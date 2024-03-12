@@ -20,6 +20,7 @@ Soporte para descargar ambos tipos de medios de forma eficiente.
 
 #### Clona el repositorio
 ```git clone https://github.com/Emy69/CoomerDL.git```
+```cd CoomerDL```
 
 #### Instala las dependencias
 ```pip install -r requirements.txt```
