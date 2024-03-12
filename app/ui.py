@@ -8,7 +8,7 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         # Inicialización
-        self.downloader = None  # Se establecerá correctamente después
+        self.downloader = None  
 
         self.title("Image Downloader")
         self.geometry("800x490")
@@ -52,8 +52,6 @@ class ImageDownloaderApp(ctk.CTk):
 
 
     def add_log_message(self, message, message_type="info"):
-        # Ejemplo de cómo podrías cambiar el color de fondo del CTkTextbox basado en el tipo de mensaje
-        # Nota: Esta es una implementación ilustrativa; customtkinter no soporta cambiar el color del fondo de CTkTextbox después de su creación.
         if message_type == "info":
             color = "#D3D3D3"  # Light Gray para mensajes informativos
         elif message_type == "success":
@@ -74,18 +72,17 @@ class ImageDownloaderApp(ctk.CTk):
             return
         self.disable_widgets()  # Deshabilita widgets al inicio de la descarga.
         self.progress_label.configure(text="Preparando descarga...")
-        # Ahora, usa threading aquí para empezar la descarga sin bloquear la UI
+        # Ahora,threading aquí para empezar la descarga sin bloquear la UI
         threading.Thread(target=self.start_download).start()
 
 
     def start_download(self):
         url = self.url_entry.get()
-        # Usa el objeto downloader directamente aquí para la descarga
+        # el objeto downloader directamente aquí para la descarga
         image_urls = self.downloader.generate_image_links(url)
         self.downloader.download_images(image_urls)  # Asume que maneja una lista de URLs
 
         # Tras finalizar la descarga, vuelve a habilitar los widgets
-        # Esto debe hacerse de manera segura ya que estamos en un hilo diferente
         self.after(0, self.enable_widgets)
 
 
