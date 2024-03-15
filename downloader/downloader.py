@@ -37,48 +37,65 @@ class Downloader:
 
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type):
+
+        if self.cancel_requested:
+            return
+
         media_url = element.get('src') or element.get('data-src') or element.get('href')
         if media_url.startswith('//'):
             media_url = "https:" + media_url
         elif not media_url.startswith('http'):
             media_url = urljoin("https://coomer.su/", media_url)
-        media_data = requests.get(media_url).content
+
+        try:
+            media_data = requests.get(media_url, timeout=5).content  # timeout para evitar esperas largas
+        except requests.Timeout:
+            if self.log_callback is not None:
+                self.log_callback(f"Tiempo de espera excedido al descargar: {media_url}")
+            return
+        
+        if self.cancel_requested:  # Comprobar de nuevo después de la operación bloqueante
+            return
+
         extension = media_url.split('.')[-1].split('?')[0]
         filename = f"{media_type}_{page_idx}_{media_idx}.{extension}"
         filepath = os.path.join(self.download_folder, filename)
+
         with open(filepath, 'wb') as file:
             file.write(media_data)
-        #self.add_log_message(f"Descargado {media_type} {page_idx+1}-{media_idx+1}")
+
         if self.log_callback is not None:
                 self.log_callback(f"Descargado {media_type} {page_idx+1}-{media_idx+1} de URL: {page_url}")
 
-    def download_images(self, image_urls):
+    def download_images(self, image_urls, download_images=True, download_videos=True):
         try:
-            if not image_urls:  # Si no hay URLs para procesar, actualiza el log directamente.
-                if self.log_callback is not None:
-                    self.log_callback("No se encontraron URLs para descargar.")
-                return
-
             for i, page_url in enumerate(image_urls):
                 if self.cancel_requested:
-                    break  
+                    break
 
                 page_response = requests.get(page_url)
                 page_soup = BeautifulSoup(page_response.content, 'html.parser')
-                
-                # Procesa imágenes
-                image_elements = page_soup.select('div.post__thumbnail img')
-                for idx, image_element in enumerate(image_elements):
-                    self.process_media_element(image_element, i, idx, page_url, "imagen")
+                media_found = False  # Indicador para saber si se encontraron medios
 
-                # Procesa videos
-                video_elements = page_soup.select('ul.post__attachments li.post__attachment a.post__attachment-link')
-                for idx, video_element in enumerate(video_elements):
-                    self.process_media_element(video_element, i, idx, page_url, "video")
+                if download_images:
+                    # Procesa imágenes
+                    image_elements = page_soup.select('div.post__thumbnail img')
+                    for idx, image_element in enumerate(image_elements):
+                        self.process_media_element(image_element, i, idx, page_url, "imagen")
+                        media_found = True
 
-                if not image_elements and not video_elements:
+                if download_videos:
+                    # Procesa videos
+                    video_elements = page_soup.select('ul.post__attachments li.post__attachment a.post__attachment-link')
+                    for idx, video_element in enumerate(video_elements):
+                        self.process_media_element(video_element, i, idx, page_url, "video")
+                        media_found = True
+
+                # Si no se encontraron medios, se notifica mediante el callback
+                if not media_found:
                     if self.log_callback is not None:
                         self.log_callback(f"No se encontraron medios en URL: {page_url}")
+
             if self.log_callback is not None:
                 self.log_callback("Descarga Terminada.")
         except Exception as e:

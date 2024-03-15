@@ -11,8 +11,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.downloader = None  
         self.download_folder = None
         
-        self.title("Image Downloader")
-        self.geometry("800x530")
+        self.title("Coomer Downloader [Beta-V0.2]")
+        self.geometry("800x600")
 
         # Creación de los widgets
         self.url_label = ctk.CTkLabel(self, text="URL de la página web:")
@@ -26,6 +26,16 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.folder_path = ctk.CTkLabel(self, text="")
         self.folder_path.pack(pady=(10, 20))
+
+        # Casilla de verificación para descargar imágenes
+        self.download_images_check = ctk.CTkCheckBox(self, text="Descargar Imágenes", onvalue=True, offvalue=False)
+        self.download_images_check.pack(pady=(10, 0))
+        self.download_images_check.select()  # Seleccionado por defecto
+
+        # Casilla de verificación para descargar videos
+        self.download_videos_check = ctk.CTkCheckBox(self, text="Descargar Vídeos", onvalue=True, offvalue=False)
+        self.download_videos_check.pack(pady=(10, 20))
+        self.download_videos_check.select()  # Seleccionado por defecto
 
         # Agregar un CTkTextbox para el log
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
@@ -81,12 +91,11 @@ class ImageDownloaderApp(ctk.CTk):
 
     def start_download(self):
         url = self.url_entry.get()
-        # el objeto downloader directamente aquí para la descarga
         image_urls = self.downloader.generate_image_links(url)
-        self.downloader.download_images(image_urls)  # Asume que maneja una lista de URLs
-
-        # Tras finalizar la descarga, vuelve a habilitar los widgets
-        self.after(0, self.enable_widgets)
+        download_images_pref = self.download_images_check.get()  # Obtiene la preferencia de imágenes
+        download_videos_pref = self.download_videos_check.get()  # Obtiene la preferencia de vídeos
+        # Pasa las preferencias al método de descarga
+        self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
 
 
     def disable_widgets(self):
