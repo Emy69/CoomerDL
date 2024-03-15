@@ -61,19 +61,11 @@ class ImageDownloaderApp(ctk.CTk):
             self.setup_downloader()
 
 
-    def add_log_message(self, message, message_type="info"):
-        if message_type == "info":
-            color = "#D3D3D3"  # Light Gray para mensajes informativos
-        elif message_type == "success":
-            color = "#90EE90"  # Light Green para éxito
-        elif message_type == "error":
-            color = "#FFCCCB"  # Light Red para errores
-        else:
-            color = "#D3D3D3"  # Default a Light Gray
-        message = f"{message}\n        ↳ Completo 100%"
+    def add_log_message(self, message):
+        message = f"{message}\n"
         self.log_textbox.configure(state='normal')  # Habilitar escritura
         self.log_textbox.insert('end', message + '\n')  # Agregar mensaje
-        self.log_textbox.configure(state='disabled', bg_color=color)  # Deshabilitar edición, intento de cambiar color
+        self.log_textbox.configure(state='disabled')  # Deshabilitar edición, intento de cambiar color
         self.log_textbox.yview_moveto(1)  # Auto-scroll
 
     def start_download_wrapper(self):
