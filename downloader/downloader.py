@@ -16,7 +16,7 @@ class Downloader:
 
     def generate_image_links(self, start_url):
         image_urls = []
-        folder_name = ""  # Variable para almacenar el nombre obtenido
+        folder_name = ""  
         try:
             response = requests.get(start_url)
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -25,7 +25,7 @@ class Downloader:
             name_element = soup.find(attrs={"itemprop": "name"})
             if name_element:
                 folder_name = name_element.text.strip()
-                # Realiza aquí la limpieza del nombre de la carpeta si es necesario
+                
             
             posts = soup.find_all('article', class_='post-card post-card--preview')
             for post in posts:
@@ -62,7 +62,7 @@ class Downloader:
                 self.log_callback(f"Tiempo de espera excedido al descargar: {media_url}")
             return
         
-        if self.cancel_requested:  # Comprobar de nuevo después de la operación bloqueante
+        if self.cancel_requested:
             return
 
         extension = media_url.split('.')[-1].split('?')[0]

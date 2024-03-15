@@ -1,7 +1,7 @@
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
-from downloader.downloader import Downloader  # Ajusta esta línea según tu estructura de importación real
+from downloader.downloader import Downloader  
 import threading, os
 
 class ImageDownloaderApp(ctk.CTk):
@@ -35,7 +35,7 @@ class ImageDownloaderApp(ctk.CTk):
         # Casilla de verificación para descargar videos
         self.download_videos_check = ctk.CTkCheckBox(self, text="Descargar Vídeos", onvalue=True, offvalue=False)
         self.download_videos_check.pack(pady=(10, 20))
-        self.download_videos_check.select()  # Seleccionado por defecto
+        self.download_videos_check.select()
 
         # Agregar un CTkTextbox para el log
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
@@ -66,8 +66,7 @@ class ImageDownloaderApp(ctk.CTk):
         folder_selected = filedialog.askdirectory()
         if folder_selected:  
             self.folder_path.configure(text=folder_selected)
-            self.download_folder = folder_selected  # Actualiza download_folder con la carpeta seleccionada
-            # Configura el objeto downloader aquí y pasa las referencias necesarias
+            self.download_folder = folder_selected  
             self.setup_downloader()
 
 
@@ -75,7 +74,7 @@ class ImageDownloaderApp(ctk.CTk):
         message = f"{message}\n"
         self.log_textbox.configure(state='normal')  # Habilitar escritura
         self.log_textbox.insert('end', message + '\n')  # Agregar mensaje
-        self.log_textbox.configure(state='disabled')  # Deshabilitar edición, intento de cambiar color
+        self.log_textbox.configure(state='disabled')
         self.log_textbox.yview_moveto(1)  # Auto-scroll
 
     def start_download_wrapper(self):
@@ -85,7 +84,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.disable_widgets()  # Deshabilita widgets al inicio de la descarga.
         self.cancel_button.configure(state="normal") 
         self.progress_label.configure(text="Preparando descarga...")
-        # Ahora,threading aquí para empezar la descarga sin bloquear la UI
         threading.Thread(target=self.start_download).start()
         
 
