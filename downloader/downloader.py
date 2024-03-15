@@ -16,11 +16,18 @@ class Downloader:
 
     def generate_image_links(self, start_url):
         image_urls = []
+        folder_name = ""  # Variable para almacenar el nombre obtenido
         try:
             response = requests.get(start_url)
             soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Intenta obtener el nombre del elemento con itemprop="name"
+            name_element = soup.find(attrs={"itemprop": "name"})
+            if name_element:
+                folder_name = name_element.text.strip()
+                # Realiza aquí la limpieza del nombre de la carpeta si es necesario
+            
             posts = soup.find_all('article', class_='post-card post-card--preview')
-
             for post in posts:
                 data_id = post.get('data-id')
                 data_service = post.get('data-service')
@@ -29,11 +36,12 @@ class Downloader:
                 if data_id and data_service and data_user:
                     image_url = f"https://coomer.su/{data_service}/user/{data_user}/post/{data_id}"
                     image_urls.append(image_url)
-
         except Exception as e:
             if self.log_callback is not None:
                 self.log_callback(f"Error durante la recopilación de links: {str(e)}")
-        return image_urls
+        
+        return image_urls, folder_name
+
 
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type):

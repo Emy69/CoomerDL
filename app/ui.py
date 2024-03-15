@@ -2,7 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
 from downloader.downloader import Downloader  # Ajusta esta línea según tu estructura de importación real
-import threading
+import threading, os
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -91,11 +91,21 @@ class ImageDownloaderApp(ctk.CTk):
 
     def start_download(self):
         url = self.url_entry.get()
-        image_urls = self.downloader.generate_image_links(url)
-        download_images_pref = self.download_images_check.get()  # Obtiene la preferencia de imágenes
-        download_videos_pref = self.download_videos_check.get()  # Obtiene la preferencia de vídeos
-        # Pasa las preferencias al método de descarga
+        image_urls, folder_name = self.downloader.generate_image_links(url)  # Ahora devuelve también el nombre de la carpeta
+        if folder_name:  # Verifica que el nombre de la carpeta no esté vacío
+            # Crea el subdirectorio con el nombre de la carpeta
+            specific_download_folder = os.path.join(self.download_folder, folder_name)
+            os.makedirs(specific_download_folder, exist_ok=True)
+            # Actualiza la carpeta de descarga en el objeto downloader
+            self.downloader.download_folder = specific_download_folder
+        else:
+            # Maneja el caso de que no se haya podido obtener un nombre de carpeta
+            self.log_callback("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
+
+        download_images_pref = self.download_images_check.get()
+        download_videos_pref = self.download_videos_check.get()
         self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
+
 
 
     def disable_widgets(self):
