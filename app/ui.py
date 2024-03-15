@@ -11,7 +11,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.downloader = None  
         self.download_folder = None
         
-        self.title("Coomer Downloader [Beta-V0.2]")
+        self.title("Coomer Downloader [Beta-V0.3]")
         self.geometry("800x600")
 
         # Creación de los widgets
