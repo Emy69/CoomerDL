@@ -1,3 +1,4 @@
+from tkinter import messagebox
 import requests
 from bs4 import BeautifulSoup
 import os
@@ -7,7 +8,11 @@ class Downloader:
     def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None):
         self.download_folder = download_folder
         self.log_callback = log_callback
-        self.enable_widgets_callback = enable_widgets_callback
+        self.enable_widgets_callback = enable_widgets_callback  
+        self.cancel_requested = False  
+
+    def request_cancel(self):
+        self.cancel_requested = True   
 
     def generate_image_links(self, start_url):
         image_urls = []
@@ -55,6 +60,9 @@ class Downloader:
                 return
 
             for i, page_url in enumerate(image_urls):
+                if self.cancel_requested:
+                    break  
+
                 page_response = requests.get(page_url)
                 page_soup = BeautifulSoup(page_response.content, 'html.parser')
                 
@@ -77,9 +85,6 @@ class Downloader:
             if self.log_callback is not None:
                 self.log_callback(f"Error durante la descarga: {str(e)}")
         finally:
+            self.cancel_requested = False
             if self.enable_widgets_callback is not None:
-                self.enable_widgets_callback() 
-
-    
-    
-
+                self.enable_widgets_callback()

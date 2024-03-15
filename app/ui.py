@@ -9,9 +9,10 @@ class ImageDownloaderApp(ctk.CTk):
         super().__init__()
         # Inicialización
         self.downloader = None  
-
+        self.download_folder = None
+        
         self.title("Image Downloader")
-        self.geometry("800x490")
+        self.geometry("800x530")
 
         # Creación de los widgets
         self.url_label = ctk.CTkLabel(self, text="URL de la página web:")
@@ -33,20 +34,29 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_button = ctk.CTkButton(self, text="Descargar Imágenes", command=self.start_download_wrapper)
         self.download_button.pack()
 
+        self.cancel_button = ctk.CTkButton(self, text="Cancelar Descarga", command=self.request_cancel)
+        self.cancel_button.pack()
+        self.cancel_button.configure(state="disabled")  
+
         self.progress_label = ctk.CTkLabel(self, text="")
         self.progress_label.pack(pady=(20, 0))
 
     def setup_downloader(self):
         self.downloader = Downloader(
             download_folder=self.download_folder,
-            log_callback=self.add_log_message  # La referencia al callback para logs
+            log_callback=self.add_log_message,
+            enable_widgets_callback=self.enable_widgets
         )
+
+    def request_cancel(self):
+        if self.downloader:
+            self.downloader.request_cancel()
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:  
             self.folder_path.configure(text=folder_selected)
-            self.download_folder = folder_selected
+            self.download_folder = folder_selected  # Actualiza download_folder con la carpeta seleccionada
             # Configura el objeto downloader aquí y pasa las referencias necesarias
             self.setup_downloader()
 
@@ -71,10 +81,11 @@ class ImageDownloaderApp(ctk.CTk):
             self.progress_label.configure(text="Seleccione una carpeta y una URL válida.")
             return
         self.disable_widgets()  # Deshabilita widgets al inicio de la descarga.
+        self.cancel_button.configure(state="normal") 
         self.progress_label.configure(text="Preparando descarga...")
         # Ahora,threading aquí para empezar la descarga sin bloquear la UI
         threading.Thread(target=self.start_download).start()
-
+        
 
     def start_download(self):
         url = self.url_entry.get()
@@ -94,6 +105,7 @@ class ImageDownloaderApp(ctk.CTk):
 
     def enable_widgets(self):
         # Habilita los widgets una vez finalizada la descarga.
+        self.cancel_button.configure(state="disabled")  
         self.browse_button.configure(state="normal")
         self.download_button.configure(state="normal")
         self.url_entry.configure(state="normal")
