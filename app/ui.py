@@ -101,7 +101,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.downloader.download_folder = specific_download_folder
         else:
             # Maneja el caso de que no se haya podido obtener un nombre de carpeta
-            self.log_callback("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
+            self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
 
         download_images_pref = self.download_images_check.get()
         download_videos_pref = self.download_videos_check.get()
