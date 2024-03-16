@@ -42,13 +42,10 @@ class Downloader:
         
         return image_urls, folder_name
 
-
-
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type):
-
         if self.cancel_requested:
             return
-
+        
         media_url = element.get('src') or element.get('data-src') or element.get('href')
         if media_url.startswith('//'):
             media_url = "https:" + media_url
