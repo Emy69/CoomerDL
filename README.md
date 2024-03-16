@@ -9,7 +9,7 @@ Soporte para descargar ambos tipos de medios de forma eficiente.
 ##
 ## [Discord](https://discord.gg/c2pzb6FFAx)
 
-![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/screenshots/Screenshot%202024-03-12.png)
+![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/screenshots/Screenshot%202024-03-15.png)
 
 ## 🚀 Empezando
 
