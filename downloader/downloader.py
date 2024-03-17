@@ -16,17 +16,20 @@ class Downloader:
 
     def generate_image_links(self, start_url):
         image_urls = []
-        folder_name = ""  
+        folder_name = ""
         try:
             response = requests.get(start_url)
             soup = BeautifulSoup(response.content, 'html.parser')
+
+            # Determinar el dominio base de la URL proporcionada
+            base_url = "https://coomer.su/" if "coomer.su" in start_url else "https://kemono.su/"
             
             # Intenta obtener el nombre del elemento con itemprop="name"
             name_element = soup.find(attrs={"itemprop": "name"})
             if name_element:
                 folder_name = name_element.text.strip()
-                
-            
+
+            # Ajustar la búsqueda de los posts según el sitio web
             posts = soup.find_all('article', class_='post-card post-card--preview')
             for post in posts:
                 data_id = post.get('data-id')
@@ -34,31 +37,36 @@ class Downloader:
                 data_user = post.get('data-user')
 
                 if data_id and data_service and data_user:
-                    image_url = f"https://coomer.su/{data_service}/user/{data_user}/post/{data_id}"
+                    image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
                     image_urls.append(image_url)
         except Exception as e:
             if self.log_callback is not None:
                 self.log_callback(f"Error durante la recopilación de links: {str(e)}")
-        
+
         return image_urls, folder_name
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type):
         if self.cancel_requested:
             return
-        
+
         media_url = element.get('src') or element.get('data-src') or element.get('href')
         if media_url.startswith('//'):
             media_url = "https:" + media_url
         elif not media_url.startswith('http'):
-            media_url = urljoin("https://coomer.su/", media_url)
+            base_url = "https://coomer.su/" if "coomer.su" in page_url else "https://kemono.su/"
+            media_url = urljoin(base_url, media_url)
+
+        # Mensaje de inicio de descarga
+        if self.log_callback is not None:
+            self.log_callback(f"Iniciando descarga de {media_type} {page_idx+1}-{media_idx+1} desde {page_url}...")
 
         try:
-            media_data = requests.get(media_url, timeout=5).content  # timeout para evitar esperas largas
+            media_data = requests.get(media_url, timeout=5).content
         except requests.Timeout:
             if self.log_callback is not None:
                 self.log_callback(f"Tiempo de espera excedido al descargar: {media_url}")
             return
-        
+
         if self.cancel_requested:
             return
 
@@ -70,7 +78,9 @@ class Downloader:
             file.write(media_data)
 
         if self.log_callback is not None:
-                self.log_callback(f"Descargado {media_type} {page_idx+1}-{media_idx+1} de URL: {page_url}")
+            self.log_callback(f"Descargado {media_type} {page_idx+1}-{media_idx+1} de {page_url} exitosamente.")
+
+
 
     def download_images(self, image_urls, download_images=True, download_videos=True):
         try:
