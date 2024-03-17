@@ -45,6 +45,10 @@ class ImageDownloaderApp(ctk.CTk):
         self.action_frame = ctk.CTkFrame(self)
         self.action_frame.pack(pady=10, fill='x', padx=20)
 
+        # En la clase ImageDownloaderApp
+        self.download_speed_label = ctk.CTkLabel(self.action_frame, text="Velocidad de descarga: 0 KB/s")
+        self.download_speed_label.pack(side='left', padx=10)
+
         self.download_button = ctk.CTkButton(self.action_frame, text="Descargar", command=self.start_download_wrapper)
         self.download_button.pack(side='left', padx=10)
 
@@ -62,8 +66,14 @@ class ImageDownloaderApp(ctk.CTk):
         self.downloader = Downloader(
             download_folder=self.download_folder,
             log_callback=self.add_log_message,
-            enable_widgets_callback=self.enable_widgets
+            enable_widgets_callback=self.enable_widgets,
+            update_speed_callback=self.update_download_speed
+            
         )
+    def update_download_speed(self, speed):
+        # Usa after para asegurarte de que se ejecute en el hilo principal de Tkinter
+        self.after(0, lambda: self.download_speed_label.configure(text=f"Velocidad de descarga: {speed:.2f} KB/s"))
+
 
     def request_cancel(self):
         if self.downloader:

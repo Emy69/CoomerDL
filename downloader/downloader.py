@@ -3,13 +3,15 @@ import requests
 from bs4 import BeautifulSoup
 import os
 from urllib.parse import urljoin
+import time
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None):
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_speed_callback=None):
         self.download_folder = download_folder
         self.log_callback = log_callback
-        self.enable_widgets_callback = enable_widgets_callback  
-        self.cancel_requested = False  
+        self.enable_widgets_callback = enable_widgets_callback
+        self.update_speed_callback = update_speed_callback  # Nuevo callback
+        self.cancel_requested = False
 
     def request_cancel(self):
         self.cancel_requested = True   
@@ -61,23 +63,37 @@ class Downloader:
             self.log_callback(f"Iniciando descarga de {media_type} {page_idx+1}-{media_idx+1} desde {page_url}...")
 
         try:
-            media_data = requests.get(media_url, timeout=5).content
-        except requests.Timeout:
+            with requests.get(media_url, stream=True) as r:
+                r.raise_for_status()
+                total_length = int(r.headers.get('content-length', 0))
+                start_time = time.time()
+                data_downloaded = 0
+                extension = media_url.split('.')[-1].split('?')[0]
+                filename = f"{media_type}_{page_idx}_{media_idx}.{extension}"
+                filepath = os.path.join(self.download_folder, filename)
+
+                with open(filepath, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=65536):
+                        if self.cancel_requested:
+                            break
+                        if chunk:
+                            f.write(chunk)
+                            data_downloaded += len(chunk)
+                            elapsed_time = time.time() - start_time
+                            # Asegurarse de que elapsed_time no sea cero antes de calcular la velocidad
+                            if elapsed_time > 0:
+                                speed_kb_s = (data_downloaded / elapsed_time) / 1024  # velocidad en KB/s
+                                if self.update_speed_callback:
+                                    self.update_speed_callback(speed_kb_s)
+                            else:
+                                # Si elapsed_time es cero, evitar la división por cero
+                                if self.update_speed_callback:
+                                    self.update_speed_callback(0)
+        except requests.exceptions.RequestException as e:
             if self.log_callback is not None:
-                self.log_callback(f"Tiempo de espera excedido al descargar: {media_url}")
-            return
+                self.log_callback(f"Error al descargar {media_url}: {e}")
 
-        if self.cancel_requested:
-            return
-
-        extension = media_url.split('.')[-1].split('?')[0]
-        filename = f"{media_type}_{page_idx}_{media_idx}.{extension}"
-        filepath = os.path.join(self.download_folder, filename)
-
-        with open(filepath, 'wb') as file:
-            file.write(media_data)
-
-        if self.log_callback is not None:
+        if not self.cancel_requested and self.log_callback is not None:
             self.log_callback(f"Descargado {media_type} {page_idx+1}-{media_idx+1} de {page_url} exitosamente.")
 
 
