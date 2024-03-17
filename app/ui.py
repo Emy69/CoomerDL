@@ -11,6 +11,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.title("Coomer Downloader [Beta-V0.3]")
         self.geometry("800x600")
         self.download_folder = None
+        self.iconbitmap("img/window.ico")
+
         # Frame para la URL y selección de carpeta
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.pack(pady=20, fill='x', padx=20)
