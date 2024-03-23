@@ -11,6 +11,8 @@ Soporte para descargar ambos tipos de medios de forma eficiente.
 
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/screenshots/Screenshot%202024-03-15.png)
 
+## [Descargar](https://github.com/Emy69/CoomerDL/releases)
+
 ## 🚀 Empezando
 
 ### Prerrequisitos
