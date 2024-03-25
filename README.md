@@ -7,9 +7,11 @@ Es una aplicación de escritorio desarrollada en Python, que permite a los usuar
 Soporte para descargar ambos tipos de medios de forma eficiente.
 
 ##
-## [Discord](https://discord.gg/c2pzb6FFAx)
+## [Descargar](https://github.com/Emy69/CoomerDL/releases)
 
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/screenshots/Screenshot%202024-03-15.png)
+
+
 
 ## 🚀 Empezando
 
