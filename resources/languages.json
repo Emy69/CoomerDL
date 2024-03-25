@@ -1,0 +1,47 @@
+{
+    "english": {
+        "window_title": "Image Downloader [Beta-V0.3]",
+        "change_language": "Change Language",
+        "webpage_url": "Webpage URL:",
+        "select_folder": "Select Folder",
+        "download_images": "Download Images",
+        "download_videos": "Download Videos",
+        "download_speed": "Download Speed: {speed:.2f} KB/s",
+        "download": "Download",
+        "cancel_download": "Cancel Download",
+        "log_message_start_download": "Starting download of {media_type} {page_idx}-{media_idx} from {page_url}...",
+        "log_message_error_download": "Error downloading from {media_url}: {e}",
+        "log_message_success_download": "Successfully downloaded {media_type} {page_idx}-{media_idx} from {page_url}.",
+        "log_message_no_media": "No media found at URL: {page_url}",
+        "log_message_download_complete": "Download Complete.",
+        "log_message_error_collecting_links": "Error collecting links: {e}",
+        "log_message_folder_name_failed": "Failed to retrieve the page name, using default folder.",
+        "select_folder_url_valid": "Please select a folder and a valid URL.",
+        "preparing_download": "Preparing download...",
+        "settings_menu": "Settings",
+        "select_language": "Select Language"
+
+    },
+    "spanish": {
+        "window_title": "Descargador de Imágenes [Beta-V0.3]",
+        "change_language": "Cambiar Idioma",
+        "webpage_url": "URL de la página web:",
+        "select_folder": "Seleccionar Carpeta",
+        "download_images": "Descargar Imágenes",
+        "download_videos": "Descargar Vídeos",
+        "download_speed": "Velocidad de descarga: {speed:.2f} KB/s",
+        "download": "Descargar",
+        "cancel_download": "Cancelar Descarga",
+        "log_message_start_download": "Iniciando descarga de {media_type} {page_idx}-{media_idx} desde {page_url}...",
+        "log_message_error_download": "Error al descargar de {media_url}: {e}",
+        "log_message_success_download": "Descargado {media_type} {page_idx}-{media_idx} de {page_url} exitosamente.",
+        "log_message_no_media": "No se encontraron medios en URL: {page_url}",
+        "log_message_download_complete": "Descarga Terminada.",
+        "log_message_error_collecting_links": "Error durante la recopilación de links: {str(e)}",
+        "log_message_folder_name_failed": "No se pudo obtener el nombre de la página, usando carpeta predeterminada.",
+        "select_folder_url_valid": "Seleccione una carpeta y una URL válida.",
+        "preparing_download": "Preparando descarga...",
+        "settings_menu": "Configuración",
+        "select_language": "Seleccionar Idioma"
+    }
+}

@@ -6,12 +6,20 @@ from urllib.parse import urljoin
 import time
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_speed_callback=None):
+    def __init__(self, download_folder, translations, log_callback=None, enable_widgets_callback=None, update_speed_callback=None):
         self.download_folder = download_folder
+        self.translations = translations  # Diccionario de traducciones para el idioma actual
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
-        self.update_speed_callback = update_speed_callback  # Nuevo callback
+        self.update_speed_callback = update_speed_callback
         self.cancel_requested = False
+
+    def log(self, message_key, **kwargs):
+        # Construye y envía un mensaje de log utilizando la clave del mensaje y los argumentos proporcionados.
+        if self.log_callback is not None:
+            message_template = self.translations[message_key]
+            message = message_template.format(**kwargs)
+            self.log_callback(message)
 
     def request_cancel(self):
         self.cancel_requested = True   
@@ -43,7 +51,7 @@ class Downloader:
                     image_urls.append(image_url)
         except Exception as e:
             if self.log_callback is not None:
-                self.log_callback(f"Error durante la recopilación de links: {str(e)}")
+                self.log("log_message_error_collecting_links", e=str(e))
 
         return image_urls, folder_name
 
@@ -60,7 +68,7 @@ class Downloader:
 
         # Mensaje de inicio de descarga
         if self.log_callback is not None:
-            self.log_callback(f"Iniciando descarga de {media_type} {page_idx+1}-{media_idx+1} desde {page_url}...")
+            self.log("log_message_start_download", media_type=media_type, page_idx=page_idx+1, media_idx=media_idx+1, page_url=page_url)
 
         try:
             with requests.get(media_url, stream=True) as r:
@@ -91,12 +99,10 @@ class Downloader:
                                     self.update_speed_callback(0)
         except requests.exceptions.RequestException as e:
             if self.log_callback is not None:
-                self.log_callback(f"Error al descargar {media_url}: {e}")
+                self.log("log_message_error_download", media_url=media_url, e=str(e))
 
         if not self.cancel_requested and self.log_callback is not None:
-            self.log_callback(f"Descargado {media_type} {page_idx+1}-{media_idx+1} de {page_url} exitosamente.")
-
-
+            self.log("log_message_success_download", media_type=media_type, page_idx=page_idx+1, media_idx=media_idx+1, page_url=page_url)
 
     def download_images(self, image_urls, download_images=True, download_videos=True):
         try:
@@ -125,13 +131,13 @@ class Downloader:
                 # Si no se encontraron medios, se notifica mediante el callback
                 if not media_found:
                     if self.log_callback is not None:
-                        self.log_callback(f"No se encontraron medios en URL: {page_url}")
+                        self.log("log_message_no_media", page_url=page_url)
 
             if self.log_callback is not None:
-                self.log_callback("Descarga Terminada.")
+                self.log("log_message_download_complete")
         except Exception as e:
             if self.log_callback is not None:
-                self.log_callback(f"Error durante la descarga: {str(e)}")
+                self.log("log_message_error_during_download", e=str(e))
         finally:
             self.cancel_requested = False
             if self.enable_widgets_callback is not None:
