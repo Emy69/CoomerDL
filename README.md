@@ -9,7 +9,7 @@ Soporte para descargar ambos tipos de medios de forma eficiente.
 ##
 ## [Descargar](https://github.com/Emy69/CoomerDL/releases)
 
-![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/screenshots/Screenshot%202024-03-15.png)
+![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-25.png)
 
 
 
