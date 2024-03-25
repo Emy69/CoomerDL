@@ -2,7 +2,8 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
 from downloader.downloader import Downloader  
-import threading, os,json
+import threading, os,json,sys
+from pathlib import Path
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -83,9 +84,16 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
 
     def load_translations(self):
-        current_dir = os.path.dirname(__file__)
-        path_to_file = os.path.join(current_dir, '../resources/languages.json')
-        
+        # Verificar si se está ejecutando como un ejecutable congelado
+        if getattr(sys, 'frozen', False):
+            # Si es así, usar la ruta relativa al ejecutable
+            application_path = Path(sys.executable).parent
+        else:
+            # Si no, usar la ruta relativa al script
+            application_path = Path(__file__).parent.parent
+
+        path_to_file = application_path / 'resources' / 'languages.json'
+
         with open(path_to_file, 'r', encoding='utf-8') as f:
             self.translations = json.load(f)
 
