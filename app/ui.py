@@ -265,7 +265,7 @@ class ImageDownloaderApp(ctk.CTk):
             'Referer': 'https://www.erome.com/'
         },
         translations=self.translations[self.current_language],
-        log_callback=self.add_log_message  # Asume que tienes un método add_log_message en tu app
+        log_callback=self.add_log_message  
         )
 
 
