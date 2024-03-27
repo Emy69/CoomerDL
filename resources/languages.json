@@ -19,7 +19,12 @@
         "select_folder_url_valid": "Please select a folder and a valid URL.",
         "preparing_download": "Preparing download...",
         "settings_menu": "Settings",
-        "select_language": "Select Language"
+        "select_language": "Select Language",
+        "download_success": "{resource_type} successfully downloaded: {file_path}",
+        "download_error": "Error downloading {resource_type}. Status code: {status_code}",
+        "error_accessing_page": "Error accessing page {page_url}. Status code: {status_code}",
+        "no_media_found": "No media found in {page_url}."
+
 
     },
     "spanish": {
@@ -42,6 +47,10 @@
         "select_folder_url_valid": "Seleccione una carpeta y una URL válida.",
         "preparing_download": "Preparando descarga...",
         "settings_menu": "Configuración",
-        "select_language": "Seleccionar Idioma"
+        "select_language": "Seleccionar Idioma",
+        "download_success": "{resource_type} descargado con éxito: {file_path}",
+        "download_error": "Error al descargar {resource_type}. Código de estado: {status_code}",
+        "error_accessing_page": "Error al acceder a la página {page_url}. Código de estado: {status_code}",
+        "no_media_found": "No se encontraron medios en {page_url}."
     }
 }

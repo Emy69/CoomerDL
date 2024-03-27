@@ -1,9 +1,13 @@
 import tkinter as tk
+from tkinter import messagebox
+from tkinter import Menu
 import customtkinter as ctk
 from tkinter import filedialog
 from downloader.downloader import Downloader  
 import threading, os,json,sys
 from pathlib import Path
+from downloader.erome import EromeDownloader
+
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -17,6 +21,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.load_language_preference()  
         self.initialize_ui()
         self.apply_translations()
+        self.erome_downloader = None
 
     def initialize_ui(self):
         # Frame para la URL y selección de carpeta
@@ -38,8 +43,16 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_label = ctk.CTkLabel(self.input_frame, text="URL de la página web:")
         self.url_label.grid(row=1, column=0, sticky='w')
 
-        self.url_entry = ctk.CTkEntry(self.input_frame, width=300)
+        # En tu método initialize_ui, reemplaza el ctk.CTkEntry por un ctk.CTkTextbox para la entrada de URLs
+        self.url_entry = ctk.CTkTextbox(self.input_frame, width=300, height=100, wrap="none")
         self.url_entry.grid(row=2, column=0, sticky='we', padx=(0, 5))
+
+        # Configura el menú de clic derecho para el cuadro de texto
+        self.right_click_menu = Menu(self, tearoff=0)
+        self.right_click_menu.add_command(label="Pegar", command=self.paste_from_clipboard)
+
+        # Configura el evento de clic derecho en el cuadro de texto
+        self.url_entry.bind("<Button-3>", self.show_right_click_menu)
 
 
         self.browse_button = ctk.CTkButton(self.input_frame, text="Seleccionar Carpeta", command=self.select_folder)
@@ -82,6 +95,22 @@ class ImageDownloaderApp(ctk.CTk):
         # Log de actividad
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
+    
+    def paste_from_clipboard(self):
+        try:
+            # Obtiene texto del portapapeles y lo inserta en el cuadro de texto
+            text_to_paste = self.clipboard_get()
+            self.url_entry.insert('insert', text_to_paste)
+        except Exception as e:
+            print(f"Error pegando texto: {e}")
+
+    def show_right_click_menu(self, event):
+        try:
+            # Muestra el menú de clic derecho en las coordenadas del evento
+            self.right_click_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            # Asegura que el menú de clic derecho se cierra correctamente
+            self.right_click_menu.grab_release()
 
     def load_translations(self):
         # Verificar si se está ejecutando como un ejecutable congelado
@@ -192,6 +221,9 @@ class ImageDownloaderApp(ctk.CTk):
     def request_cancel(self):
         if self.downloader:
             self.downloader.request_cancel()
+        if hasattr(self, 'erome_downloader'):
+            self.erome_downloader.request_cancel()
+            self.add_log_message("Descarga cancelada por el usuario.")
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
@@ -208,32 +240,73 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox.yview_moveto(1)  # Auto-scroll
 
     def start_download_wrapper(self):
-        if not self.download_folder or not self.url_entry.get():
+        urls = self.url_entry.get("1.0", "end-1c").splitlines()
+        urls = [url for url in urls if url.strip()]
+        if len(urls) > 5:
+            messagebox.showinfo("Limitación", "Por favor, introduce un máximo de 5 URLs.")
+            return
+        if not self.download_folder or not urls:
             translation = self.translations[self.current_language]["select_folder_url_valid"]
             self.progress_label.configure(text=translation)
             return
-        self.disable_widgets()  # Deshabilita widgets al inicio de la descarga.
-        self.cancel_button.configure(state="normal")
+        self.disable_widgets()
+        # Restablecer el estado de cancelación aquí si es necesario
+        self.downloader.cancel_requested = False
+        self.cancel_button.configure(state="normal")  # Reactivar el botón de cancelar para la nueva secuencia
         translation = self.translations[self.current_language]["preparing_download"]
         self.progress_label.configure(text=translation)
-        threading.Thread(target=self.start_download).start()
-        
-    def start_download(self):
-        url = self.url_entry.get()
-        image_urls, folder_name = self.downloader.generate_image_links(url)  # Ahora devuelve también el nombre de la carpeta
-        if folder_name:  # Verifica que el nombre de la carpeta no esté vacío
-            # Crea el subdirectorio con el nombre de la carpeta
-            specific_download_folder = os.path.join(self.download_folder, folder_name)
-            os.makedirs(specific_download_folder, exist_ok=True)
-            # Actualiza la carpeta de descarga en el objeto downloader
-            self.downloader.download_folder = specific_download_folder
-        else:
-            # Maneja el caso de que no se haya podido obtener un nombre de carpeta
-            self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
+        threading.Thread(target=self.start_download, args=(urls,)).start()
 
-        download_images_pref = self.download_images_check.get()
-        download_videos_pref = self.download_videos_check.get()
-        self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
+    def start_download(self, urls):
+        # Inicializa la instancia de EromeDownloader con los headers
+        self.erome_downloader = EromeDownloader(
+        headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+            'Referer': 'https://www.erome.com/'
+        },
+        translations=self.translations[self.current_language],
+        log_callback=self.add_log_message  # Asume que tienes un método add_log_message en tu app
+        )
+
+
+        for index, url in enumerate(urls):
+            if self.downloader.cancel_requested:
+                # Registra o maneja la cancelación aquí si es necesario
+                self.add_log_message("Descarga cancelada por el usuario.")
+                break  # Salir del ciclo for si se solicitó la cancelación
+
+            if len(url.strip()) == 0:  # Omitir líneas vacías
+                continue
+
+            if "/a/" in url:
+                self.erome_downloader.process_album_page(url, self.download_folder)
+            else:
+                self.erome_downloader.process_profile_page(url)
+
+            # Actualiza el log y la UI conforme sea necesario
+            self.add_log_message(f"Descarga completada desde {url}")
+
+            self.progress_label.configure(text=f"Descargando de {url}...")
+            image_urls, folder_name = self.downloader.generate_image_links(url)
+            if folder_name:
+                specific_download_folder = os.path.join(self.download_folder, folder_name)
+                os.makedirs(specific_download_folder, exist_ok=True)
+                self.downloader.download_folder = specific_download_folder
+            else:
+                self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
+            download_images_pref = self.download_images_check.get()
+            download_videos_pref = self.download_videos_check.get()
+            self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
+            if index < len(urls) - 1 and not self.downloader.cancel_requested:
+            # Si quedan más URLs y no se ha solicitado la cancelación, asegúrate de que el botón siga activo
+                self.cancel_button.configure(state="normal")
+            else:
+                # Si es la última URL o se solicitó la cancelación, se puede desactivar el botón
+                self.cancel_button.configure(state="disabled")
+
+        # Asegúrate de reactivar los widgets correctamente al finalizar todas las descargas
+        self.enable_widgets()
+        self.progress_label.configure(text=self.translations[self.current_language]["log_message_download_complete"])
 
     def disable_widgets(self):
         # Deshabilita los widgets para evitar interacción durante la descarga.
