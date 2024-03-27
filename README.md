@@ -1,5 +1,5 @@
 # Coomer Downloader App 
-Es una aplicación de escritorio desarrollada en Python, que permite a los usuarios descargar fácilmente imágenes y vídeos de https://coomer.su/ y https://kemono.su/. Utilizando una interfaz gráfica de usuario (GUI) intuitiva, los usuarios pueden simplemente introducir la URL y descargar.
+Es una aplicación de escritorio desarrollada en Python, que permite a los usuarios descargar fácilmente imágenes y vídeos de https://coomer.su/ , https://kemono.su/ y https://www.erome.com/. Utilizando una interfaz gráfica de usuario (GUI) intuitiva, los usuarios pueden simplemente introducir la URL y descargar.
 
 ## 🌟 Características
     
