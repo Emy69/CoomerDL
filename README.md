@@ -26,7 +26,7 @@ Support to download both types of media efficiently.
 ````cd CoomerDL````
 
 #### Install the dependencies
-````pip install -r requirements.txt```
+````pip install -r requirements.txt````
 
 ### Usage
 ````python main.py````
