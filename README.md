@@ -1,32 +1,32 @@
 # Coomer Downloader App 
-Es una aplicación de escritorio desarrollada en Python, que permite a los usuarios descargar fácilmente imágenes y vídeos de https://coomer.su/ , https://kemono.su/ y https://www.erome.com/. Utilizando una interfaz gráfica de usuario (GUI) intuitiva, los usuarios pueden simplemente introducir la URL y descargar.
+It is a desktop application developed in Python, which allows users to easily download images and videos from https://coomer.su/ , https://kemono.su/ and https://www.erome.com/. Using an intuitive graphical user interface (GUI), users can simply enter the URL and download.
 
-## 🌟 Características
+## 🌟 Features.
     
-### Descarga de imágenes y vídeos
-Soporte para descargar ambos tipos de medios de forma eficiente.
+### Downloading images and videos
+Support to download both types of media efficiently.
 
 ## 
-## [Descargar](https://github.com/Emy69/CoomerDL/releases) 
+## [Download](https://github.com/Emy69/CoomerDL/releases) 
 ## [Discord](https://discord.gg/u5CawUYZGk)
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-25.png)
 
 
 
-## 🚀 Empezando
+## 🚀 Getting Started
 
-### Prerrequisitos
-- Python 3.8 o superior.
+### Prerequisites
+- Python 3.8 or higher.
 
-### Instalación
+### Installation
 
-#### Clona el repositorio
-```git clone https://github.com/Emy69/CoomerDL.git```
+#### Clone the repository
+````git clone https://github.com/Emy69/CoomerDL.git````
 
-```cd CoomerDL```
+````cd CoomerDL````
 
-#### Instala las dependencias
-```pip install -r requirements.txt```
+#### Install the dependencies
+````pip install -r requirements.txt```
 
-### Uso
-```python main.py```
+### Usage
+````python main.py````
