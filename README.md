@@ -6,7 +6,7 @@ Es una aplicación de escritorio desarrollada en Python, que permite a los usuar
 ### Descarga de imágenes y vídeos
 Soporte para descargar ambos tipos de medios de forma eficiente.
 
-##
+## 
 ## [Descargar](https://github.com/Emy69/CoomerDL/releases) 
 ## [Discord](https://discord.gg/u5CawUYZGk)
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-25.png)
