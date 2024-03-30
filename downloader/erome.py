@@ -4,10 +4,12 @@ import os
 from urllib.parse import urljoin
 
 class EromeDownloader:
-    def __init__(self, headers, translations, log_callback=None):
+    def __init__(self, headers, translations, log_callback=None, download_images=True, download_videos=True):
         self.headers = headers
         self.translations = translations
         self.log_callback = log_callback
+        self.download_images = download_images
+        self.download_videos = download_videos
         self.cancel_requested = False
 
     # Método para solicitar la cancelación del proceso de descarga
@@ -59,23 +61,25 @@ class EromeDownloader:
             folder_path = self.create_folder(os.path.join(base_folder, self.clean_filename(folder_name)))
             
             # Descarga videos
-            videos = soup.find_all('video')
-            for video in videos:
-                for source in video.find_all('source'):
-                    video_src = source.get('src')
-                    abs_video_src = urljoin(page_url, video_src)
-                    video_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_video_src)))
-                    self.download_file(abs_video_src, video_name, 'Video')
+            if self.download_videos:
+                videos = soup.find_all('video')
+                for video in videos:
+                    for source in video.find_all('source'):
+                        video_src = source.get('src')
+                        abs_video_src = urljoin(page_url, video_src)
+                        video_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_video_src)))
+                        self.download_file(abs_video_src, video_name, 'Video')
             
             # Descarga imágenes dentro de 'div.img'
-            image_divs = soup.select('div.img')
-            for div in image_divs:
-                img = div.find('img', attrs={'data-src': True})
-                if img:
-                    img_src = img.get('data-src')
-                    abs_img_src = urljoin(page_url, img_src)
-                    img_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_img_src)))
-                    self.download_file(abs_img_src, img_name, 'Imagen')
+            if self.download_images:
+                image_divs = soup.select('div.img')
+                for div in image_divs:
+                    img = div.find('img', attrs={'data-src': True})
+                    if img:
+                        img_src = img.get('data-src')
+                        abs_img_src = urljoin(page_url, img_src)
+                        img_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_img_src)))
+                        self.download_file(abs_img_src, img_name, 'Imagen')
         else:
             self.log(f"Error al acceder a la página {page_url}. Código de estado: {response.status_code}")
 

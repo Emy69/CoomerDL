@@ -1,6 +1,6 @@
 {
     "english": {
-        "window_title": "Image Downloader [Beta-V0.3]",
+        "window_title": "Image Downloader [Beta-V0.4.1]",
         "change_language": "Change Language",
         "webpage_url": "Webpage URL:",
         "select_folder": "Select Folder",
@@ -23,12 +23,15 @@
         "download_success": "{resource_type} successfully downloaded: {file_path}",
         "download_error": "Error downloading {resource_type}. Status code: {status_code}",
         "error_accessing_page": "Error accessing page {page_url}. Status code: {status_code}",
-        "no_media_found": "No media found in {page_url}."
-
+        "no_media_found": "No media found in {page_url}.",
+        "apply": "Apply",
+        "help": "Help",
+        "about":"About",
+        "select_theme": "Select Theme"
 
     },
     "spanish": {
-        "window_title": "Descargador de Imágenes [Beta-V0.3]",
+        "window_title": "Descargador de Imágenes [Beta-V0.4.1]",
         "change_language": "Cambiar Idioma",
         "webpage_url": "URL de la página web:",
         "select_folder": "Seleccionar Carpeta",
@@ -51,6 +54,11 @@
         "download_success": "{resource_type} descargado con éxito: {file_path}",
         "download_error": "Error al descargar {resource_type}. Código de estado: {status_code}",
         "error_accessing_page": "Error al acceder a la página {page_url}. Código de estado: {status_code}",
-        "no_media_found": "No se encontraron medios en {page_url}."
+        "no_media_found": "No se encontraron medios en {page_url}.",
+        "apply": "Aplicar",
+        "help": "Ayuda",
+        "about":"Acerca de",
+        "select_theme": "Seleccionar Tema"
+
     }
 }

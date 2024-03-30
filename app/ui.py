@@ -7,18 +7,34 @@ from downloader.downloader import Downloader
 import threading, os,json,sys
 from pathlib import Path
 from downloader.erome import EromeDownloader
+from app.settings import open_language_settings, show_about_dialog
 
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Coomer Downloader [Beta-V0.3]")
-        self.geometry("800x600")
+        self.title("Downloader [V0.4.1]")
+
+        # Configura el tamaño de la ventana
+        window_width = 1000
+        window_height = 680
+
+        # Obtiene las dimensiones de la pantalla
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Calcula la posición x e y para centrar la ventana
+        center_x = int((screen_width / 2) - (window_width / 2))
+        center_y = int((screen_height / 2) - (window_height / 2))
+
+        # Establece la geometría de la ventana para centrarla
+        self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+
         self.download_folder = None
         self.iconbitmap("resources/img/window.ico")
         self.load_translations()
         self.current_language = "spanish"
-        self.load_language_preference()  
+        self.load_language_preference()
         self.initialize_ui()
         self.apply_translations()
         self.erome_downloader = None
@@ -32,19 +48,20 @@ class ImageDownloaderApp(ctk.CTk):
         self.menu_bar = tk.Menu(self)
         self.config(menu=self.menu_bar)
 
-       # Agregar un menú de configuración
-        self.settings_menu_label = "Configuración"  # Initial label, will be updated
+        # Configurar el menú de configuración
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label=self.settings_menu_label, menu=self.settings_menu)
+        self.menu_bar.add_cascade(label=self.translations[self.current_language]["settings_menu"], menu=self.settings_menu)
+        self.settings_menu.add_command(label=self.translations[self.current_language]["change_language"], command=lambda: open_language_settings(self))
 
-        # Store a reference to the 'Change Language' menu item
-        self.change_language_menu_item = self.settings_menu.add_command(label="Cambiar Idioma", command=self.open_language_settings)
+        # Configurar el menú de ayuda
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label=self.translations[self.current_language]["help"], menu=self.help_menu)
+        self.help_menu.add_command(label=self.translations[self.current_language]["about"], command=lambda: show_about_dialog(self))
 
         self.url_label = ctk.CTkLabel(self.input_frame, text="URL de la página web:")
         self.url_label.grid(row=1, column=0, sticky='w')
 
-        # En tu método initialize_ui, reemplaza el ctk.CTkEntry por un ctk.CTkTextbox para la entrada de URLs
-        self.url_entry = ctk.CTkTextbox(self.input_frame, width=300, height=100, wrap="none")
+        self.url_entry = ctk.CTkTextbox(self.input_frame, width=300, height=80, wrap="none")
         self.url_entry.grid(row=2, column=0, sticky='we', padx=(0, 5))
 
         # Configura el menú de clic derecho para el cuadro de texto
@@ -54,10 +71,8 @@ class ImageDownloaderApp(ctk.CTk):
         # Configura el evento de clic derecho en el cuadro de texto
         self.url_entry.bind("<Button-3>", self.show_right_click_menu)
 
-
-        self.browse_button = ctk.CTkButton(self.input_frame, text="Seleccionar Carpeta", command=self.select_folder)
+        self.browse_button = ctk.CTkButton(self.input_frame,width=30, height=80, text="Seleccionar Carpeta", command=self.select_folder)
         self.browse_button.grid(row=2, column=1, sticky='e')
-
 
         self.input_frame.columnconfigure(0, weight=1)  # Hace que la columna 0 (entrada de URL) se expanda para llenar el espacio extra
 
@@ -139,13 +154,27 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(text=t["cancel_download"])
         
         # Actualiza las etiquetas del menú y submenús directamente.
-        self.build_menus(t)
+        self.build_menus()
 
-    def build_menus(self, translations):
+    def build_menus(self):
+        # Acceso directo a las traducciones dentro del método
+        t = self.translations[self.current_language]
+        
+        # Limpiar menús existentes
         self.menu_bar.delete(0, 'end')
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label=translations["settings_menu"], menu=self.settings_menu)
-        self.settings_menu.add_command(label=translations["change_language"], command=self.open_language_settings)
+        
+        # Configurar el menú de Configuración
+        settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label=t["settings_menu"], menu=settings_menu)
+        settings_menu.add_command(label=t["change_language"], command=lambda: open_language_settings(self))
+        
+        # Configurar el menú de Ayuda
+        help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label=t["help"], menu=help_menu)
+        help_menu.add_command(label=t["about"], command=lambda: show_about_dialog(self))
+        
+        # Aplicar el menú a la ventana principal
+        self.config(menu=self.menu_bar)
 
     def setup_downloader(self):
         # Asegúrate de llamar a este método después de cargar las traducciones y cuando cambies el idioma.
@@ -174,32 +203,6 @@ class ImageDownloaderApp(ctk.CTk):
         speed_text = speed_template.format(speed=speed)
         # Actualiza el texto de 'download_speed_label' en el hilo principal de Tkinter
         self.after(0, lambda: self.download_speed_label.configure(text=speed_text))
-
-    def open_language_settings(self):
-        t = self.translations[self.current_language]
-
-        # Esta función abre un diálogo simple con opciones de idioma
-        language_window = ctk.CTkToplevel(self)
-        language_window.title(t["select_language"])
-
-        # Calcula la posición central basada en la ventana principal
-        window_width = 200
-        window_height = 100
-        position_right = int(self.winfo_screenwidth()/2 - window_width/2)
-        position_down = int(self.winfo_screenheight()/2 - window_height/2)
-
-        # Configura el tamaño y posición de la ventana
-        language_window.geometry(f"{window_width}x{window_height}+{position_right}+{position_down}")
-
-        # Si CustomTkinter es compatible con Toplevel, usa ctk.CTkButton aquí
-        ctk.CTkButton(language_window, text="English", command=lambda: self.set_language("english")).pack(fill='x', padx=20, pady=5)
-        ctk.CTkButton(language_window, text="Español", command=lambda: self.set_language("spanish")).pack(fill='x', padx=20, pady=5)
-
-        # Hace que la ventana de configuración de idioma sea modal
-        language_window.transient(self)
-        language_window.grab_set()
-        self.wait_window(language_window)
-
 
     def set_language(self, language):
         self.current_language = language
@@ -240,6 +243,15 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox.yview_moveto(1)  # Auto-scroll
 
     def start_download_wrapper(self):
+        # Obtiene el estado de las preferencias de descarga
+        download_images_pref = self.download_images_check.get()
+        download_videos_pref = self.download_videos_check.get()
+
+        # Verifica si no se ha seleccionado al menos una opción
+        if not download_images_pref and not download_videos_pref:
+            messagebox.showwarning("Advertencia", "Por favor, elija al menos una opción de descarga (imágenes o vídeos).")
+            return
+
         urls = self.url_entry.get("1.0", "end-1c").splitlines()
         urls = [url for url in urls if url.strip()]
         if len(urls) > 5:
@@ -250,24 +262,29 @@ class ImageDownloaderApp(ctk.CTk):
             self.progress_label.configure(text=translation)
             return
         self.disable_widgets()
-        # Restablecer el estado de cancelación aquí si es necesario
         self.downloader.cancel_requested = False
-        self.cancel_button.configure(state="normal")  # Reactivar el botón de cancelar para la nueva secuencia
+        self.cancel_button.configure(state="normal")
         translation = self.translations[self.current_language]["preparing_download"]
         self.progress_label.configure(text=translation)
         threading.Thread(target=self.start_download, args=(urls,)).start()
 
-    def start_download(self, urls):
-        # Inicializa la instancia de EromeDownloader con los headers
-        self.erome_downloader = EromeDownloader(
-        headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-            'Referer': 'https://www.erome.com/'
-        },
-        translations=self.translations[self.current_language],
-        log_callback=self.add_log_message  
-        )
 
+    def start_download(self, urls):
+        # Obtiene las preferencias de descarga directamente de los checkboxes en la UI.
+        download_images_pref = self.download_images_check.get()
+        download_videos_pref = self.download_videos_check.get()
+
+        # Inicializa la instancia de EromeDownloader con las preferencias de descarga
+        self.erome_downloader = EromeDownloader(
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'Referer': 'https://www.erome.com/'
+            },
+            translations=self.translations[self.current_language],
+            log_callback=self.add_log_message,
+            download_images=download_images_pref,
+            download_videos=download_videos_pref
+        )
 
         for index, url in enumerate(urls):
             if self.downloader.cancel_requested:
