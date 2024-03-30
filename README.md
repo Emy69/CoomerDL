@@ -9,7 +9,7 @@ Support to download both types of media efficiently.
 ## 
 ## [Download](https://github.com/Emy69/CoomerDL/releases) 
 ## [Discord](https://discord.gg/u5CawUYZGk)
-![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-25.png)
+![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-30.png)
 
 
 
