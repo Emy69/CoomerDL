@@ -1,6 +1,7 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import Tk, messagebox
 from tkinter import Menu
+import webbrowser
 import customtkinter as ctk
 from tkinter import filedialog
 from downloader.downloader import Downloader  
@@ -12,6 +13,7 @@ from app.settings import open_language_settings, show_about_dialog
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
+        ctk.set_appearance_mode("dark")
         super().__init__()
         self.title("Downloader [V0.4.1]")
 
@@ -38,6 +40,20 @@ class ImageDownloaderApp(ctk.CTk):
         self.initialize_ui()
         self.apply_translations()
         self.erome_downloader = None
+        self.is_downloading = False
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.closing = False
+
+    def on_close(self):
+        t = self.translations[self.current_language]
+        if self.is_downloading:
+            if messagebox.askokcancel(t["exit_title"], t["exit_confirmation"]):
+                self.closing = True  # Indicates that the application is closing
+                self.erome_downloader.request_cancel()  # Cancel the download
+                self.destroy()
+        else:
+            self.closing = True  # Indicates that the application is closing
+            self.destroy()
 
     def initialize_ui(self):
         # Frame para la URL y selección de carpeta
@@ -45,18 +61,19 @@ class ImageDownloaderApp(ctk.CTk):
         self.input_frame.pack(pady=20, fill='x', padx=20)
 
         # Crear un menú principal para la ventana
-        self.menu_bar = tk.Menu(self)
+        self.menu_bar = tk.Menu(self, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
         self.config(menu=self.menu_bar)
 
         # Configurar el menú de configuración
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
         self.menu_bar.add_cascade(label=self.translations[self.current_language]["settings_menu"], menu=self.settings_menu)
         self.settings_menu.add_command(label=self.translations[self.current_language]["change_language"], command=lambda: open_language_settings(self))
 
         # Configurar el menú de ayuda
-        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
         self.menu_bar.add_cascade(label=self.translations[self.current_language]["help"], menu=self.help_menu)
         self.help_menu.add_command(label=self.translations[self.current_language]["about"], command=lambda: show_about_dialog(self))
+        self.help_menu.add_command(label=self.translations[self.current_language]["help_and_feedback"], command=self.open_help_and_feedback)
 
         self.url_label = ctk.CTkLabel(self.input_frame, text="URL de la página web:")
         self.url_label.grid(row=1, column=0, sticky='w')
@@ -66,7 +83,7 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Configura el menú de clic derecho para el cuadro de texto
         self.right_click_menu = Menu(self, tearoff=0)
-        self.right_click_menu.add_command(label="Pegar", command=self.paste_from_clipboard)
+        self.right_click_menu.add_command(label=self.translations[self.current_language]["paste"], command=self.paste_from_clipboard)
 
         # Configura el evento de clic derecho en el cuadro de texto
         self.url_entry.bind("<Button-3>", self.show_right_click_menu)
@@ -157,24 +174,28 @@ class ImageDownloaderApp(ctk.CTk):
         self.build_menus()
 
     def build_menus(self):
-        # Acceso directo a las traducciones dentro del método
         t = self.translations[self.current_language]
-        
+
         # Limpiar menús existentes
         self.menu_bar.delete(0, 'end')
-        
+
         # Configurar el menú de Configuración
-        settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        settings_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
         self.menu_bar.add_cascade(label=t["settings_menu"], menu=settings_menu)
         settings_menu.add_command(label=t["change_language"], command=lambda: open_language_settings(self))
-        
+
         # Configurar el menú de Ayuda
-        help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        help_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
         self.menu_bar.add_cascade(label=t["help"], menu=help_menu)
         help_menu.add_command(label=t["about"], command=lambda: show_about_dialog(self))
-        
+        help_menu.add_command(label=t["help_and_feedback"], command=self.open_help_and_feedback)
+
         # Aplicar el menú a la ventana principal
         self.config(menu=self.menu_bar)
+
+        
+    def open_help_and_feedback(self):
+        webbrowser.open("https://github.com/Emy69/CoomerDL/issues")
 
     def setup_downloader(self):
         # Asegúrate de llamar a este método después de cargar las traducciones y cuando cambies el idioma.
@@ -222,11 +243,13 @@ class ImageDownloaderApp(ctk.CTk):
             self.current_language = "spanish"
 
     def request_cancel(self):
+        t = self.translations[self.current_language]
         if self.downloader:
             self.downloader.request_cancel()
         if hasattr(self, 'erome_downloader'):
             self.erome_downloader.request_cancel()
-            self.add_log_message("Descarga cancelada por el usuario.")
+            self.add_log_message(t["cancel_user"])
+
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
@@ -243,19 +266,22 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox.yview_moveto(1)  # Auto-scroll
 
     def start_download_wrapper(self):
+        current_language = self.current_language  # Asegúrate de tener esta propiedad en tu instancia de aplicación
+        translations = self.translations[current_language]
+
         # Obtiene el estado de las preferencias de descarga
         download_images_pref = self.download_images_check.get()
         download_videos_pref = self.download_videos_check.get()
 
         # Verifica si no se ha seleccionado al menos una opción
         if not download_images_pref and not download_videos_pref:
-            messagebox.showwarning("Advertencia", "Por favor, elija al menos una opción de descarga (imágenes o vídeos).")
+            messagebox.showwarning(translations["warning_title"], translations["download_option_warning"])
             return
 
         urls = self.url_entry.get("1.0", "end-1c").splitlines()
         urls = [url for url in urls if url.strip()]
         if len(urls) > 5:
-            messagebox.showinfo("Limitación", "Por favor, introduce un máximo de 5 URLs.")
+            messagebox.showinfo(translations["limitation_title"], translations["url_limit_warning"])
             return
         if not self.download_folder or not urls:
             translation = self.translations[self.current_language]["select_folder_url_valid"]
@@ -266,7 +292,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(state="normal")
         translation = self.translations[self.current_language]["preparing_download"]
         self.progress_label.configure(text=translation)
-        threading.Thread(target=self.start_download, args=(urls,)).start()
+        self.is_downloading = True
+        download_thread = threading.Thread(target=self.start_download, args=(urls,))
+        download_thread.start()
 
 
     def start_download(self, urls):
@@ -274,56 +302,65 @@ class ImageDownloaderApp(ctk.CTk):
         download_images_pref = self.download_images_check.get()
         download_videos_pref = self.download_videos_check.get()
 
-        # Inicializa la instancia de EromeDownloader con las preferencias de descarga
-        self.erome_downloader = EromeDownloader(
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-                'Referer': 'https://www.erome.com/'
-            },
-            translations=self.translations[self.current_language],
-            log_callback=self.add_log_message,
-            download_images=download_images_pref,
-            download_videos=download_videos_pref
-        )
+        try:
+            # Inicializa la instancia de EromeDownloader con las preferencias de descarga
+            root = Tk()
+            self.erome_downloader = EromeDownloader(root,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                    'Referer': 'https://www.erome.com/'
+                },
+                translations=self.translations[self.current_language],
+                log_callback=self.add_log_message,
+                download_images=download_images_pref,
+                download_videos=download_videos_pref,
+                
+                
+            )
+        
+            for index, url in enumerate(urls):
+                t = self.translations[self.current_language]
+                if self.downloader.cancel_requested or self.closing:
+                    # Registra o maneja la cancelación aquí si es necesario
+                    self.add_log_message("cancel_user")
+                    break  # Salir del ciclo for si se solicitó la cancelación
 
-        for index, url in enumerate(urls):
-            if self.downloader.cancel_requested:
-                # Registra o maneja la cancelación aquí si es necesario
-                self.add_log_message("Descarga cancelada por el usuario.")
-                break  # Salir del ciclo for si se solicitó la cancelación
+                if len(url.strip()) == 0:  # Omitir líneas vacías
+                    continue
 
-            if len(url.strip()) == 0:  # Omitir líneas vacías
-                continue
+                if "/a/" in url:
+                    self.erome_downloader.process_album_page(url, self.download_folder)
+                else:
+                    self.erome_downloader.process_profile_page(url)
 
-            if "/a/" in url:
-                self.erome_downloader.process_album_page(url, self.download_folder)
-            else:
-                self.erome_downloader.process_profile_page(url)
+                # Actualiza el log y la UI conforme sea necesario
+                self.add_log_message(t["download_completed_from"])
 
-            # Actualiza el log y la UI conforme sea necesario
-            self.add_log_message(f"Descarga completada desde {url}")
+                self.progress_label.configure(text=f"Descargando de {url}...")
+                image_urls, folder_name = self.downloader.generate_image_links(url)
+                if folder_name:
+                    specific_download_folder = os.path.join(self.download_folder, folder_name)
+                    os.makedirs(specific_download_folder, exist_ok=True)
+                    self.downloader.download_folder = specific_download_folder
+                else:
+                    self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
+                download_images_pref = self.download_images_check.get()
+                download_videos_pref = self.download_videos_check.get()
+                self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
+                if index < len(urls) - 1 and not self.downloader.cancel_requested:
+                # Si quedan más URLs y no se ha solicitado la cancelación, asegúrate de que el botón siga activo
+                    self.cancel_button.configure(state="normal")
+                else:
+                    # Si es la última URL o se solicitó la cancelación, se puede desactivar el botón
+                    self.cancel_button.configure(state="disabled")
 
-            self.progress_label.configure(text=f"Descargando de {url}...")
-            image_urls, folder_name = self.downloader.generate_image_links(url)
-            if folder_name:
-                specific_download_folder = os.path.join(self.download_folder, folder_name)
-                os.makedirs(specific_download_folder, exist_ok=True)
-                self.downloader.download_folder = specific_download_folder
-            else:
-                self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
-            download_images_pref = self.download_images_check.get()
-            download_videos_pref = self.download_videos_check.get()
-            self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
-            if index < len(urls) - 1 and not self.downloader.cancel_requested:
-            # Si quedan más URLs y no se ha solicitado la cancelación, asegúrate de que el botón siga activo
-                self.cancel_button.configure(state="normal")
-            else:
-                # Si es la última URL o se solicitó la cancelación, se puede desactivar el botón
-                self.cancel_button.configure(state="disabled")
-
-        # Asegúrate de reactivar los widgets correctamente al finalizar todas las descargas
-        self.enable_widgets()
-        self.progress_label.configure(text=self.translations[self.current_language]["log_message_download_complete"])
+            # Asegúrate de reactivar los widgets correctamente al finalizar todas las descargas
+            self.enable_widgets()
+            self.progress_label.configure(text=self.translations[self.current_language]["log_message_download_complete"])
+        finally:
+            self.is_downloading = False
+            if self.closing:
+                self.after(0, self.destroy)
 
     def disable_widgets(self):
         # Deshabilita los widgets para evitar interacción durante la descarga.
