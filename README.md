@@ -23,13 +23,21 @@ Support to download both types of media efficiently.
 
 ### Installation
 
-#### Clone the repository
-````git clone https://github.com/Emy69/CoomerDL.git````
+1. **Clone the repository**
+```bash
+git clone https://github.com/Emy69/CoomerDL.git
+```
 
-````cd CoomerDL````
+```bash
+cd CoomerDL
+```
 
-#### Install the dependencies
-````pip install -r requirements.txt````
+2. **Install the dependencies**
+```bash
+pip install -r requirements.txt
+```
 
-### Usage
-````python main.py````
+3. **Usage**
+```bash
+python main.py
+```
