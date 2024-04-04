@@ -1,11 +1,9 @@
 import tkinter as tk
-from tkinter import Tk, messagebox
-from tkinter import Menu
 import webbrowser
 import customtkinter as ctk
-from tkinter import filedialog
-from downloader.downloader import Downloader  
-import threading, os,json,sys
+from tkinter import filedialog, messagebox,Tk
+from downloader.downloader import Downloader
+import threading, os, json, sys
 from pathlib import Path
 from downloader.erome import EromeDownloader
 from app.settings import open_language_settings, show_about_dialog
@@ -82,7 +80,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_entry.grid(row=2, column=0, sticky='we', padx=(0, 5))
 
         # Configura el menú de clic derecho para el cuadro de texto
-        self.right_click_menu = Menu(self, tearoff=0)
+        self.right_click_menu = tk.Menu(self, tearoff=0)
         self.right_click_menu.add_command(label=self.translations[self.current_language]["paste"], command=self.paste_from_clipboard)
 
         # Configura el evento de clic derecho en el cuadro de texto
@@ -145,17 +143,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.right_click_menu.grab_release()
 
     def load_translations(self):
-        # Verificar si se está ejecutando como un ejecutable congelado
-        if getattr(sys, 'frozen', False):
-            # Si es así, usar la ruta relativa al ejecutable
-            application_path = Path(sys.executable).parent
-        else:
-            # Si no, usar la ruta relativa al script
-            application_path = Path(__file__).parent.parent
-
-        path_to_file = application_path / 'resources' / 'languages.json'
-
-        with open(path_to_file, 'r', encoding='utf-8') as f:
+        application_path = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent.parent
+        with open(application_path / 'resources' / 'languages.json', 'r', encoding='utf-8') as f:
             self.translations = json.load(f)
 
     def apply_translations(self):
@@ -163,6 +152,7 @@ class ImageDownloaderApp(ctk.CTk):
         
         # Actualiza el título de la ventana y otros elementos UI directamente.
         self.title(t["window_title"])
+
         self.url_label.configure(text=t["webpage_url"])
         self.browse_button.configure(text=t["select_folder"])
         self.download_images_check.configure(text=t["download_images"])
@@ -174,24 +164,20 @@ class ImageDownloaderApp(ctk.CTk):
         self.build_menus()
 
     def build_menus(self):
-        t = self.translations[self.current_language]
-
-        # Limpiar menús existentes
         self.menu_bar.delete(0, 'end')
+        self.create_menu(self.settings_menu, self.translations[self.current_language]["settings_menu"], [
+            (self.translations[self.current_language]["change_language"], lambda: open_language_settings(self))
+        ])
+        self.create_menu(self.help_menu, self.translations[self.current_language]["help"], [
+            (self.translations[self.current_language]["about"], lambda: show_about_dialog(self)),
+            (self.translations[self.current_language]["help_and_feedback"], self.open_help_and_feedback)
+        ])
 
-        # Configurar el menú de Configuración
-        settings_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.menu_bar.add_cascade(label=t["settings_menu"], menu=settings_menu)
-        settings_menu.add_command(label=t["change_language"], command=lambda: open_language_settings(self))
-
-        # Configurar el menú de Ayuda
-        help_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.menu_bar.add_cascade(label=t["help"], menu=help_menu)
-        help_menu.add_command(label=t["about"], command=lambda: show_about_dialog(self))
-        help_menu.add_command(label=t["help_and_feedback"], command=self.open_help_and_feedback)
-
-        # Aplicar el menú a la ventana principal
-        self.config(menu=self.menu_bar)
+    def create_menu(self, parent, label, commands):
+        menu = tk.Menu(parent, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
+        self.menu_bar.add_cascade(label=label, menu=menu)
+        for command_label, command in commands:
+            menu.add_command(label=command_label, command=command)
 
         
     def open_help_and_feedback(self):
@@ -369,8 +355,11 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_entry.configure(state="disabled")
 
     def enable_widgets(self):
-        # Habilita los widgets una vez finalizada la descarga.
-        self.cancel_button.configure(state="disabled")  
+        self.after(0, self._enable_widgets_safe)
+
+    def _enable_widgets_safe(self):
+        # Este método ahora se ejecuta de forma segura en el hilo principal
+        self.cancel_button.configure(state="disabled")
         self.browse_button.configure(state="normal")
         self.download_button.configure(state="normal")
         self.url_entry.configure(state="normal")
