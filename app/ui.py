@@ -13,34 +13,30 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.4.1]")
-
-        # Configura el tamaño de la ventana
-        window_width = 1000
-        window_height = 680
-
-        # Obtiene las dimensiones de la pantalla
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-
-        # Calcula la posición x e y para centrar la ventana
-        center_x = int((screen_width / 2) - (window_width / 2))
-        center_y = int((screen_height / 2) - (window_height / 2))
-
-        # Establece la geometría de la ventana para centrarla
-        self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-
-        self.download_folder = None
-        self.iconbitmap("resources/img/window.ico")
+        self.title("Downloader [V0.4.2]")
+        self.setup_window()
         self.load_translations()
         self.current_language = "spanish"
         self.load_language_preference()
         self.initialize_ui()
         self.apply_translations()
-        self.erome_downloader = None
+        self.setup_downloader()
         self.is_downloading = False
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.closing = False
+        self.erome_downloader = None
+
+    def setup_window(self):
+        window_width = 1000
+        window_height = 680
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        center_x = int((screen_width / 2) - (window_width / 2))
+        center_y = int((screen_height / 2) - (window_height / 2))
+        self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        self.download_folder = None
+        self.iconbitmap("resources/img/window.ico")
+
 
     def on_close(self):
         t = self.translations[self.current_language]
