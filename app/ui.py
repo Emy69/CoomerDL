@@ -19,22 +19,19 @@ class ImageDownloaderApp(ctk.CTk):
         self.setup_window()
         self.active_downloader = None
         self.patch_notes = PatchNotes(self, self.tr)
-        # Aquí pasas los métodos relevantes al constructor de SettingsWindow
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
         
-        # Aquí deberías llamar a load_language_preference para obtener el idioma actual y luego cargar las traducciones.
-        lang = self.load_language_preference()  # Corrección aquí, usar load_language_preference
+        lang = self.load_language_preference() 
         self.load_translations(lang)
         
         self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         self.initialize_ui()
 
-    
+
     def save_language_preference(self, language_code):
         config = {'language': language_code}
         with open('resources/config/languages/save_language/language_config.json', 'w') as config_file:
             json.dump(config, config_file)
-        # Cargar de nuevo las traducciones para aplicar el cambio inmediatamente
         self.load_translations(language_code)
         self.update_ui_texts()
     
@@ -66,16 +63,19 @@ class ImageDownloaderApp(ctk.CTk):
 
     def initialize_ui(self):
         self.input_frame = ctk.CTkFrame(self)
-        self.input_frame.pack(pady=20, fill='x', padx=20)
+        self.input_frame.pack(fill='x', padx=20, pady=20) 
+
+        self.input_frame.grid_columnconfigure(0, weight=1)  
+        self.input_frame.grid_rowconfigure(1, weight=1)
 
         self.url_label = ctk.CTkLabel(self.input_frame, text=self.tr("URL de la página web:"))
-        self.url_label.grid(row=1, column=0, sticky='w')
+        self.url_label.grid(row=0, column=0, sticky='w')  
 
-        self.url_entry = ctk.CTkTextbox(self.input_frame, width=820, height=80, wrap="none")
-        self.url_entry.grid(row=2, column=0, sticky='ew', padx=(0, 5))
+        self.url_entry = ctk.CTkTextbox(self.input_frame, height=80, wrap="none")
+        self.url_entry.grid(row=1, column=0, sticky='ew', padx=(0, 5))
 
-        self.browse_button = ctk.CTkButton(self.input_frame, width=30, height=80, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
-        self.browse_button.grid(row=2, column=1, sticky='e')
+        self.browse_button = ctk.CTkButton(self.input_frame, height=80, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
+        self.browse_button.grid(row=1, column=1, sticky='e')
 
         self.folder_path = ctk.CTkLabel(self.input_frame, text="")
         self.folder_path.grid(row=3, column=0, columnspan=2, sticky='w')

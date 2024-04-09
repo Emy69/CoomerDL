@@ -13,7 +13,7 @@ class BunkrDownloader:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'Accept-Language': 'en-US,en;q=0.9',
-            # Añade más headers si es necesario
+            
         }
         self.cancel_requested = False
         
@@ -39,7 +39,7 @@ class BunkrDownloader:
     def descargar_archivo(self, url_media, ruta_carpeta):
         if self.cancel_requested:
             self.log("Descarga cancelada por el usuario.")
-            return  # Salir temprano si se solicitó la cancelación
+            return  
 
         max_intentos = 3
         for intento in range(max_intentos):
@@ -54,7 +54,7 @@ class BunkrDownloader:
                         if self.cancel_requested:
                             self.log("Descarga cancelada durante la descarga del archivo.")
                             archivo.close()
-                            os.remove(ruta_archivo)  # Considera eliminar el archivo parcialmente descargado
+                            os.remove(ruta_archivo)  
                             return
                         archivo.write(chunk)
                 self.log(f"Archivo descargado: {nombre_archivo}")

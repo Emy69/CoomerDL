@@ -33,7 +33,7 @@ class Downloader:
     def generate_image_links(self, start_url):
         image_urls = []
         folder_name = ""
-        user_id = ""  # Agregar variable para capturar el identificador de usuario
+        user_id = ""  
         try:
             response = requests.get(start_url, headers=self.headers)
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -49,10 +49,10 @@ class Downloader:
                 if data_id and data_service and data_user:
                     image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
                     image_urls.append(image_url)
-                    user_id = data_user  # Asignar data-user a user_id
+                    user_id = data_user  
         except Exception as e:
             self.log(f"Error collecting links: {e}")
-        return image_urls, folder_name, user_id  # Devolver user_id
+        return image_urls, folder_name, user_id  
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type, user_id):
         if self.cancel_requested:
@@ -71,7 +71,7 @@ class Downloader:
                 if not os.path.exists(user_folder):
                     os.makedirs(user_folder)
                 # Sanitizar el nombre del archivo para eliminar caracteres no válidos
-                filename = os.path.basename(media_url).split('?')[0]  # Eliminar query parameters
+                filename = os.path.basename(media_url).split('?')[0]  
                 # Reemplazar caracteres no válidos en Windows
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
                 filepath = os.path.join(user_folder, filename)
@@ -85,7 +85,6 @@ class Downloader:
             self.log(f"Error downloading: {e}")
 
     def download_media(self, image_urls, user_id, download_images=True, download_videos=True):
-        # Envuelve las operaciones de descarga en una función interna para ejecutar en un hilo
         def download_task():
             try:
                 for i, page_url in enumerate(image_urls):
