@@ -1,30 +1,58 @@
+import json
+import threading
 import tkinter as tk
-import webbrowser
-import customtkinter as ctk
-from tkinter import filedialog, messagebox,Tk
-from downloader.downloader import Downloader
-import threading, os, json, sys
 from pathlib import Path
-from downloader.erome import EromeDownloader
-from app.settings import open_language_settings, show_about_dialog
+import customtkinter as ctk
+from tkinter import filedialog, messagebox
 
+from .patch_notes import PatchNotes
+from downloader.erome import EromeDownloader
+from downloader.downloader import Downloader
+from downloader.bunkr import BunkrDownloader
+from .settings_window import SettingsWindow
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.4.2]")
+        self.title("Downloader [V0.5]")
         self.setup_window()
-        self.load_translations()
-        self.current_language = "spanish"
-        self.load_language_preference()
+        self.active_downloader = None
+        self.patch_notes = PatchNotes(self, self.tr)
+        # Aquí pasas los métodos relevantes al constructor de SettingsWindow
+        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
+        
+        # Aquí deberías llamar a load_language_preference para obtener el idioma actual y luego cargar las traducciones.
+        lang = self.load_language_preference()  # Corrección aquí, usar load_language_preference
+        self.load_translations(lang)
+        
+        self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         self.initialize_ui()
-        self.apply_translations()
-        self.setup_downloader()
-        self.is_downloading = False
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.closing = False
-        self.erome_downloader = None
+
+    
+    def save_language_preference(self, language_code):
+        config = {'language': language_code}
+        with open('resources/config/languages/save_language/language_config.json', 'w') as config_file:
+            json.dump(config, config_file)
+        # Cargar de nuevo las traducciones para aplicar el cambio inmediatamente
+        self.load_translations(language_code)
+        self.update_ui_texts()
+    
+    def load_language_preference(self):
+        try:
+            with open('resources/config/languages/save_language/language_config.json', 'r') as config_file:
+                config = json.load(config_file)
+                return config.get('language', 'en')  # Retorna el idioma guardado o 'en' por defecto
+        except FileNotFoundError:
+            return 'en'  # Si el archivo no existe, retorna 'en' como idioma predeterminado
+
+    def load_translations(self, lang):
+        path = f"resources/config/languages/{lang}.json"
+        with open(path, 'r', encoding='utf-8') as file:
+            self.translations = json.load(file)
+    
+    def tr(self, text):
+        return self.translations.get(text, text)
 
     def setup_window(self):
         window_width = 1000
@@ -34,328 +62,202 @@ class ImageDownloaderApp(ctk.CTk):
         center_x = int((screen_width / 2) - (window_width / 2))
         center_y = int((screen_height / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-        self.download_folder = None
         self.iconbitmap("resources/img/window.ico")
 
-
-    def on_close(self):
-        t = self.translations[self.current_language]
-        if self.is_downloading:
-            if messagebox.askokcancel(t["exit_title"], t["exit_confirmation"]):
-                self.closing = True  # Indicates that the application is closing
-                self.erome_downloader.request_cancel()  # Cancel the download
-                self.destroy()
-        else:
-            self.closing = True  # Indicates that the application is closing
-            self.destroy()
-
     def initialize_ui(self):
-        # Frame para la URL y selección de carpeta
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.pack(pady=20, fill='x', padx=20)
 
-        # Crear un menú principal para la ventana
-        self.menu_bar = tk.Menu(self, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.config(menu=self.menu_bar)
-
-        # Configurar el menú de configuración
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.menu_bar.add_cascade(label=self.translations[self.current_language]["settings_menu"], menu=self.settings_menu)
-        self.settings_menu.add_command(label=self.translations[self.current_language]["change_language"], command=lambda: open_language_settings(self))
-
-        # Configurar el menú de ayuda
-        self.help_menu = tk.Menu(self.menu_bar, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.menu_bar.add_cascade(label=self.translations[self.current_language]["help"], menu=self.help_menu)
-        self.help_menu.add_command(label=self.translations[self.current_language]["about"], command=lambda: show_about_dialog(self))
-        self.help_menu.add_command(label=self.translations[self.current_language]["help_and_feedback"], command=self.open_help_and_feedback)
-
-        self.url_label = ctk.CTkLabel(self.input_frame, text="URL de la página web:")
+        self.url_label = ctk.CTkLabel(self.input_frame, text=self.tr("URL de la página web:"))
         self.url_label.grid(row=1, column=0, sticky='w')
 
-        self.url_entry = ctk.CTkTextbox(self.input_frame, width=300, height=80, wrap="none")
-        self.url_entry.grid(row=2, column=0, sticky='we', padx=(0, 5))
+        self.url_entry = ctk.CTkTextbox(self.input_frame, width=820, height=80, wrap="none")
+        self.url_entry.grid(row=2, column=0, sticky='ew', padx=(0, 5))
 
-        # Configura el menú de clic derecho para el cuadro de texto
-        self.right_click_menu = tk.Menu(self, tearoff=0)
-        self.right_click_menu.add_command(label=self.translations[self.current_language]["paste"], command=self.paste_from_clipboard)
-
-        # Configura el evento de clic derecho en el cuadro de texto
-        self.url_entry.bind("<Button-3>", self.show_right_click_menu)
-
-        self.browse_button = ctk.CTkButton(self.input_frame,width=30, height=80, text="Seleccionar Carpeta", command=self.select_folder)
+        self.browse_button = ctk.CTkButton(self.input_frame, width=30, height=80, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
         self.browse_button.grid(row=2, column=1, sticky='e')
-
-        self.input_frame.columnconfigure(0, weight=1)  # Hace que la columna 0 (entrada de URL) se expanda para llenar el espacio extra
 
         self.folder_path = ctk.CTkLabel(self.input_frame, text="")
         self.folder_path.grid(row=3, column=0, columnspan=2, sticky='w')
 
-        # Frame para opciones de descarga
         self.options_frame = ctk.CTkFrame(self)
         self.options_frame.pack(pady=10, fill='x', padx=20)
 
-        self.download_images_check = ctk.CTkCheckBox(self.options_frame, text="Descargar Imágenes", onvalue=True, offvalue=False)
+        self.download_images_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Imágenes"))
         self.download_images_check.pack(side='left', padx=10)
         self.download_images_check.select()
 
-        self.download_videos_check = ctk.CTkCheckBox(self.options_frame, text="Descargar Vídeos", onvalue=True, offvalue=False)
+        self.download_videos_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Vídeos"))
         self.download_videos_check.pack(side='left', padx=10)
         self.download_videos_check.select()
 
-        # Frame para botones de acción y estado de descarga
         self.action_frame = ctk.CTkFrame(self)
         self.action_frame.pack(pady=10, fill='x', padx=20)
 
-        self.download_speed_label = ctk.CTkLabel(self.action_frame, text="Velocidad de descarga: 0 KB/s")
+        self.download_speed_label = ctk.CTkLabel(self.action_frame, text=self.tr("Velocidad de descarga: 0 KB/s"))
         self.download_speed_label.pack(side='left', padx=10)
 
-        self.download_button = ctk.CTkButton(self.action_frame, text="Descargar", command=self.start_download_wrapper)
+        self.download_button = ctk.CTkButton(self.action_frame, text=self.tr("Descargar"), command=self.start_download)
         self.download_button.pack(side='left', padx=10)
 
-        self.cancel_button = ctk.CTkButton(self.action_frame, text="Cancelar Descarga", command=self.request_cancel, state="disabled")
+        self.cancel_button = ctk.CTkButton(self.action_frame, text=self.tr("Cancelar Descarga"), state="disabled", command=self.cancel_download)
         self.cancel_button.pack(side='left', padx=10)
 
         self.progress_label = ctk.CTkLabel(self.action_frame, text="")
         self.progress_label.pack(side='left', padx=10)
 
-        # Log de actividad
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
-    
-    def paste_from_clipboard(self):
-        try:
-            # Obtiene texto del portapapeles y lo inserta en el cuadro de texto
-            text_to_paste = self.clipboard_get()
-            self.url_entry.insert('insert', text_to_paste)
-        except Exception as e:
-            print(f"Error pegando texto: {e}")
 
-    def show_right_click_menu(self, event):
-        try:
-            # Muestra el menú de clic derecho en las coordenadas del evento
-            self.right_click_menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            # Asegura que el menú de clic derecho se cierra correctamente
-            self.right_click_menu.grab_release()
+        self.context_menu = tk.Menu(self.url_entry, tearoff=0)
+        self.context_menu.add_command(label=self.tr("Pegar"), command=self.paste_from_clipboard)
 
-    def load_translations(self):
-        application_path = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent.parent
-        with open(application_path / 'resources' / 'languages.json', 'r', encoding='utf-8') as f:
-            self.translations = json.load(f)
+        self.url_entry.bind("<Button-3>", self.show_context_menu)
 
-    def apply_translations(self):
-        t = self.translations[self.current_language]
+        menubar = tk.Menu(self)
+
+        self.config(menu=menubar)
+
+        # Crear menú Archivo y añadirle opciones
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
+        file_menu.add_separator()  # Añade un separador
+        file_menu.add_command(label=self.tr("Salir"), command=self.quit)
+        menubar.add_cascade(label=self.tr("Archivo"), menu=file_menu)
+
+        # Crear menú Favoritos
+        favorites_menu = tk.Menu(menubar, tearoff=0)
+        favorites_menu.add_command(label=self.tr("Añadir a Favoritos"), command=self.add_to_favorites)
+        favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
+        menubar.add_cascade(label=self.tr("Favoritos"), menu=favorites_menu)
+
+        # Crear menú Acerca de
+        about_menu = tk.Menu(menubar, tearoff=0)
+        about_menu.add_command(label=self.tr("Acerca de"), command=self.show_about)
+        menubar.add_cascade(label=self.tr("Acerca de"), menu=about_menu)
+        about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
+
+        # Configurar la barra de menú en la ventana
+        self.config(menu=menubar)
         
-        # Actualiza el título de la ventana y otros elementos UI directamente.
-        self.title(t["window_title"])
+    def update_ui_texts(self):
+        self.url_label.configure(text=self.tr("URL de la página web:"))
+        self.browse_button.configure(text=self.tr("Seleccionar Carpeta"))
+        self.download_images_check.configure(text=self.tr("Descargar Imágenes"))
+        self.download_videos_check.configure(text=self.tr("Descargar Vídeos"))
+        self.download_button.configure(text=self.tr("Descargar"))
+        self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
 
-        self.url_label.configure(text=t["webpage_url"])
-        self.browse_button.configure(text=t["select_folder"])
-        self.download_images_check.configure(text=t["download_images"])
-        self.download_videos_check.configure(text=t["download_videos"])
-        self.download_button.configure(text=t["download"])
-        self.cancel_button.configure(text=t["cancel_download"])
+        self.title(self.tr("Downloader [V0.5]"))
+
+    def add_to_favorites(self):
+        messagebox.showinfo("Favoritos", "coming soon")
+
+    def show_favorites(self):
+        messagebox.showinfo("Favoritos", "coming soon")
+
+    def show_about(self):
+        messagebox.showinfo("Acerca de", "Downloader [V0.5]\nDesarrollado por: Emy69")
         
-        # Actualiza las etiquetas del menú y submenús directamente.
-        self.build_menus()
-
-    def build_menus(self):
-        self.menu_bar.delete(0, 'end')
-        self.create_menu(self.settings_menu, self.translations[self.current_language]["settings_menu"], [
-            (self.translations[self.current_language]["change_language"], lambda: open_language_settings(self))
-        ])
-        self.create_menu(self.help_menu, self.translations[self.current_language]["help"], [
-            (self.translations[self.current_language]["about"], lambda: show_about_dialog(self)),
-            (self.translations[self.current_language]["help_and_feedback"], self.open_help_and_feedback)
-        ])
-
-    def create_menu(self, parent, label, commands):
-        menu = tk.Menu(parent, tearoff=0, bg="#333333", fg="white", bd=0, activebackground="#555555", activeforeground="white")
-        self.menu_bar.add_cascade(label=label, menu=menu)
-        for command_label, command in commands:
-            menu.add_command(label=command_label, command=command)
-
-        
-    def open_help_and_feedback(self):
-        webbrowser.open("https://github.com/Emy69/CoomerDL/issues")
-
-    def setup_downloader(self):
-        # Asegúrate de llamar a este método después de cargar las traducciones y cuando cambies el idioma.
-        self.downloader = Downloader(
+    def setup_erome_downloader(self):
+        self.erome_downloader = EromeDownloader(
+            root=self,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'Referer': 'https://www.erome.com/'
+            },
+            log_callback=self.add_log_message_safe,
+            download_images=self.download_images_check.get(),
+            download_videos=self.download_videos_check.get()
+        )
+    def setup_bunkr_downloader(self):
+        self.bunkr_downloader = BunkrDownloader(
             download_folder=self.download_folder,
-            translations=self.translations[self.current_language],  # Traducciones basadas en el idioma actual
-            log_callback=self.add_log_message,
-            enable_widgets_callback=self.enable_widgets,
-            update_speed_callback=self.update_download_speed
+            log_callback=self.add_log_message_safe,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                'Referer': 'https://bunkr.si/',
+            }
         )
     
-    def toggle_language(self):
-        # Cambiar el idioma actual
-        self.current_language = "english" if self.current_language == "spanish" else "spanish"
-        
-        # Aplicar las traducciones al UI basado en el nuevo idioma
-        self.apply_translations()
-        
-        # Actualizar las traducciones usadas en Downloader
-        self.setup_downloader()
-
-    def update_download_speed(self, speed):
-        # Obtiene la traducción para 'download_speed'
-        speed_template = self.translations[self.current_language]["download_speed"]
-        # Formatea la cadena con el valor de velocidad actual
-        speed_text = speed_template.format(speed=speed)
-        # Actualiza el texto de 'download_speed_label' en el hilo principal de Tkinter
-        self.after(0, lambda: self.download_speed_label.configure(text=speed_text))
-
-    def set_language(self, language):
-        self.current_language = language
-        self.apply_translations()
-        self.save_language_preference()
-    
-    def save_language_preference(self):
-        with open("resources/config/config.json", "w") as config_file:
-            json.dump({"language": self.current_language}, config_file)
-
-    def load_language_preference(self):
-        try:
-            with open("resources/config/config.json", "r") as config_file:
-                config = json.load(config_file)
-                self.current_language = config.get("language", "spanish")
-        except FileNotFoundError:
-            self.current_language = "spanish"
-
-    def request_cancel(self):
-        t = self.translations[self.current_language]
-        if self.downloader:
-            self.downloader.request_cancel()
-        if hasattr(self, 'erome_downloader'):
-            self.erome_downloader.request_cancel()
-            self.add_log_message(t["cancel_user"])
-
+    def setup_general_downloader(self):
+        self.general_downloader = Downloader(
+            download_folder=self.download_folder,
+            log_callback=self.add_log_message_safe,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                'Referer': 'https://coomer.su/',
+            },
+            download_images = None,
+            download_videos = None
+        )
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
-        if folder_selected:  
-            self.folder_path.configure(text=folder_selected)
-            self.download_folder = folder_selected  
-            self.setup_downloader()
+        if folder_selected:
+            self.download_folder = folder_selected
+            self.folder_path.configure(text=folder_selected)  # Actualiza el texto del widget con la ruta
 
-    def add_log_message(self, message):
-        message = f"{message}\n"
-        self.log_textbox.configure(state='normal')  # Habilitar escritura
-        self.log_textbox.insert('end', message + '\n')  # Agregar mensaje
-        self.log_textbox.configure(state='disabled')
-        self.log_textbox.yview_moveto(1)  # Auto-scroll
-
-    def start_download_wrapper(self):
-        current_language = self.current_language  # Asegúrate de tener esta propiedad en tu instancia de aplicación
-        translations = self.translations[current_language]
-
-        # Obtiene el estado de las preferencias de descarga
-        download_images_pref = self.download_images_check.get()
-        download_videos_pref = self.download_videos_check.get()
-
-        # Verifica si no se ha seleccionado al menos una opción
-        if not download_images_pref and not download_videos_pref:
-            messagebox.showwarning(translations["warning_title"], translations["download_option_warning"])
+    def start_download(self):
+        url = self.url_entry.get("1.0", "end-1c").strip()
+        if not hasattr(self, 'download_folder') or not self.download_folder:
+            messagebox.showerror("Error", "Por favor, selecciona una carpeta de descarga.")
             return
-
-        urls = self.url_entry.get("1.0", "end-1c").splitlines()
-        urls = [url for url in urls if url.strip()]
-        if len(urls) > 5:
-            messagebox.showinfo(translations["limitation_title"], translations["url_limit_warning"])
-            return
-        if not self.download_folder or not urls:
-            translation = self.translations[self.current_language]["select_folder_url_valid"]
-            self.progress_label.configure(text=translation)
-            return
-        self.disable_widgets()
-        self.downloader.cancel_requested = False
-        self.cancel_button.configure(state="normal")
-        translation = self.translations[self.current_language]["preparing_download"]
-        self.progress_label.configure(text=translation)
-        self.is_downloading = True
-        download_thread = threading.Thread(target=self.start_download, args=(urls,))
-        download_thread.start()
-
-
-    def start_download(self, urls):
-        # Obtiene las preferencias de descarga directamente de los checkboxes en la UI.
-        download_images_pref = self.download_images_check.get()
-        download_videos_pref = self.download_videos_check.get()
-
-        try:
-            # Inicializa la instancia de EromeDownloader con las preferencias de descarga
-            root = Tk()
-            self.erome_downloader = EromeDownloader(root,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-                    'Referer': 'https://www.erome.com/'
-                },
-                translations=self.translations[self.current_language],
-                log_callback=self.add_log_message,
-                download_images=download_images_pref,
-                download_videos=download_videos_pref,
-                
-                
-            )
         
-            for index, url in enumerate(urls):
-                t = self.translations[self.current_language]
-                if self.downloader.cancel_requested or self.closing:
-                    # Registra o maneja la cancelación aquí si es necesario
-                    self.add_log_message("cancel_user")
-                    break  # Salir del ciclo for si se solicitó la cancelación
+        download_images = self.download_images_check.get() 
+        download_videos = self.download_videos_check.get()
 
-                if len(url.strip()) == 0:  # Omitir líneas vacías
-                    continue
+        if "erome.com" in url:
+            self.add_log_message_safe("Iniciando descarga desde Erome...")
+            self.setup_erome_downloader()
+            self.active_downloader = self.erome_downloader
+            if '/a/' in url:
+                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images , download_videos))
+            else:
+                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, download_images , download_videos))
 
-                if "/a/" in url:
-                    self.erome_downloader.process_album_page(url, self.download_folder)
-                else:
-                    self.erome_downloader.process_profile_page(url)
+        elif "bunkr.si" in url:
+            self.add_log_message_safe("Iniciando descarga desde Bunkr...")
+            self.setup_bunkr_downloader()
+            self.active_downloader = self.bunkr_downloader
+            download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url, download_images, download_videos))
+        elif "https://coomer.su/" in url or "https://kemono.su/" in url:
+            self.add_log_message_safe("Iniciando descarga...")
+            self.setup_general_downloader()
+            self.active_downloader = self.general_downloader
+            image_urls, _, user_id = self.general_downloader.generate_image_links(url)
+            download_thread = threading.Thread(target=self.active_downloader.download_media, args=(image_urls, user_id, download_images, download_videos))
+        else:
+            self.add_log_message_safe("No se encontraron enlaces válidos para descargar.")
+            return
+        download_thread.start()
+        self.cancel_button.configure(state="normal")
 
-                # Actualiza el log y la UI conforme sea necesario
-                self.add_log_message(t["download_completed_from"])
+    def cancel_download(self):
+        if self.active_downloader:
+            self.active_downloader.request_cancel()
+            self.cancel_button.configure(state="disabled")
+            self.add_log_message_safe("Cancelando la descarga...")
+        else:
+            self.add_log_message_safe("No hay una descarga en curso para cancelar.")
 
-                self.progress_label.configure(text=f"Descargando de {url}...")
-                image_urls, folder_name = self.downloader.generate_image_links(url)
-                if folder_name:
-                    specific_download_folder = os.path.join(self.download_folder, folder_name)
-                    os.makedirs(specific_download_folder, exist_ok=True)
-                    self.downloader.download_folder = specific_download_folder
-                else:
-                    self.add_log_message("No se pudo obtener el nombre de la página, usando carpeta predeterminada.")
-                download_images_pref = self.download_images_check.get()
-                download_videos_pref = self.download_videos_check.get()
-                self.downloader.download_images(image_urls, download_images_pref, download_videos_pref)
-                if index < len(urls) - 1 and not self.downloader.cancel_requested:
-                # Si quedan más URLs y no se ha solicitado la cancelación, asegúrate de que el botón siga activo
-                    self.cancel_button.configure(state="normal")
-                else:
-                    # Si es la última URL o se solicitó la cancelación, se puede desactivar el botón
-                    self.cancel_button.configure(state="disabled")
+    def add_log_message_safe(self, message):
+        def log_in_main_thread():
+            self.log_textbox.configure(state='normal')
+            self.log_textbox.insert('end', message + '\n')
+            self.log_textbox.configure(state='disabled')
+            self.log_textbox.yview_moveto(1)
+        self.after(0, log_in_main_thread)
 
-            # Asegúrate de reactivar los widgets correctamente al finalizar todas las descargas
-            self.enable_widgets()
-            self.progress_label.configure(text=self.translations[self.current_language]["log_message_download_complete"])
+    def paste_from_clipboard(self):
+        try:
+            self.url_entry.delete("1.0", tk.END)  # Borra el contenido actual
+            self.url_entry.insert(tk.END, self.clipboard_get())  # Pega desde el portapapeles
+        except tk.TclError:
+            pass  # Maneja la excepción si el portapapeles está vacío o contiene un formato no soportado
+    
+    def show_context_menu(self, event):
+        try:
+            self.context_menu.tk_popup(event.x_root, event.y_root)
         finally:
-            self.is_downloading = False
-            if self.closing:
-                self.after(0, self.destroy)
-
-    def disable_widgets(self):
-        # Deshabilita los widgets para evitar interacción durante la descarga.
-        self.browse_button.configure(state="disabled")
-        self.download_button.configure(state="disabled")
-        self.url_entry.configure(state="disabled")
-
-    def enable_widgets(self):
-        self.after(0, self._enable_widgets_safe)
-
-    def _enable_widgets_safe(self):
-        # Este método ahora se ejecuta de forma segura en el hilo principal
-        self.cancel_button.configure(state="disabled")
-        self.browse_button.configure(state="normal")
-        self.download_button.configure(state="normal")
-        self.url_entry.configure(state="normal")
+            self.context_menu.grab_release()
