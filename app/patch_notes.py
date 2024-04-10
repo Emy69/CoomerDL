@@ -28,10 +28,10 @@ class PatchNotes:
         patch_notes_content.pack(pady=10, padx=10)
 
         dont_show_again_var = tk.IntVar(value=0)
-        dont_show_again_check = CTkCheckBox(patch_notes_window, text="No mostrar de nuevo", variable=dont_show_again_var)
+        dont_show_again_check = CTkCheckBox(patch_notes_window, text=self.tr("No_mostrar"), variable=dont_show_again_var)
         dont_show_again_check.pack()
 
-        ok_button = CTkButton(patch_notes_window, text="OK", command=lambda: self.close_patch_notes(patch_notes_window, dont_show_again_var))
+        ok_button = CTkButton(patch_notes_window, text=self.tr("OK"), command=lambda: self.close_patch_notes(patch_notes_window, dont_show_again_var))
         ok_button.pack(pady=10)
     
     def close_patch_notes(self, window, dont_show_again_var):

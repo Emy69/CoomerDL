@@ -147,17 +147,16 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_videos_check.configure(text=self.tr("Descargar Vídeos"))
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
-
         self.title(self.tr("Downloader [V0.5]"))
 
     def add_to_favorites(self):
-        messagebox.showinfo("Favoritos", "coming soon")
+        messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
 
     def show_favorites(self):
-        messagebox.showinfo("Favoritos", "coming soon")
+        messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
 
     def show_about(self):
-        messagebox.showinfo("Acerca de", "Downloader [V0.5]\nDesarrollado por: Emy69")
+        messagebox.showinfo(self.tr("Acerca de"), self.tr("Downloader [V0.5]\nDesarrollado por: Emy69"))
         
     def setup_erome_downloader(self):
         self.erome_downloader = EromeDownloader(
@@ -196,19 +195,19 @@ class ImageDownloaderApp(ctk.CTk):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
             self.download_folder = folder_selected
-            self.folder_path.configure(text=folder_selected)  # Actualiza el texto del widget con la ruta
+            self.folder_path.configure(text=folder_selected)
 
     def start_download(self):
         url = self.url_entry.get("1.0", "end-1c").strip()
         if not hasattr(self, 'download_folder') or not self.download_folder:
-            messagebox.showerror("Error", "Por favor, selecciona una carpeta de descarga.")
+            messagebox.showerror(self.tr("Error"), self.tr("carpeta_descarga"))
             return
         
         download_images = self.download_images_check.get() 
         download_videos = self.download_videos_check.get()
 
         if "erome.com" in url:
-            self.add_log_message_safe("Iniciando descarga desde Erome...")
+            self.add_log_message_safe(self.tr("Iniciando descarga desde Erome..."))
             self.setup_erome_downloader()
             self.active_downloader = self.erome_downloader
             if '/a/' in url:
@@ -217,7 +216,7 @@ class ImageDownloaderApp(ctk.CTk):
                 download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, download_images , download_videos))
 
         elif "bunkr.si" in url:
-            self.add_log_message_safe("Iniciando descarga desde Bunkr...")
+            self.add_log_message_safe(self.tr("Descarga_Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
             download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url, download_images, download_videos))

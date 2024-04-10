@@ -25,5 +25,15 @@
     "download_error": "Download error: {resource_type}, status code: {status_code}",
     "access_page_error": "Error accessing page {page_url}. Status code: {status_code}",
     "unknown_album": "Unknown Album",
-    "patch_notes_text": "Patch Notes - Version 0.5:\n\n- Download functionality for Bunkr is not fully implemented yet due to the complexity of the page.\n- Issues have been identified in downloads from Coomer and Kemono, where the interface may stop responding momentarily during the first download.\n- Download from Erome is functioning correctly.\n- The code has been restructured and clarified for easier future updates and maintenance.\n\nWe appreciate your understanding and patience as we work on these improvements. We hope to release more stable updates and new features soon!"
+    "carpeta_descarga":"Please select a download folder.",
+    "Archivo": "File",
+    "Favoritos":"Favorites",
+    "No_mostrar":"Do not show again",
+    "coming_soon":"Coming soon",
+    "Descarga_Bunkr":"Starting download from Bunkr...",
+    "OK":"OK",
+    "Idioma":"Language",
+    "Aplicar":"Apply",
+    "Selecciona_idioma":"Select a language:",
+    "patch_notes_text": "Patch Notes - Version 0.5:\n\n- Download functionality for Bunkr is not fully implemented yet due to the complexity of the page.\n- Download from Erome is functioning correctly.\n- The code has been restructured and clarified for easier future updates and maintenance.\n\nWe appreciate your understanding and patience as we work on these improvements. We hope to release more stable updates and new features soon!"
 }

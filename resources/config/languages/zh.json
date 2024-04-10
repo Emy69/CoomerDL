@@ -25,5 +25,15 @@
     "download_error": "下载错误：{resource_type}，状态码：{status_code}",
     "access_page_error": "访问页面错误 {page_url}。状态码：{status_code}",
     "unknown_album": "未知相册",
-    "patch_notes_text": "补丁说明 - 版本 0.5:\n\n- 由于页面的复杂性，Bunkr的下载功能尚未完全实现。\n- 在从Coomer和Kemono下载时发现了一些问题，其中界面可能会在第一次下载期间暂时停止响应。\n- 从Erome下载正常工作。\n- 代码已经被重构和澄清，以便更容易进行未来的更新和维护。\n\n我们感谢您的理解和耐心，因为我们正在努力进行这些改进。我们希望很快发布更稳定的更新和新功能！"
+    "carpeta_descarga":"请选择下载文件夹。",
+    "Archivo": "档案",
+    "Favoritos":"最爱",
+    "No_mostrar":"不再显示",
+    "coming_soon":"即将推出",
+    "Descarga_Bunkr":"从 Bunkr... 开始下载",
+    "OK":"好的",
+    "Idioma":"语言",
+    "Aplicar":"申请",
+    "Selecciona_idioma":"选择语言",
+    "patch_notes_text": "补丁说明 - 版本 0.5:\n\n- 由于页面的复杂性，Bunkr的下载功能尚未完全实现。\n- 从Erome下载正常工作。\n- 代码已经被重构和澄清，以便更容易进行未来的更新和维护。\n\n我们感谢您的理解和耐心，因为我们正在努力进行这些改进。我们希望很快发布更稳定的更新和新功能！"
 }

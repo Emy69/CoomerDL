@@ -25,5 +25,15 @@
     "download_error": "Error en descarga: {resource_type}, código de estado: {status_code}",
     "access_page_error": "Error al acceder a la página {page_url}. Código de estado: {status_code}",
     "unknown_album": "Álbum Desconocido",
-    "patch_notes_text": "Notas de Parche - Versión 0.5:\n\n- La funcionalidad de descarga para Bunkr aún no está completamente implementada debido a la complejidad de la página.\n- Se han identificado algunos problemas en las descargas de Coomer y Kemono, donde la interfaz puede dejar de responder momentáneamente durante la primera descarga.\n- La descarga desde Erome está funcionando correctamente.\n- Se ha reestructurado y clarificado el código para facilitar futuras actualizaciones y mantenimiento.\n\nAgradecemos tu comprensión y paciencia mientras trabajamos en estas mejoras. ¡Esperamos lanzar actualizaciones más estables y nuevas funcionalidades pronto!"
+    "carpeta_descarga":"Por favor, selecciona una carpeta de descarga.",
+    "Archivo": "Archivo",
+    "Favoritos":"Favoritos",
+    "No_mostrar":"No mostrar de nuevo",
+    "coming_soon":"Próximamente",
+    "Descarga_Bunkr":"Iniciando descarga desde Bunkr...",
+    "OK":"OK",
+    "Idioma":"Idioma",
+    "Aplicar":"Aplicar",
+    "Selecciona_idioma":"Selecciona un idioma:",
+    "patch_notes_text": "Notas de Parche - Versión 0.5:\n\n- La funcionalidad de descarga para Bunkr aún no está completamente implementada debido a la complejidad de la página.\n- La descarga desde Erome está funcionando correctamente.\n- Se ha reestructurado y clarificado el código para facilitar futuras actualizaciones y mantenimiento.\n\nAgradecemos tu comprensión y paciencia mientras trabajamos en estas mejoras. ¡Esperamos lanzar actualizaciones más estables y nuevas funcionalidades pronto!"
 }

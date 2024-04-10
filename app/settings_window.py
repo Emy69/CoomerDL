@@ -12,10 +12,10 @@ class SettingsWindow:
 
     def open_settings(self):
         # Crea una ventana de configuraciones directamente con la ventana principal como padre
-        settings_window = ctk.CTkToplevel(self.parent)  # Aquí se pasa self.parent en lugar de self
+        settings_window = ctk.CTkToplevel(self.parent)  
         settings_window.title(self.translate("Configuraciones"))
         settings_window.geometry("400x300")
-        settings_window.transient(self.parent)  # Asegúrate de que el argumento aquí sea la ventana principal
+        settings_window.transient(self.parent)  
         settings_window.grab_set()
 
         # Panel izquierdo para opciones de configuración
@@ -26,8 +26,8 @@ class SettingsWindow:
         settings_frame = ctk.CTkFrame(settings_window)
         settings_frame.pack(side="right", expand=True, fill="both")
         
-        # Ejemplo de opciones de configuración
-        language_button = ctk.CTkButton(options_frame, text="Idioma", command=lambda: self.show_language_settings(settings_frame))
+        # opciones de configuración
+        language_button = ctk.CTkButton(options_frame, text=self.translate("Idioma"), command=lambda: self.show_language_settings(settings_frame))
         language_button.pack(pady=5)
 
     def show_language_settings(self, parent_frame):
@@ -35,18 +35,18 @@ class SettingsWindow:
         for widget in parent_frame.winfo_children():
             widget.destroy()
 
-        language_label = ctk.CTkLabel(parent_frame, text=self.translate("Selecciona un idioma:"))
+        language_label = ctk.CTkLabel(parent_frame, text=self.translate("Selecciona_idioma"))
         language_label.pack()
 
         # Actualiza el diccionario para incluir los nuevos idiomas y sus códigos
         languages = {
             "Español": "es",
-            "Inglés": "en",
-            "Japonés": "ja",
-            "Chino": "zh",
-            "Francés": "fr",
-            "Portugués": "pt",
-            "Ruso": "ru"
+            "English": "en",
+            "日本語": "ja",
+            "日语": "zh",
+            "Français": "fr",
+            "Português": "pt",
+            "Русский": "ru"
         }
         language_combobox = ctk.CTkComboBox(parent_frame, values=list(languages.keys()))
         language_combobox.pack()
