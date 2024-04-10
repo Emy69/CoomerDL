@@ -1,5 +1,3 @@
-> ⚠️ **Important:** No more updates will be published in this repository temporarily. If you want to access to the latest versions, please visit the [Discord](https://discord.gg/u5CawUYZGk) ⚠️
-
 # Coomer Downloader App 
 It is a desktop application developed in Python, which allows users to easily download images and videos. Using an intuitive graphical user interface (GUI), users can simply enter the URL and download.
 ## Supported pages
