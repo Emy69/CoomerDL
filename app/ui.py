@@ -2,20 +2,25 @@ import json
 import threading
 import tkinter as tk
 from pathlib import Path
+from tkinter import Image, scrolledtext
 import customtkinter as ctk
+from tkinter import PhotoImage
 from tkinter import filedialog, messagebox
+from customtkinter import CTkImage
+from PIL import Image, ImageTk
 
 from .patch_notes import PatchNotes
 from downloader.erome import EromeDownloader
 from downloader.downloader import Downloader
 from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
+from downloader.youtube import YouTubeDownloader
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5]")
+        self.title("Downloader [V0.5.1]")
         self.setup_window()
         self.active_downloader = None
         self.patch_notes = PatchNotes(self, self.tr)
@@ -134,6 +139,13 @@ class ImageDownloaderApp(ctk.CTk):
         # Crear menú Acerca de
         about_menu = tk.Menu(menubar, tearoff=0)
         about_menu.add_command(label=self.tr("Acerca de"), command=self.show_about)
+        self.site_logos = {
+            "Erome": "resources/img/logos/erome_logo.png",
+            "Bunkr": "resources/img/logos/bunkr_logo.png",
+            "Coomer.su": "resources/img/logos/coomer_logo.png",
+            "Kemono.su": "resources/img/logos/kemono_logo.png",
+            "YouTube": "resources/img/logos/youtube_logo.png",
+        }
         menubar.add_cascade(label=self.tr("Acerca de"), menu=about_menu)
         about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
 
@@ -155,9 +167,39 @@ class ImageDownloaderApp(ctk.CTk):
     def show_favorites(self):
         messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
 
+    def create_photoimage(self, path, size=(32, 32)):
+        img = Image.open(path)
+        img = img.resize(size, Image.Resampling.LANCZOS)  
+        photoimg = ImageTk.PhotoImage(img)
+        return photoimg
+
     def show_about(self):
-        messagebox.showinfo(self.tr("Acerca de"), self.tr("Downloader [V0.5]\nDesarrollado por: Emy69"))
+        about_window = ctk.CTkToplevel(self)
+        about_window.title("Acerca de")
+        about_window.geometry("400x350")
+        about_window.grab_set()
         
+        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.1]", font=("Arial", 14, "bold"))
+        title_label.pack(pady=(10, 5))
+
+        description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
+        description_label.pack(pady=(0, 20))
+        
+        for site, logo_path in self.site_logos.items():
+            site_frame = ctk.CTkFrame(about_window)
+            site_frame.pack(fill='x', padx=20, pady=5)
+            
+            logo_image = self.create_photoimage(logo_path)
+            logo_label = tk.Label(site_frame, image=logo_image)  # Usa tk.Label en lugar de ctk.CTkLabel
+            logo_label.image = logo_image  # Guarda una referencia
+            logo_label.pack(side='left', padx=10)
+            
+            site_label = ctk.CTkLabel(site_frame, text=site)
+            site_label.pack(side='left')
+
+        ok_button = ctk.CTkButton(about_window, text="OK", command=about_window.destroy)
+        ok_button.pack(pady=10)
+ 
     def setup_erome_downloader(self):
         self.erome_downloader = EromeDownloader(
             root=self,
@@ -190,6 +232,20 @@ class ImageDownloaderApp(ctk.CTk):
             download_images = None,
             download_videos = None
         )
+        
+    def setup_youtube_downloader(self, youtube_url):
+        if youtube_url:
+            try:
+                downloader = YouTubeDownloader(youtube_url)
+                video_info = downloader.get_video_info()
+                self.add_log_message_safe(f"Iniciando descarga de: {video_info['title']} por {video_info['channel']}")
+                result_message = downloader.download_video(self.download_folder)
+                self.add_log_message_safe(result_message)
+            except Exception as e:
+                self.add_log_message_safe(f"Error al descargar el video: {str(e)}")
+                messagebox.showerror("Error", "Ha ocurrido un error durante la descarga del video de YouTube.")
+        else:
+            messagebox.showerror("Error", "Por favor, introduce una URL de YouTube válida.")
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
@@ -220,12 +276,17 @@ class ImageDownloaderApp(ctk.CTk):
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
             download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url, download_images, download_videos))
+        
         elif "https://coomer.su/" in url or "https://kemono.su/" in url:
             self.add_log_message_safe("Iniciando descarga...")
             self.setup_general_downloader()
             self.active_downloader = self.general_downloader
             image_urls, _, user_id = self.general_downloader.generate_image_links(url)
             download_thread = threading.Thread(target=self.active_downloader.download_media, args=(image_urls, user_id, download_images, download_videos))
+        
+        elif "youtube.com" in url or "youtu.be" in url:
+            self.add_log_message_safe("Iniciando descarga...")
+            download_thread = threading.Thread(target=self.setup_youtube_downloader, args=(url,))
         else:
             self.add_log_message_safe("No se encontraron enlaces válidos para descargar.")
             return

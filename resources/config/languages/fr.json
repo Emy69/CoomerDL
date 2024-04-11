@@ -35,6 +35,6 @@
     "Idioma":"Langue",
     "Aplicar":"Appliquer",
     "Selecciona_idioma":"Sélectionner une langue",
-    "patch_notes_text": "Notes de mise à jour - Version 0.5 :\n\n- La fonctionnalité de téléchargement pour Bunkr n'est pas encore entièrement implémentée en raison de la complexité de la page.\n- Le téléchargement depuis Erome fonctionne correctement.\n- Le code a été restructuré et clarifié pour faciliter les mises à jour futures et la maintenance.\n\nNous apprécions votre compréhension et votre patience alors que nous travaillons sur ces améliorations. Nous espérons lancer bientôt des mises à jour plus stables et de nouvelles fonctionnalités !"
+    "patch_notes_text": "Notes de mise à jour - Version 0.5.1:\n\n- Toute l'interface a été traduite, mais pas les messages du journal.\n- Le travail sur Bunkr est en cours, donc cela ne fonctionne pas encore avec les CheckBoxes.\n\nNous apprécions votre compréhension et votre patience pendant que nous travaillons sur ces améliorations. Nous espérons lancer des mises à jour plus stables et de nouvelles fonctionnalités bientôt !"
 
 }

@@ -35,5 +35,5 @@
     "Idioma":"Idioma",
     "Aplicar":"Aplicar",
     "Selecciona_idioma":"Selecciona un idioma:",
-    "patch_notes_text": "Notas de Parche - Versión 0.5:\n\n- La funcionalidad de descarga para Bunkr aún no está completamente implementada debido a la complejidad de la página.\n- La descarga desde Erome está funcionando correctamente.\n- Se ha reestructurado y clarificado el código para facilitar futuras actualizaciones y mantenimiento.\n\nAgradecemos tu comprensión y paciencia mientras trabajamos en estas mejoras. ¡Esperamos lanzar actualizaciones más estables y nuevas funcionalidades pronto!"
+    "patch_notes_text": "Notas de Parche - Versión 0.5.1:\n\n- Se tradujo toda la interfaz pero no los mensajes del log.\n- En Bunkr se sigue trabajando por lo que aun no funcion junto con los CheckBox.\n\nAgradecemos tu comprensión y paciencia mientras trabajamos en estas mejoras. ¡Esperamos lanzar actualizaciones más estables y nuevas funcionalidades pronto!"
 }
