@@ -5,7 +5,6 @@ It is a desktop application developed in Python, which allows users to easily do
 - https://kemono.su/
 - https://www.erome.com/
 - https://bunkr-albums.io/ (work in progress )
-- https://www.youtube.com/
 ## Features.
     
 ### Downloading images and videos
