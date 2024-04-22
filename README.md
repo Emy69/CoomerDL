@@ -45,3 +45,9 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+## Explore My Other Projects
+
+### :camera: Image Compressor ![Version](https://img.shields.io/badge/version-2024.04.19-blue.svg)
+A handy tool for reducing image file sizes while maintaining quality. Perfect for optimizing web pages and saving bandwidth. Check it out [here](https://github.com/Emy69/Image-Compressor).
+
