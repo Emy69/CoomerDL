@@ -14,7 +14,6 @@ from downloader.erome import EromeDownloader
 from downloader.downloader import Downloader
 from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
-from downloader.youtube import YouTubeDownloader
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -144,7 +143,6 @@ class ImageDownloaderApp(ctk.CTk):
             "Bunkr": "resources/img/logos/bunkr_logo.png",
             "Coomer.su": "resources/img/logos/coomer_logo.png",
             "Kemono.su": "resources/img/logos/kemono_logo.png",
-            "YouTube": "resources/img/logos/youtube_logo.png",
         }
         menubar.add_cascade(label=self.tr("Acerca de"), menu=about_menu)
         about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
@@ -225,28 +223,17 @@ class ImageDownloaderApp(ctk.CTk):
         self.general_downloader = Downloader(
             download_folder=self.download_folder,
             log_callback=self.add_log_message_safe,
+            enable_widgets_callback=self.enable_widgets,  # Aquí pasas el callback
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://coomer.su/',
             },
-            download_images = None,
-            download_videos = None
+            download_images=self.download_images_check.get(),
+            download_videos=self.download_videos_check.get()
         )
-        
-    def setup_youtube_downloader(self, youtube_url):
-        if youtube_url:
-            try:
-                downloader = YouTubeDownloader(youtube_url)
-                video_info = downloader.get_video_info()
-                self.add_log_message_safe(f"Iniciando descarga de: {video_info['title']} por {video_info['channel']}")
-                result_message = downloader.download_video(self.download_folder)
-                self.add_log_message_safe(result_message)
-            except Exception as e:
-                self.add_log_message_safe(f"Error al descargar el video: {str(e)}")
-                messagebox.showerror("Error", "Ha ocurrido un error durante la descarga del video de YouTube.")
-        else:
-            messagebox.showerror("Error", "Por favor, introduce una URL de YouTube válida.")
 
+        
+    
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
@@ -256,50 +243,49 @@ class ImageDownloaderApp(ctk.CTk):
     def start_download(self):
         url = self.url_entry.get("1.0", "end-1c").strip()
         if not hasattr(self, 'download_folder') or not self.download_folder:
-            messagebox.showerror(self.tr("Error"), self.tr("carpeta_descarga"))
+            messagebox.showerror(self.tr("Error"), self.tr("Por favor, selecciona una carpeta de descarga."))
             return
-        
+
         download_images = self.download_images_check.get() 
         download_videos = self.download_videos_check.get()
+
+        # Habilita el botón de cancelar y deshabilita el botón de descarga
+        self.download_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
 
         if "erome.com" in url:
             self.add_log_message_safe(self.tr("Iniciando descarga desde Erome..."))
             self.setup_erome_downloader()
             self.active_downloader = self.erome_downloader
-            if '/a/' in url:
-                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images , download_videos))
-            else:
-                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, download_images , download_videos))
-
+            download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images, download_videos))
         elif "bunkr.si" in url:
-            self.add_log_message_safe(self.tr("Descarga_Bunkr"))
+            self.add_log_message_safe(self.tr("Iniciando descarga desde Bunkr..."))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
-            download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url, download_images, download_videos))
-        
+            download_thread = threading.Thread(target=self.bunkr_downloader.download, args=(url,))
         elif "https://coomer.su/" in url or "https://kemono.su/" in url:
-            self.add_log_message_safe("Iniciando descarga...")
+            self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
             self.active_downloader = self.general_downloader
             image_urls, _, user_id = self.general_downloader.generate_image_links(url)
             download_thread = threading.Thread(target=self.active_downloader.download_media, args=(image_urls, user_id, download_images, download_videos))
-        
-        elif "youtube.com" in url or "youtu.be" in url:
-            self.add_log_message_safe("Iniciando descarga...")
-            download_thread = threading.Thread(target=self.setup_youtube_downloader, args=(url,))
         else:
-            self.add_log_message_safe("No se encontraron enlaces válidos para descargar.")
+            self.add_log_message_safe(self.tr("No se encontraron enlaces válidos para descargar."))
+            self.download_button.configure(state="normal")
+            self.cancel_button.configure(state="disabled")
             return
+
         download_thread.start()
-        self.cancel_button.configure(state="normal")
+
 
     def cancel_download(self):
         if self.active_downloader:
             self.active_downloader.request_cancel()
-            self.cancel_button.configure(state="disabled")
             self.add_log_message_safe("Cancelando la descarga...")
         else:
             self.add_log_message_safe("No hay una descarga en curso para cancelar.")
+        self.download_button.configure(state="normal")  
+        self.cancel_button.configure(state="disabled")  
 
     def add_log_message_safe(self, message):
         def log_in_main_thread():
@@ -314,10 +300,14 @@ class ImageDownloaderApp(ctk.CTk):
             self.url_entry.delete("1.0", tk.END)  # Borra el contenido actual
             self.url_entry.insert(tk.END, self.clipboard_get())  # Pega desde el portapapeles
         except tk.TclError:
-            pass  # Maneja la excepción si el portapapeles está vacío o contiene un formato no soportado
+            pass  
     
     def show_context_menu(self, event):
         try:
             self.context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.context_menu.grab_release()
+
+    def enable_widgets(self):
+        self.download_button.configure(state="normal")  
+        self.cancel_button.configure(state="disabled")  

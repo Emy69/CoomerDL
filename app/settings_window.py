@@ -48,7 +48,7 @@ class SettingsWindow:
             "Português": "pt",
             "Русский": "ru"
         }
-        language_combobox = ctk.CTkComboBox(parent_frame, values=list(languages.keys()))
+        language_combobox = ctk.CTkComboBox(parent_frame, values=list(languages.keys()), state='readonly')
         language_combobox.pack()
 
         apply_button = ctk.CTkButton(parent_frame, text=self.translate("Aplicar"), command=lambda: self.apply_language_settings(language_combobox.get(), languages))

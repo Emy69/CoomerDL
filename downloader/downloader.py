@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import os
 from urllib.parse import urljoin
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 class Downloader:
     def __init__(self, download_folder, log_callback=None, download_images=True, 
@@ -20,6 +21,8 @@ class Downloader:
         self.media_counter = 0 
         self.download_images = download_images
         self.download_videos = download_videos  
+        self.image_executor = ThreadPoolExecutor(max_workers=3)  # Executor for images
+        self.video_executor = ThreadPoolExecutor(max_workers=6)
 
 
     def log(self, message):
@@ -70,13 +73,13 @@ class Downloader:
                 user_folder = os.path.join(self.download_folder, user_id)
                 if not os.path.exists(user_folder):
                     os.makedirs(user_folder)
-                # Sanitizar el nombre del archivo para eliminar caracteres no válidos
-                filename = os.path.basename(media_url).split('?')[0]  
-                # Reemplazar caracteres no válidos en Windows
+                filename = os.path.basename(media_url).split('?')[0]
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
                 filepath = os.path.join(user_folder, filename)
+                # Aumentar el tamaño del chunk aquí
+                chunk_size = 524288  # 512 KB, aumenta según sea necesario
                 with open(filepath, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=65536):
+                    for chunk in r.iter_content(chunk_size=chunk_size):
                         if self.cancel_requested:
                             break
                         f.write(chunk)
@@ -85,31 +88,36 @@ class Downloader:
             self.log(f"Error downloading: {e}")
 
     def download_media(self, image_urls, user_id, download_images=True, download_videos=True):
-        def download_task():
-            try:
-                for i, page_url in enumerate(image_urls):
-                    if self.cancel_requested:
-                        break
+        futures = []
+        try:
+            for i, page_url in enumerate(image_urls):
+                if self.cancel_requested:
+                    break
 
-                    page_response = requests.get(page_url)
-                    page_soup = BeautifulSoup(page_response.content, 'html.parser')
-                    if download_images:
-                        image_elements = page_soup.select('div.post__thumbnail img')
-                        for idx, image_element in enumerate(image_elements):
-                            self.process_media_element(image_element, i, idx, page_url, "image", user_id)
+                page_response = requests.get(page_url)
+                page_soup = BeautifulSoup(page_response.content, 'html.parser')
+                if download_images:
+                    image_elements = page_soup.select('div.post__thumbnail img')
+                    for idx, image_element in enumerate(image_elements):
+                        futures.append(self.image_executor.submit(self.process_media_element, image_element, i, idx, page_url, "image", user_id))
 
-                    if download_videos:
-                        video_elements = page_soup.select('ul.post__attachments li.post__attachment a.post__attachment-link')
-                        for idx, video_element in enumerate(video_elements):
-                            self.process_media_element(video_element, i, idx, page_url, "video", user_id)
-                            
+                if download_videos:
+                    video_elements = page_soup.select('ul.post__attachments li.post__attachment a.post__attachment-link')
+                    for idx, video_element in enumerate(video_elements):
+                        futures.append(self.video_executor.submit(self.process_media_element, video_element, i, idx, page_url, "video", user_id))
+
+        except Exception as e:
+            self.log(f"Error during download: {e}")
+        finally:
+            # Wait for all futures to complete
+            for future in futures:
+                future.result()  # This will block until the future has completed
+
+            self.image_executor.shutdown()
+            self.video_executor.shutdown()
+
+            if not self.cancel_requested:
                 self.log("Download complete.")
-            except Exception as e:
-                self.log(f"Error during download: {e}")
-            finally:
-                if self.enable_widgets_callback:
-                    self.enable_widgets_callback()
-        
-        # Inicia el hilo de descarga
-        download_thread = threading.Thread(target=download_task)
-        download_thread.start()
+            
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()  # Re-enable UI elements here
