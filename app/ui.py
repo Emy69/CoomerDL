@@ -19,7 +19,7 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5.1]")
+        self.title("Downloader [V0.5.4]")
         self.setup_window()
         self.active_downloader = None
         self.patch_notes = PatchNotes(self, self.tr)
