@@ -1,5 +1,5 @@
-customtkinter==5.2.2
-beautifulsoup4==4.12.3
-urllib3==1.26.18
-requests==2.31.0
-pillow==10.3.0
+customtkinter
+beautifulsoup4
+urllib3
+requests
+pillow
