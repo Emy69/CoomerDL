@@ -31,9 +31,14 @@
     "No_mostrar":"No mostrar de nuevo",
     "coming_soon":"Próximamente",
     "Descarga_Bunkr":"Iniciando descarga desde Bunkr...",
+    "Descarga_Erome":"Iniciando descarga desde Erome...",
+    "URL_album":"Detectado URL de álbum, procediendo a descargar álbum.",
+    "URL_perfil":"Detectado URL de perfil, procediendo a descargar perfil.",
+    "enlaces_validos":"No se encontraron enlaces válidos para descargar.",
+    "album_download_complete": "Descarga de álbum '{album_name}' completada.",
+    "profile_download_complete": "Descarga de perfil '{profile_name}' completada.",
     "OK":"OK",
     "Idioma":"Idioma",
     "Aplicar":"Aplicar",
-    "Selecciona_idioma":"Selecciona un idioma:",
-    "patch_notes_text": "Notas de Parche - Versión 0.5.1:\n\n- Se tradujo toda la interfaz pero no los mensajes del log.\n- En Bunkr se sigue trabajando por lo que aun no funcion junto con los CheckBox.\n\nAgradecemos tu comprensión y paciencia mientras trabajamos en estas mejoras. ¡Esperamos lanzar actualizaciones más estables y nuevas funcionalidades pronto!"
+    "Selecciona_idioma":"Selecciona un idioma:"
 }

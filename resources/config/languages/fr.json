@@ -31,10 +31,14 @@
     "No_mostrar":"Ne plus montrer",
     "coming_soon":"Prochainement",
     "Descarga_Bunkr":"Démarrage du téléchargement à partir de Bunkr...",
+    "Descarga_Erome":"Démarrage du téléchargement à partir d'Erome...",
+    "URL_album":"URL de l'album détecté, procéder au téléchargement de l'album.",
+    "URL_perfil":"URL du profil détectée, procéder au téléchargement du profil.",
+    "enlaces_validos":"Aucun lien de téléchargement valide n'a été trouvé.",
+    "album_download_complete": "Téléchargement de l'album '{album_name}' terminé.",
+    "profile_download_complete": "Téléchargement du profil '{profile_name}' terminé.",
     "OK":"OK",
     "Idioma":"Langue",
     "Aplicar":"Appliquer",
-    "Selecciona_idioma":"Sélectionner une langue",
-    "patch_notes_text": "Notes de mise à jour - Version 0.5.1:\n\n- Toute l'interface a été traduite, mais pas les messages du journal.\n- Le travail sur Bunkr est en cours, donc cela ne fonctionne pas encore avec les CheckBoxes.\n\nNous apprécions votre compréhension et votre patience pendant que nous travaillons sur ces améliorations. Nous espérons lancer des mises à jour plus stables et de nouvelles fonctionnalités bientôt !"
-
+    "Selecciona_idioma":"Sélectionner une langue"
 }

@@ -31,10 +31,14 @@
     "No_mostrar":"Do not show again",
     "coming_soon":"Coming soon",
     "Descarga_Bunkr":"Starting download from Bunkr...",
+    "Descarga_Erome":"Starting download from Erome...",
+    "URL_album":"Album URL detected, proceeding to download album.",
+    "URL_perfil":"Profile URL detected, proceeding to download profile.",
+    "enlaces_validos":"No valid download links were found.",
+    "album_download_complete": "Album download '{album_name}' completed.",
+    "profile_download_complete": "Profile download '{profile_name}' completed.",
     "OK":"OK",
     "Idioma":"Language",
     "Aplicar":"Apply",
-    "Selecciona_idioma":"Select a language:",
-    "patch_notes_text": "Patch Notes - Version 0.5.1:\n\n- The entire interface has been translated, but not the log messages.\n- Work on Bunkr is ongoing, so it still doesn't work with CheckBoxes yet.\n\nWe appreciate your understanding and patience as we work on these improvements. We hope to release more stable updates and new features soon!"
-
+    "Selecciona_idioma":"Select a language:"
 }

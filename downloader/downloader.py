@@ -21,9 +21,8 @@ class Downloader:
         self.media_counter = 0 
         self.download_images = download_images
         self.download_videos = download_videos  
-        self.image_executor = ThreadPoolExecutor(max_workers=3)  # Executor for images
-        self.video_executor = ThreadPoolExecutor(max_workers=6)
-
+        self.image_executor = ThreadPoolExecutor(max_workers=3)
+        self.video_executor = ThreadPoolExecutor(max_workers=2)
 
     def log(self, message):
         if self.log_callback:
@@ -120,4 +119,4 @@ class Downloader:
                 self.log("Download complete.")
             
             if self.enable_widgets_callback:
-                self.enable_widgets_callback()  # Re-enable UI elements here
+                self.enable_widgets_callback()  

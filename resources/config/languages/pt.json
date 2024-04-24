@@ -31,10 +31,14 @@
     "No_mostrar":"Não voltar a mostrar",
     "coming_soon":"Em breve",
     "Descarga_Bunkr":"Iniciar a transferência a partir de Bunkr...",
+    "Descarga_Erome":"A iniciar o download do Erome...",
+    "URL_album":"URL do álbum detectado, avançar para a transferência do álbum.",
+    "URL_perfil":"URL do perfil detectado, avançar para a transferência do perfil.",
+    "enlaces_validos":"Não foram encontradas ligações de transferência válidas.",
+    "album_download_complete": "Download do álbum '{album_name}' completado.",
+    "profile_download_complete": "Download do perfil '{profile_name}' completado.",
     "OK":"OK",
     "Idioma":"Língua",
     "Aplicar":"Aplicar",
-    "Selecciona_idioma":"Selecionar uma língua",
-    "patch_notes_text": "Notas de Patch - Versão 0.5.1:\n\n- Toda a interface foi traduzida, mas não as mensagens do log.\n- O trabalho no Bunkr está em andamento, por isso ainda não funciona com CheckBoxes.\n\nAgradecemos a sua compreensão e paciência enquanto trabalhamos nessas melhorias. Esperamos lançar atualizações mais estáveis e novas funcionalidades em breve!"
-
+    "Selecciona_idioma":"Selecionar uma língua"
 }

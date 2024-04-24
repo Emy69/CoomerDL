@@ -19,7 +19,7 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5.4]")
+        self.title("Downloader [V0.5.3]")
         self.setup_window()
         self.active_downloader = None
         self.patch_notes = PatchNotes(self, self.tr)
@@ -30,7 +30,6 @@ class ImageDownloaderApp(ctk.CTk):
         
         self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         self.initialize_ui()
-
 
     def save_language_preference(self, language_code):
         config = {'language': language_code}
@@ -177,7 +176,7 @@ class ImageDownloaderApp(ctk.CTk):
         about_window.geometry("400x350")
         about_window.grab_set()
         
-        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.1]", font=("Arial", 14, "bold"))
+        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.3]", font=("Arial", 14, "bold"))
         title_label.pack(pady=(10, 5))
 
         description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
@@ -201,6 +200,7 @@ class ImageDownloaderApp(ctk.CTk):
     def setup_erome_downloader(self):
         self.erome_downloader = EromeDownloader(
             root=self,
+            enable_widgets_callback=self.enable_widgets,
             headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
                 'Referer': 'https://www.erome.com/'
@@ -223,7 +223,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.general_downloader = Downloader(
             download_folder=self.download_folder,
             log_callback=self.add_log_message_safe,
-            enable_widgets_callback=self.enable_widgets,  # Aquí pasas el callback
+            enable_widgets_callback=self.enable_widgets, 
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://coomer.su/',
@@ -254,12 +254,20 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(state="normal")
 
         if "erome.com" in url:
-            self.add_log_message_safe(self.tr("Iniciando descarga desde Erome..."))
+            self.add_log_message_safe(self.tr("Descarga_Erome"))
             self.setup_erome_downloader()
             self.active_downloader = self.erome_downloader
-            download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images, download_videos))
+            # Distingue entre descarga de perfil y álbum
+            if "/a/" in url:
+                # URL de álbum
+                self.add_log_message_safe(self.tr("URL_album"))
+                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images, download_videos))
+            else:
+                # URL de perfil
+                self.add_log_message_safe(self.tr("URL_perfil"))
+                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, download_images, download_videos))
         elif "bunkr.si" in url:
-            self.add_log_message_safe(self.tr("Iniciando descarga desde Bunkr..."))
+            self.add_log_message_safe(self.tr("Descarga_Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
             download_thread = threading.Thread(target=self.bunkr_downloader.download, args=(url,))
@@ -267,16 +275,18 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
             self.active_downloader = self.general_downloader
-            image_urls, _, user_id = self.general_downloader.generate_image_links(url)
-            download_thread = threading.Thread(target=self.active_downloader.download_media, args=(image_urls, user_id, download_images, download_videos))
+            download_thread = threading.Thread(target=self.handle_download, args=(url,))
         else:
-            self.add_log_message_safe(self.tr("No se encontraron enlaces válidos para descargar."))
+            self.add_log_message_safe(self.tr("enlaces_validos"))
             self.download_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
             return
 
         download_thread.start()
-
+    
+    def handle_download(self, url):
+        image_urls, _, user_id = self.active_downloader.generate_image_links(url)
+        self.active_downloader.download_media(image_urls, user_id, self.download_images_check.get(), self.download_videos_check.get())
 
     def cancel_download(self):
         if self.active_downloader:
@@ -297,8 +307,8 @@ class ImageDownloaderApp(ctk.CTk):
 
     def paste_from_clipboard(self):
         try:
-            self.url_entry.delete("1.0", tk.END)  # Borra el contenido actual
-            self.url_entry.insert(tk.END, self.clipboard_get())  # Pega desde el portapapeles
+            self.url_entry.delete("1.0", tk.END)  
+            self.url_entry.insert(tk.END, self.clipboard_get())  
         except tk.TclError:
             pass  
     

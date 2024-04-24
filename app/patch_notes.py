@@ -12,7 +12,7 @@ class PatchNotes:
 
         patch_notes_window = CTkToplevel(self.parent)
         patch_notes_window.title(self.tr("Notas de Parche"))
-        window_width = 1000
+        window_width = 800
         window_height = 300
 
         position_right = int(self.parent.winfo_x() + (self.parent.winfo_width() / 2) - (window_width / 2))
@@ -23,7 +23,15 @@ class PatchNotes:
         patch_notes_window.transient(self.parent)
         patch_notes_window.grab_set()
 
-        patch_notes_text = self.tr("patch_notes_text")
+        patch_notes_text = """
+            Patch Notes 0.5.3:\n
+                - Improvements in thread management to prevent interface freezing during downloads.
+                - Corrections in updating the user interface after completing or cancelling downloads.
+                - Ensured that all time-consuming operations are performed on separate threads to improve UI responsiveness.
+                - Added exception handling in download threads to prevent unexpected shutdowns and improve stability.
+                - Added the 'handle_download' method to better organize the initiation and management of downloads.
+                - General improvements in application stability and performance.
+            """
         patch_notes_content = CTkLabel(patch_notes_window, text=patch_notes_text, justify="left")
         patch_notes_content.pack(pady=10, padx=10)
 

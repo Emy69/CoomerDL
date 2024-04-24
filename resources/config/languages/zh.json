@@ -31,10 +31,14 @@
     "No_mostrar":"不再显示",
     "coming_soon":"即将推出",
     "Descarga_Bunkr":"从 Bunkr... 开始下载",
+    "Descarga_Erome":"开始从 Erome 下载...",
+    "URL_album":"检测到专辑 URL，继续下载专辑。",
+    "URL_perfil":"检测到个人资料 URL，继续下载个人资料。",
+    "enlaces_validos":"未找到有效的下载链接。",
+    "album_download_complete": "专辑 '{album_name}' 下载完成。",
+    "profile_download_complete": "个人资料 '{profile_name}' 下载完成。",
     "OK":"好的",
     "Idioma":"语言",
     "Aplicar":"申请",
-    "Selecciona_idioma":"选择语言",
-    "patch_notes_text": "补丁说明 - 版本0.5.1：\n\n- 整个界面已经翻译，但日志消息尚未翻译。\n- Bunkr的工作仍在进行中，因此它还不能与复选框一起工作。\n\n我们感谢您的理解和耐心，因为我们正在努力进行这些改进。我们希望很快发布更稳定的更新和新功能！"
-
+    "Selecciona_idioma":"选择语言"
 }

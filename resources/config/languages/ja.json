@@ -31,10 +31,14 @@
     "No_mostrar":"二度と表示しない",
     "coming_soon":"近日公開",
     "Descarga_Bunkr":"Bunkrからのダウンロードを開始...",
+    "Descarga_Erome":"Eromeからのダウンロードを開始...",
+    "URL_album":"アルバムのURLが検出されました。",
+    "URL_perfil":"プロファイルの URL が検出されました。",
+    "enlaces_validos":"有効なダウンロードリンクが見つかりませんでした。",
+    "album_download_complete": "アルバム '{album_name}' のダウンロードが完了しました。",
+    "profile_download_complete": "プロファイル '{profile_name}' のダウンロードが完了しました。",
     "OK":"OK",
     "Idioma":"言語",
     "Aplicar":"応募する",
-    "Selecciona_idioma":"言語を選択",
-    "patch_notes_text": "パッチノート - バージョン0.5.1：\n\n- インターフェース全体が翻訳されましたが、ログメッセージは翻訳されていません。\n- Bunkrについては作業中であり、まだチェックボックスと連携していません。\n\nこれらの改善に取り組んでいる間、ご理解と忍耐を賜りありがとうございます。より安定したアップデートと新機能を近々リリースできることを願っています！"
-
+    "Selecciona_idioma":"言語を選択"
 }
