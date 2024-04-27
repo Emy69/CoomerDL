@@ -16,7 +16,7 @@ Support to download both types of media efficiently.
 
 
 ## Screenshot
-![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-03-30.png)
+![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-04-27.png)
 
 
 
