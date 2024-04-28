@@ -45,4 +45,32 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+## Contributing
+
+Contributions are welcome! If you're interested in enhancing the Coomer Downloader App, please follow these steps to contribute:
+
+1. **Fork the Repository**
+   - Begin by forking the project to your GitHub account. You can do this by visiting the [repository's main page](https://github.com/Emy69/CoomerDL) and clicking the fork button.
+
+2. **Create a Branch**
+   - Create a branch in your forked repository for your changes:
+     ```bash
+     git checkout -b feature-branch-name
+     ```
+
+3. **Make Your Changes**
+   - Implement your changes and enhancements on your feature branch. Make sure to adhere to the coding standards and guidelines of the project.
+
+4. **Run Tests**
+   - If the project has any tests, run them to ensure that your changes don't break existing functionality.
+
+5. **Submit a Pull Request**
+   - Once you're ready, submit a pull request from your fork back to the original repository. Provide a clear description of your changes and any other information that might help the reviewers understand your contributions.
+
+6. **Wait for Feedback**
+   - The project maintainers will review your pull request. Based on their feedback, you might need to make additional changes.
+
+### Getting Help
+
+If you need help with your contributions, feel free to raise issues on the project's issue tracker or contact the maintainers directly.
 
