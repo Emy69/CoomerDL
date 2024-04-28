@@ -21,11 +21,10 @@ class ImageDownloaderApp(ctk.CTk):
         super().__init__()
         self.title("Downloader [V0.5.3]")
         self.setup_window()
-        self.active_downloader = None
         self.patch_notes = PatchNotes(self, self.tr)
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
         
-        lang = self.load_language_preference() 
+        lang = self.load_language_preference()
         self.load_translations(lang)
         
         self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
@@ -55,12 +54,10 @@ class ImageDownloaderApp(ctk.CTk):
         return self.translations.get(text, text)
 
     def setup_window(self):
-        window_width = 1000
-        window_height = 680
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        center_x = int((screen_width / 2) - (window_width / 2))
-        center_y = int((screen_height / 2) - (window_height / 2))
+        # Configuración centralizada de la geometría de la ventana
+        window_width, window_height = 1000, 680
+        center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
+        center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         self.iconbitmap("resources/img/window.ico")
 
@@ -289,13 +286,13 @@ class ImageDownloaderApp(ctk.CTk):
         self.active_downloader.download_media(image_urls, user_id, self.download_images_check.get(), self.download_videos_check.get())
 
     def cancel_download(self):
+        # Control centralizado para cancelar descargas
         if self.active_downloader:
             self.active_downloader.request_cancel()
             self.add_log_message_safe("Cancelando la descarga...")
         else:
             self.add_log_message_safe("No hay una descarga en curso para cancelar.")
-        self.download_button.configure(state="normal")  
-        self.cancel_button.configure(state="disabled")  
+        self.enable_widgets()
 
     def add_log_message_safe(self, message):
         def log_in_main_thread():
@@ -319,5 +316,6 @@ class ImageDownloaderApp(ctk.CTk):
             self.context_menu.grab_release()
 
     def enable_widgets(self):
-        self.download_button.configure(state="normal")  
-        self.cancel_button.configure(state="disabled")  
+        # Habilitar/deshabilitar widgets de manera centralizada
+        self.download_button.configure(state="normal")
+        self.cancel_button.configure(state="disabled")
