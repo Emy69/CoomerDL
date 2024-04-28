@@ -1,4 +1,31 @@
+# Virtual environment directories
 venv/
-setup.py
-build/
+
+# Python cache and compiled files
 __pycache__/
+*.py[cod]
+*.pyc
+
+# Python distribution artifacts
+build/
+dist/
+*.egg-info/
+
+# Test caches
+.pytest_cache/
+
+# IDE/editor configuration files
+.idea/
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Sensitive configuration files
+.env
+
+# Other files to ignore
+*.log
+*.csv
+setup.py
