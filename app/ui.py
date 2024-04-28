@@ -270,7 +270,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("Descarga_Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
-            download_thread = threading.Thread(target=self.bunkr_downloader.download, args=(url,))
+            download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url,))
         elif "https://coomer.su/" in url or "https://kemono.su/" in url:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
