@@ -21,7 +21,8 @@ class Downloader:
         self.media_counter = 0 
         self.download_images = download_images
         self.download_videos = download_videos  
-        self.image_executor = ThreadPoolExecutor(max_workers=3)
+        self.session = requests.Session()
+        self.image_executor = ThreadPoolExecutor(max_workers=4)
         self.video_executor = ThreadPoolExecutor(max_workers=2)
 
     def log(self, message):
@@ -67,18 +68,15 @@ class Downloader:
             media_url = urljoin(base_url, media_url)
         self.log(f"Starting download: {media_type} #{media_idx+1} from {page_url}")
         try:
-            with requests.get(media_url, stream=True, headers=self.headers) as r:
+            with self.session.get(media_url, stream=True, headers=self.headers) as r:
                 r.raise_for_status()
                 user_folder = os.path.join(self.download_folder, user_id)
-                if not os.path.exists(user_folder):
-                    os.makedirs(user_folder)
+                os.makedirs(user_folder, exist_ok=True)
                 filename = os.path.basename(media_url).split('?')[0]
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
                 filepath = os.path.join(user_folder, filename)
-                # Aumentar el tamaño del chunk aquí
-                chunk_size = 524288  # 512 KB, aumenta según sea necesario
                 with open(filepath, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=chunk_size):
+                    for chunk in r.iter_content(chunk_size=524288):  # 512 KB
                         if self.cancel_requested:
                             break
                         f.write(chunk)
