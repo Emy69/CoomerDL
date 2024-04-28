@@ -3,6 +3,7 @@ import requests
 import time
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse
 
 class BunkrDownloader:
     def __init__(self, download_folder, log_callback=None, headers=None):
@@ -13,38 +14,39 @@ class BunkrDownloader:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'Accept-Language': 'en-US,en;q=0.9',
-            
         }
         self.cancel_requested = False
         
-    def log(self, message):
+    def log(self, message, url=None):
+        domain = urlparse(url).netloc if url else "General"
+        full_message = f"{domain}: {message}"
         if self.log_callback is not None:
-            self.log_callback(message)
+            self.log_callback(full_message)
     
     def request_cancel(self):
-        self.cancel_requested = True   
-        self.log("La descarga ha sido cancelada.") 
+        self.cancel_requested = True
+        self.log("La descarga ha sido cancelada.")
     
     def obtener_nombre_video(self, url_pagina):
         try:
-            respuesta = requests.get(url_pagina, headers=self.headers)
+            respuesta = self.session.get(url_pagina, headers=self.headers)
             respuesta.raise_for_status()
             soup = BeautifulSoup(respuesta.text, 'html.parser')
             h1_contenido = soup.find("h1", class_="text-[20px] font-bold text-dark dark:text-white").text.strip()
             return h1_contenido
         except Exception as e:
-            self.log(f"Error al obtener el nombre del video desde {url_pagina}: {e}")
+            self.log(f"Error al obtener el nombre del video desde {url_pagina}: {e}", url=url_pagina)
             return None
 
     def descargar_archivo(self, url_media, ruta_carpeta):
         if self.cancel_requested:
-            self.log("Descarga cancelada por el usuario.")
+            self.log("Descarga cancelada por el usuario.", url=url_media)
             return  
 
         max_intentos = 3
         for intento in range(max_intentos):
             try:
-                respuesta_media = requests.get(url_media, headers=self.headers)
+                respuesta_media = self.session.get(url_media, headers=self.headers)
                 respuesta_media.raise_for_status()
                 nombre_archivo = url_media.split('/')[-1]
                 ruta_archivo = os.path.join(ruta_carpeta, nombre_archivo)
@@ -52,15 +54,15 @@ class BunkrDownloader:
                 with open(ruta_archivo, 'wb') as archivo:
                     for chunk in respuesta_media.iter_content(chunk_size=1024):
                         if self.cancel_requested:
-                            self.log("Descarga cancelada durante la descarga del archivo.")
+                            self.log("Descarga cancelada durante la descarga del archivo.", url=url_media)
                             archivo.close()
-                            os.remove(ruta_archivo)  
+                            os.remove(ruta_archivo)
                             return
                         archivo.write(chunk)
-                self.log(f"Archivo descargado: {nombre_archivo}")
+                self.log(f"Archivo descargado: {nombre_archivo}", url=url_media)
                 break
             except requests.RequestException as e:
-                self.log(f"Error al descargar desde {url_media}: {e}. Intento {intento + 1} de {max_intentos}")
+                self.log(f"Error al descargar desde {url_media}: {e}. Intento {intento + 1} de {max_intentos}", url=url_media)
                 if intento < max_intentos - 1:
                     time.sleep(3)
 
