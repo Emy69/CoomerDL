@@ -1,3 +1,7 @@
+![Windows Compatibility](https://img.shields.io/badge/Windows-10%2C%2011-blue)
+![Linux Compatibility](https://img.shields.io/badge/Linux-Compatible-green)
+![macOS Compatibility](https://img.shields.io/badge/macOS-Coming%20Soon-lightgrey)
+
 # Coomer Downloader App 
 It is a desktop application developed in Python, which allows users to easily download images and videos. Using an intuitive graphical user interface (GUI), users can simply enter the URL and download.
 ## Supported pages
