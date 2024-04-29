@@ -1,5 +1,6 @@
 # Virtual environment directories
 venv/
+myenv/
 
 # Python cache and compiled files
 __pycache__/
