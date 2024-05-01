@@ -19,7 +19,7 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5.3]")
+        self.title("Downloader [V0.5.4]")
         self.setup_window()
         self.patch_notes = PatchNotes(self, self.tr)
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
@@ -173,7 +173,7 @@ class ImageDownloaderApp(ctk.CTk):
         about_window.geometry("400x350")
         about_window.grab_set()
         
-        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.3]", font=("Arial", 14, "bold"))
+        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.4]", font=("Arial", 14, "bold"))
         title_label.pack(pady=(10, 5))
 
         description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
