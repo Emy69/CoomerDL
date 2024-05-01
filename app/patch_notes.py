@@ -3,8 +3,8 @@ from customtkinter import CTkToplevel, CTkLabel, CTkCheckBox, CTkButton
 import os
 
 class PatchNotes:
-    WINDOW_WIDTH = 800
-    WINDOW_HEIGHT = 300
+    WINDOW_WIDTH = 950
+    WINDOW_HEIGHT = 450
     PATCH_NOTES_PATH = "resources/config/patch_notes/patch_notes_pref.txt"
 
     def __init__(self, parent, translations_func):
@@ -40,13 +40,17 @@ class PatchNotes:
 
     def get_patch_notes_text(self):
         return """
-            Patch Notes 0.5.3:\n
-                - Improvements in thread management to prevent interface freezing during downloads.
-                - Corrections in updating the user interface after completing or cancelling downloads.
-                - Ensured that all time-consuming operations are performed on separate threads to improve UI responsiveness.
-                - Added exception handling in download threads to prevent unexpected shutdowns and improve stability.
-                - Added the 'handle_download' method to better organize the initiation and management of downloads.
-                - General improvements in application stability and performance.
+            Patch Notes 0.5.4:\n
+                - Updated user agent in the headers for session requests to support newer image formats such as AVIF.\n
+                - Removed the obsolete method 'obtener_nombre_video' which was specific to video name extraction from URLs.\n
+                - Generalized download methods to handle both image and video files effectively within 'descargar_archivo'.\n
+                - Introduced flexibility in 'descargar_perfil_bunkr' to handle dynamic URL structures and different media types without predefined URL endpoints.\n
+                - Enhanced error handling in 'descargar_archivo' with improved retry logic and more detailed logging for each attempt.\n
+                - Implemented more robust session management across download processes to prevent session timeouts and manage persistent connections.\n
+                - Streamlined logging functionality to automatically check callback presence, reducing the risk of null reference exceptions.\n
+                - Removed specific CSS selector logic from 'descargar_perfil_bunkr', opting for a more generalized approach to accommodate different page structures.\n
+                - Enhanced documentation within the code to clarify the purpose and usage of each method, particularly for 'download_file' and 'descargar_perfil_bunkr'.\n
+                - Refactored the logging mechanism to ensure clarity in log messages across different domains and actions.
             """
 
     def close_patch_notes(self, window, dont_show_again_var):
