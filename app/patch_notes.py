@@ -40,17 +40,9 @@ class PatchNotes:
 
     def get_patch_notes_text(self):
         return """
-            Patch Notes 0.5.4:\n
-                - Updated user agent in the headers for session requests to support newer image formats such as AVIF.\n
-                - Removed the obsolete method 'obtener_nombre_video' which was specific to video name extraction from URLs.\n
-                - Generalized download methods to handle both image and video files effectively within 'descargar_archivo'.\n
-                - Introduced flexibility in 'descargar_perfil_bunkr' to handle dynamic URL structures and different media types without predefined URL endpoints.\n
-                - Enhanced error handling in 'descargar_archivo' with improved retry logic and more detailed logging for each attempt.\n
-                - Implemented more robust session management across download processes to prevent session timeouts and manage persistent connections.\n
-                - Streamlined logging functionality to automatically check callback presence, reducing the risk of null reference exceptions.\n
-                - Removed specific CSS selector logic from 'descargar_perfil_bunkr', opting for a more generalized approach to accommodate different page structures.\n
-                - Enhanced documentation within the code to clarify the purpose and usage of each method, particularly for 'download_file' and 'descargar_perfil_bunkr'.\n
-                - Refactored the logging mechanism to ensure clarity in log messages across different domains and actions.
+            Patch Notes 0.5.5:\n
+            - change of logos 
+
             """
 
     def close_patch_notes(self, window, dont_show_again_var):
