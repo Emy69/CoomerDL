@@ -30,4 +30,4 @@ Thumbs.db
 *.log
 *.csv
 setup.py
-test.py
+test.py 
