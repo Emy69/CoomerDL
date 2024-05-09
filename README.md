@@ -9,6 +9,7 @@ It is a desktop application developed in Python, which allows users to easily do
 - https://kemono.su/
 - https://www.erome.com/
 - https://bunkr-albums.io/ (only images)
+- https://cyberdrop.me/ (very soon)
 ## Features.
     
 ### Downloading images and videos
