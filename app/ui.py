@@ -19,7 +19,7 @@ class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5.4]")
+        self.title("Downloader [V0.5.5]")
         self.setup_window()
         self.patch_notes = PatchNotes(self, self.tr)
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
@@ -41,9 +41,9 @@ class ImageDownloaderApp(ctk.CTk):
         try:
             with open('resources/config/languages/save_language/language_config.json', 'r') as config_file:
                 config = json.load(config_file)
-                return config.get('language', 'en')  # Retorna el idioma guardado o 'en' por defecto
+                return config.get('language', 'en')  
         except FileNotFoundError:
-            return 'en'  # Si el archivo no existe, retorna 'en' como idioma predeterminado
+            return 'en'  
 
     def load_translations(self, lang):
         path = f"resources/config/languages/{lang}.json"
@@ -54,7 +54,6 @@ class ImageDownloaderApp(ctk.CTk):
         return self.translations.get(text, text)
 
     def setup_window(self):
-        # Configuración centralizada de la geometría de la ventana
         window_width, window_height = 1000, 680
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
@@ -173,7 +172,7 @@ class ImageDownloaderApp(ctk.CTk):
         about_window.geometry("400x350")
         about_window.grab_set()
         
-        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.4]", font=("Arial", 14, "bold"))
+        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.5]", font=("Arial", 14, "bold"))
         title_label.pack(pady=(10, 5))
 
         description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
@@ -184,8 +183,8 @@ class ImageDownloaderApp(ctk.CTk):
             site_frame.pack(fill='x', padx=20, pady=5)
             
             logo_image = self.create_photoimage(logo_path)
-            logo_label = tk.Label(site_frame, image=logo_image)  # Usa tk.Label en lugar de ctk.CTkLabel
-            logo_label.image = logo_image  # Guarda una referencia
+            logo_label = tk.Label(site_frame, image=logo_image)  
+            logo_label.image = logo_image 
             logo_label.pack(side='left', padx=10)
             
             site_label = ctk.CTkLabel(site_frame, text=site)
@@ -210,6 +209,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.bunkr_downloader = BunkrDownloader(
             download_folder=self.download_folder,
             log_callback=self.add_log_message_safe,
+            enable_widgets_callback=self.enable_widgets,
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://bunkr.si/',
@@ -230,7 +230,7 @@ class ImageDownloaderApp(ctk.CTk):
         )
 
         
-    
+        
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:

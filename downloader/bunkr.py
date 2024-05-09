@@ -6,9 +6,10 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
 class BunkrDownloader:
-    def __init__(self, download_folder, log_callback=None, headers=None):
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, headers=None):
         self.download_folder = download_folder
         self.log_callback = log_callback
+        self.enable_widgets_callback = enable_widgets_callback
         self.session = requests.Session()
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
@@ -60,33 +61,35 @@ class BunkrDownloader:
             response = self.session.get(url_perfil, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                ruta_carpeta = os.path.join(self.download_folder, "Downloaded_Images")
+                folder_name = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'}).text.strip()
+                ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
                 
-                # Find all links that lead to image detail pages
                 links = soup.select("div.grid-images_box a.grid-images_box-link")
+                image_urls = []
                 for link in links:
-                    if self.cancel_requested:
-                        self.log("Download cancelled by the user.")
-                        break
                     image_page_url = link['href']
                     image_response = self.session.get(image_page_url, headers=self.headers)
                     if image_response.status_code == 200:
                         image_soup = BeautifulSoup(image_response.text, 'html.parser')
-                        # Assuming the actual image is within a div with class 'lightgallery'
                         image_tag = image_soup.select_one("div.lightgallery img")
                         if image_tag and 'src' in image_tag.attrs:
                             img_url = image_tag['src']
-                            self.download_file(img_url, ruta_carpeta)
-                        else:
-                            self.log("No image found at the page", url=image_page_url)
-                    else:
-                        self.log(f"Failed to access image page {image_page_url}: Status {image_response.status_code}")
-                    
-                    if self.cancel_requested:
-                        break
+                            image_urls.append((img_url, ruta_carpeta))
+
+               
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    futures = [executor.submit(self.download_file, img_url, ruta_carpeta) for img_url, ruta_carpeta in image_urls]
+                    for future in futures:
+                        future.result()  
+
+                self.log("Download completed.")
+                if self.enable_widgets_callback:
+                    self.enable_widgets_callback()
             else:
                 self.log(f"Failed to access the profile {url_perfil}: Status {response.status_code}")
         except Exception as e:
             self.log(f"Failed to access the profile {url_perfil}: {e}")
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()
 
