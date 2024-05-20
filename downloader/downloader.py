@@ -22,7 +22,7 @@ class Downloader:
         self.download_images = download_images
         self.download_videos = download_videos  
         self.session = requests.Session()
-        self.image_executor = ThreadPoolExecutor(max_workers=4)
+        self.image_executor = ThreadPoolExecutor(max_workers=2)
         self.video_executor = ThreadPoolExecutor(max_workers=2)
 
     def log(self, message):
@@ -32,6 +32,7 @@ class Downloader:
     def request_cancel(self):
         self.cancel_requested = True
         self.log("Download cancelled.")
+        self.enable_widgets_callback()
 
     def generate_image_links(self, start_url):
         image_urls = []
@@ -78,9 +79,12 @@ class Downloader:
                 with open(filepath, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=524288):  # 512 KB
                         if self.cancel_requested:
+                            f.close()
+                            os.remove(filepath)
                             break
                         f.write(chunk)
-                self.log(f"Download success: {media_type} #{media_idx+1} from {page_url}")
+                if not self.cancel_requested:
+                    self.log(f"Download success: {media_type} #{media_idx+1} from {page_url}")
         except Exception as e:
             self.log(f"Error downloading: {e}")
 
@@ -91,10 +95,11 @@ class Downloader:
                 if self.cancel_requested:
                     break
 
-                page_response = requests.get(page_url)
+                page_response = self.session.get(page_url, headers=self.headers)
                 page_soup = BeautifulSoup(page_response.content, 'html.parser')
                 if download_images:
-                    image_elements = page_soup.select('div.post__thumbnail img')
+                    
+                    image_elements = page_soup.select('div.post__thumbnail a.fileThumb')
                     for idx, image_element in enumerate(image_elements):
                         futures.append(self.image_executor.submit(self.process_media_element, image_element, i, idx, page_url, "image", user_id))
 
@@ -106,15 +111,12 @@ class Downloader:
         except Exception as e:
             self.log(f"Error during download: {e}")
         finally:
-            # Wait for all futures to complete
+            
             for future in futures:
-                future.result()  # This will block until the future has completed
+                future.result()  
 
             self.image_executor.shutdown()
             self.video_executor.shutdown()
-
-            if not self.cancel_requested:
-                self.log("Download complete.")
             
             if self.enable_widgets_callback:
-                self.enable_widgets_callback()  
+                self.enable_widgets_callback()

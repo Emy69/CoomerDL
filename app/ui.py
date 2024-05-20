@@ -316,6 +316,5 @@ class ImageDownloaderApp(ctk.CTk):
             self.context_menu.grab_release()
 
     def enable_widgets(self):
-        # Habilitar/deshabilitar widgets de manera centralizada
-        self.download_button.configure(state="normal")
-        self.cancel_button.configure(state="disabled")
+        self.after(0, lambda: self.download_button.configure(state="normal"))
+        self.after(0, lambda: self.cancel_button.configure(state="disabled"))
