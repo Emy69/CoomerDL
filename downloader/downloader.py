@@ -13,7 +13,7 @@ class Downloader:
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
         self.update_speed_callback = update_speed_callback
-        self.cancel_requested = False
+        self.cancel_requested = threading.Event()  # Usar un Event para manejar la cancelación
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -22,7 +22,7 @@ class Downloader:
         self.download_images = download_images
         self.download_videos = download_videos  
         self.session = requests.Session()
-        self.image_executor = ThreadPoolExecutor(max_workers=2)
+        self.image_executor = ThreadPoolExecutor(max_workers=3)
         self.video_executor = ThreadPoolExecutor(max_workers=2)
 
     def log(self, message):
@@ -30,9 +30,10 @@ class Downloader:
             self.log_callback(message)
 
     def request_cancel(self):
-        self.cancel_requested = True
+        self.cancel_requested.set()  # Usar el método set() del Event
         self.log("Download cancelled.")
-        self.enable_widgets_callback()
+        if self.enable_widgets_callback:
+            self.enable_widgets_callback()
 
     def generate_image_links(self, start_url):
         image_urls = []
@@ -59,32 +60,41 @@ class Downloader:
         return image_urls, folder_name, user_id  
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type, user_id):
-        if self.cancel_requested:
+        if self.cancel_requested.is_set():
             return
-        media_url = element.get('src') or element.get('data-src') or element.get('href')
+        
+        media_url = element.get('href')
+        download_name = element.get('download')
+        
         if media_url.startswith('//'):
             media_url = "https:" + media_url
         elif not media_url.startswith('http'):
             base_url = "https://coomer.su/" if "coomer.su" in page_url else "https://kemono.su/"
             media_url = urljoin(base_url, media_url)
+        
         self.log(f"Starting download: {media_type} #{media_idx+1} from {page_url}")
+
         try:
             with self.session.get(media_url, stream=True, headers=self.headers) as r:
                 r.raise_for_status()
                 user_folder = os.path.join(self.download_folder, user_id)
                 os.makedirs(user_folder, exist_ok=True)
-                filename = os.path.basename(media_url).split('?')[0]
+                
+                filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
                 filepath = os.path.join(user_folder, filename)
+                
                 with open(filepath, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=524288):  # 512 KB
-                        if self.cancel_requested:
+                        if self.cancel_requested.is_set():
                             f.close()
                             os.remove(filepath)
                             break
                         f.write(chunk)
-                if not self.cancel_requested:
+                
+                if not self.cancel_requested.is_set():
                     self.log(f"Download success: {media_type} #{media_idx+1} from {page_url}")
+        
         except Exception as e:
             self.log(f"Error downloading: {e}")
 
@@ -92,13 +102,13 @@ class Downloader:
         futures = []
         try:
             for i, page_url in enumerate(image_urls):
-                if self.cancel_requested:
+                if self.cancel_requested.is_set():
                     break
 
                 page_response = self.session.get(page_url, headers=self.headers)
                 page_soup = BeautifulSoup(page_response.content, 'html.parser')
+
                 if download_images:
-                    
                     image_elements = page_soup.select('div.post__thumbnail a.fileThumb')
                     for idx, image_element in enumerate(image_elements):
                         futures.append(self.image_executor.submit(self.process_media_element, image_element, i, idx, page_url, "image", user_id))
@@ -111,12 +121,11 @@ class Downloader:
         except Exception as e:
             self.log(f"Error during download: {e}")
         finally:
-            
             for future in futures:
-                future.result()  
+                future.result()
 
-            self.image_executor.shutdown()
-            self.video_executor.shutdown()
-            
+            self.image_executor.shutdown(wait=True)
+            self.video_executor.shutdown(wait=True)
+
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()

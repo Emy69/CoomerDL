@@ -1,4 +1,5 @@
 import json
+import queue
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -29,6 +30,8 @@ class ImageDownloaderApp(ctk.CTk):
         
         self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         self.initialize_ui()
+        self.update_queue = queue.Queue()
+        self.check_update_queue()
 
     def save_language_preference(self, language_code):
         config = {'language': language_code}
@@ -314,7 +317,13 @@ class ImageDownloaderApp(ctk.CTk):
             self.context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.context_menu.grab_release()
+    
+    def check_update_queue(self):
+        while not self.update_queue.empty():
+            task = self.update_queue.get_nowait()
+            task()
+        self.after(100, self.check_update_queue)
 
     def enable_widgets(self):
-        self.after(0, lambda: self.download_button.configure(state="normal"))
-        self.after(0, lambda: self.cancel_button.configure(state="disabled"))
+        self.update_queue.put(lambda: self.download_button.configure(state="normal"))
+        self.update_queue.put(lambda: self.cancel_button.configure(state="disabled"))
