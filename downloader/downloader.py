@@ -38,31 +38,38 @@ class Downloader:
     def generate_image_links(self, start_url):
         image_urls = []
         folder_name = ""
-        user_id = ""  
+        user_id = ""
         try:
-            response = requests.get(start_url, headers=self.headers)
+            response = self.session.get(start_url, headers=self.headers)
             soup = BeautifulSoup(response.content, 'html.parser')
             base_url = "https://coomer.su/" if "coomer.su" in start_url else "https://kemono.su/"
-            name_element = soup.find(attrs={"itemprop": "name"})
-            if name_element:
-                folder_name = name_element.text.strip()
-            posts = soup.find_all('article', class_='post-card post-card--preview')
-            for post in posts:
-                data_id = post.get('data-id')
-                data_service = post.get('data-service')
-                data_user = post.get('data-user')
-                if data_id and data_service and data_user:
-                    image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
-                    image_urls.append(image_url)
-                    user_id = data_user  
+            
+            if "/post/" in start_url:  # Es URL de publicación específica
+                post_id = start_url.split("/post/")[-1]
+                folder_name = f"Post_{post_id}"
+                image_urls.append(start_url)
+            else:  # Es URL de perfil
+                name_element = soup.find(attrs={"itemprop": "name"})
+                if name_element:
+                    folder_name = name_element.text.strip()
+                posts = soup.find_all('article', class_='post-card post-card--preview')
+                for post in posts:
+                    data_id = post.get('data-id')
+                    data_service = post.get('data-service')
+                    data_user = post.get('data-user')
+                    if data_id and data_service and data_user:
+                        image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
+                        image_urls.append(image_url)
+            user_id = start_url.split('/user/')[1].split('/')[0]  # Asume estructura de URL consistente
+
         except Exception as e:
             self.log(f"Error collecting links: {e}")
-        return image_urls, folder_name, user_id  
+        return image_urls, folder_name, user_id
 
     def process_media_element(self, element, page_idx, media_idx, page_url, media_type, user_id):
         if self.cancel_requested.is_set():
             return
-        
+
         media_url = element.get('href')
         download_name = element.get('download')
         
@@ -77,7 +84,8 @@ class Downloader:
         try:
             with self.session.get(media_url, stream=True, headers=self.headers) as r:
                 r.raise_for_status()
-                user_folder = os.path.join(self.download_folder, user_id)
+                folder_suffix = f"Post_{page_idx + 1}" if "/post/" in page_url else ""
+                user_folder = os.path.join(self.download_folder, user_id, folder_suffix)
                 os.makedirs(user_folder, exist_ok=True)
                 
                 filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
