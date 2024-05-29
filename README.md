@@ -15,6 +15,9 @@ It is a desktop application developed in Python, which allows users to easily do
 ### Downloading images and videos
 Support to download both types of media efficiently.
 
+## Discord
+If you have any problem or want to communicate with me join my [discord server](https://discord.gg/ku8gSPsesh)
+
 ## Downloads
 
 - **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
