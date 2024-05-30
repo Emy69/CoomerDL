@@ -13,7 +13,7 @@ class Downloader:
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
         self.update_speed_callback = update_speed_callback
-        self.cancel_requested = threading.Event()  # Usar un Event para manejar la cancelación
+        self.cancel_requested = threading.Event()  
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -30,7 +30,7 @@ class Downloader:
             self.log_callback(message)
 
     def request_cancel(self):
-        self.cancel_requested.set()  # Usar el método set() del Event
+        self.cancel_requested.set() 
         self.log("Download cancelled.")
         if self.enable_widgets_callback:
             self.enable_widgets_callback()
@@ -44,23 +44,25 @@ class Downloader:
             soup = BeautifulSoup(response.content, 'html.parser')
             base_url = "https://coomer.su/" if "coomer.su" in start_url else "https://kemono.su/"
             
-            if "/post/" in start_url:  # Es URL de publicación específica
-                post_id = start_url.split("/post/")[-1]
+            user_id = start_url.split('/user/')[1].split('/')[0].split('?')[0]  
+            
+            if "/post/" in start_url:
+                post_id = start_url.split("/post/")[-1].split('?')[0]  
                 folder_name = f"Post_{post_id}"
                 image_urls.append(start_url)
-            else:  # Es URL de perfil
+            else:
                 name_element = soup.find(attrs={"itemprop": "name"})
                 if name_element:
                     folder_name = name_element.text.strip()
                 posts = soup.find_all('article', class_='post-card post-card--preview')
-                for post in posts:
+                for idx, post in enumerate(posts):
                     data_id = post.get('data-id')
                     data_service = post.get('data-service')
                     data_user = post.get('data-user')
                     if data_id and data_service and data_user:
                         image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
                         image_urls.append(image_url)
-            user_id = start_url.split('/user/')[1].split('/')[0]  # Asume estructura de URL consistente
+                        folder_name = f"Post_{idx + 1}"  
 
         except Exception as e:
             self.log(f"Error collecting links: {e}")
@@ -80,12 +82,12 @@ class Downloader:
             media_url = urljoin(base_url, media_url)
         
         self.log(f"Starting download: {media_type} #{media_idx+1} from {page_url}")
-
+        
         try:
             with self.session.get(media_url, stream=True, headers=self.headers) as r:
                 r.raise_for_status()
-                folder_suffix = f"Post_{page_idx + 1}" if "/post/" in page_url else ""
-                user_folder = os.path.join(self.download_folder, user_id, folder_suffix)
+                
+                user_folder = os.path.join(self.download_folder, user_id, f"Post_{page_idx + 1}")
                 os.makedirs(user_folder, exist_ok=True)
                 
                 filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
@@ -93,7 +95,7 @@ class Downloader:
                 filepath = os.path.join(user_folder, filename)
                 
                 with open(filepath, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=524288):  # 512 KB
+                    for chunk in r.iter_content(chunk_size=524288):
                         if self.cancel_requested.is_set():
                             f.close()
                             os.remove(filepath)
