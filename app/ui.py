@@ -32,6 +32,13 @@ class ImageDownloaderApp(ctk.CTk):
         self.initialize_ui()
         self.update_queue = queue.Queue()
         self.check_update_queue()
+        self.protocol("WM_DELETE_WINDOW", self.on_app_close)
+    
+    def on_app_close(self):
+        if hasattr(self, 'active_downloader') and self.active_downloader:
+            self.active_downloader.request_cancel()     
+            self.active_downloader.shutdown_executors()     
+        self.destroy()      
 
     def save_language_preference(self, language_code):
         config = {'language': language_code}
@@ -116,39 +123,37 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.url_entry.bind("<Button-3>", self.show_context_menu)
 
-        menubar = tk.Menu(self)
+        self.menubar = tk.Menu(self)
+        self.config(menu=self.menubar)
 
-        self.config(menu=menubar)
+        # Menú Archivo
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label=self.tr("Salir"), command=self.quit)
+        self.menubar.add_cascade(label=self.tr("Archivo"), menu=self.file_menu)
 
-        # Crear menú Archivo y añadirle opciones
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
-        file_menu.add_separator()  # Añade un separador
-        file_menu.add_command(label=self.tr("Salir"), command=self.quit)
-        menubar.add_cascade(label=self.tr("Archivo"), menu=file_menu)
+        # Menú Favoritos
+        self.favorites_menu = tk.Menu(self.menubar, tearoff=0)
+        self.favorites_menu.add_command(label=self.tr("Añadir a Favoritos"), command=self.add_to_favorites)
+        self.favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
+        self.menubar.add_cascade(label=self.tr("Favoritos"), menu=self.favorites_menu)
 
-        # Crear menú Favoritos
-        favorites_menu = tk.Menu(menubar, tearoff=0)
-        favorites_menu.add_command(label=self.tr("Añadir a Favoritos"), command=self.add_to_favorites)
-        favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
-        menubar.add_cascade(label=self.tr("Favoritos"), menu=favorites_menu)
-
-        # Crear menú Acerca de
-        about_menu = tk.Menu(menubar, tearoff=0)
-        about_menu.add_command(label=self.tr("Acerca de"), command=self.show_about)
+        # Menú Acerca de
+        self.about_menu = tk.Menu(self.menubar, tearoff=0)
+        self.about_menu.add_command(label=self.tr("Acerca de"), command=self.show_about)
         self.site_logos = {
             "Erome": "resources/img/logos/erome_logo.png",
             "Bunkr": "resources/img/logos/bunkr_logo.png",
             "Coomer.su": "resources/img/logos/coomer_logo.png",
             "Kemono.su": "resources/img/logos/kemono_logo.png",
         }
-        menubar.add_cascade(label=self.tr("Acerca de"), menu=about_menu)
-        about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
+        self.menubar.add_cascade(label=self.tr("Acerca de"), menu=self.about_menu)
+        self.about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
 
-        # Configurar la barra de menú en la ventana
-        self.config(menu=menubar)
         
     def update_ui_texts(self):
+        # Actualizar controles de la UI
         self.url_label.configure(text=self.tr("URL de la página web:"))
         self.browse_button.configure(text=self.tr("Seleccionar Carpeta"))
         self.download_images_check.configure(text=self.tr("Descargar Imágenes"))
@@ -156,6 +161,14 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
         self.title(self.tr("Downloader [V0.5]"))
+        
+        # Actualizar textos del menú
+        self.file_menu.entryconfigure(0, label=self.tr("Configuraciones"))
+        self.file_menu.entryconfigure(2, label=self.tr("Salir"))
+        self.favorites_menu.entryconfigure(0, label=self.tr("Añadir a Favoritos"))
+        self.favorites_menu.entryconfigure(1, label=self.tr("Ver Favoritos"))
+        self.about_menu.entryconfigure(0, label=self.tr("Acerca de"))
+        self.about_menu.entryconfigure(1, label=self.tr("Notas de Parche"))
 
     def add_to_favorites(self):
         messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
