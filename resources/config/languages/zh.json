@@ -41,5 +41,7 @@
     "Idioma":"语言",
     "Aplicar":"申请",
     "Selecciona_idioma":"选择语言",
-    "ConfiguracionDescarga":"下载"
+    "ConfiguracionDescarga":"下载",
+    "Por favor, selecciona una carpeta de descarga.":"请选择下载文件夹",
+    "Selecciona idioma":"选择语言"
 }

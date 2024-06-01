@@ -33,8 +33,8 @@ class SettingsWindow:
         language_button = ctk.CTkButton(options_frame, text=self.translate("Idioma"), command=lambda: self.show_language_settings(settings_frame))
         language_button.pack(pady=5, fill='x')
 
-        download_button = ctk.CTkButton(options_frame, text=self.translate("ConfiguracionDescarga"), command=lambda: self.show_download_settings(settings_frame))
-        download_button.pack(pady=5, fill='x')
+        """download_button = ctk.CTkButton(options_frame, text=self.translate("ConfiguracionDescarga"), command=lambda: self.show_download_settings(settings_frame))
+        download_button.pack(pady=5, fill='x')"""
 
     def show_language_settings(self, parent_frame):
         for widget in parent_frame.winfo_children():
@@ -49,7 +49,7 @@ class SettingsWindow:
         apply_button = ctk.CTkButton(parent_frame, text=self.translate("Aplicar"), command=lambda: self.apply_language_settings(language_combobox.get()))
         apply_button.pack(pady=10)
 
-    def show_download_settings(self, parent_frame):
+    """def show_download_settings(self, parent_frame):
         for widget in parent_frame.winfo_children():
             widget.destroy()
 
@@ -60,7 +60,7 @@ class SettingsWindow:
         download_path_entry.pack(pady=10)
 
         save_path_button = ctk.CTkButton(parent_frame, text=self.translate("Guardar"), command=lambda: self.save_download_path(download_path_entry.get()))
-        save_path_button.pack(pady=10)
+        save_path_button.pack(pady=10)"""
 
     def apply_language_settings(self, selected_language_name):
         selected_language_code = self.languages[selected_language_name]

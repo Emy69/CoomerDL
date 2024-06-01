@@ -41,5 +41,7 @@
     "Idioma":"Langue",
     "Aplicar":"Appliquer",
     "Selecciona_idioma":"Sélectionner une langue",
-    "ConfiguracionDescarga":"Téléchargements"
+    "ConfiguracionDescarga":"Téléchargements",
+    "Por favor, selecciona una carpeta de descarga.":"Veuillez sélectionner un dossier de téléchargement",
+    "Selecciona idioma":"Sélection de la langue"
 }

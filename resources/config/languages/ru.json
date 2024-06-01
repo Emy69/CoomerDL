@@ -41,5 +41,7 @@
     "Idioma":"Язык",
     "Aplicar":"Применить",
     "Selecciona_idioma":"Выберите язык",
-    "ConfiguracionDescarga":"Скачать"
+    "ConfiguracionDescarga":"Скачать",
+    "Por favor, selecciona una carpeta de descarga.":"Выберите папку для передачи",
+    "Selecciona idioma":"Выберите язык"
 }

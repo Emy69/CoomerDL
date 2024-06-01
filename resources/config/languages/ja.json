@@ -41,5 +41,7 @@
     "Idioma":"言語",
     "Aplicar":"応募する",
     "Selecciona_idioma":"言語を選択",
-    "ConfiguracionDescarga":"ダウンロード"
+    "ConfiguracionDescarga":"ダウンロード",
+    "Por favor, selecciona una carpeta de descarga.":"ダウンロードフォルダを選択してください",
+    "Selecciona idioma":"言語を選択"
 }

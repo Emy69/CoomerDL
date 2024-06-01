@@ -41,5 +41,7 @@
     "Idioma":"Language",
     "Aplicar":"Apply",
     "Selecciona_idioma":"Select a language:",
-    "ConfiguracionDescarga":"Downloads"
+    "ConfiguracionDescarga":"Downloads",
+    "Por favor, selecciona una carpeta de descarga.":"Please select a download folder",
+    "Selecciona idioma":"Select language"
 }
