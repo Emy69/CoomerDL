@@ -34,6 +34,13 @@ class Downloader:
         self.log("Download cancelled.")
         if self.enable_widgets_callback:
             self.enable_widgets_callback()
+        self.shutdown_executors()
+
+    def shutdown_executors(self):
+        self.image_executor.shutdown(wait=False)
+        self.video_executor.shutdown(wait=False)
+        if self.enable_widgets_callback:
+            self.enable_widgets_callback()
 
     def generate_image_links(self, start_url):
         image_urls = []
@@ -99,6 +106,7 @@ class Downloader:
                         if self.cancel_requested.is_set():
                             f.close()
                             os.remove(filepath)
+                            self.log(f"Download cancelled for: {media_type} #{media_idx+1} from {page_url}")
                             break
                         f.write(chunk)
                 
@@ -131,11 +139,12 @@ class Downloader:
         except Exception as e:
             self.log(f"Error during download: {e}")
         finally:
+                
             for future in futures:
-                future.result()
-
-            self.image_executor.shutdown(wait=True)
-            self.video_executor.shutdown(wait=True)
-
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
+                try:
+                    future.result()     
+                except Exception as e:
+                    self.log(f"Error in download task: {e}")
+            
+            self.shutdown_executors()   
+            self.log("All downloads completed or cancelled.")
