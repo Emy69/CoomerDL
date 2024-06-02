@@ -55,7 +55,6 @@ class Downloader:
             
             if "/post/" in start_url:
                 post_id = start_url.split("/post/")[-1].split('?')[0]  
-                folder_name = f"Post_{post_id}"
                 image_urls.append(start_url)
             else:
                 name_element = soup.find(attrs={"itemprop": "name"})
@@ -69,7 +68,6 @@ class Downloader:
                     if data_id and data_service and data_user:
                         image_url = f"{base_url}{data_service}/user/{data_user}/post/{data_id}"
                         image_urls.append(image_url)
-                        folder_name = f"Post_{idx + 1}"  
 
         except Exception as e:
             self.log(f"Error collecting links: {e}")
@@ -94,12 +92,12 @@ class Downloader:
             with self.session.get(media_url, stream=True, headers=self.headers) as r:
                 r.raise_for_status()
                 
-                user_folder = os.path.join(self.download_folder, user_id, f"Post_{page_idx + 1}")
-                os.makedirs(user_folder, exist_ok=True)
+                media_folder = os.path.join(self.download_folder, user_id, "videos" if media_type == "video" else "images")
+                os.makedirs(media_folder, exist_ok=True)
                 
                 filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-                filepath = os.path.join(user_folder, filename)
+                filepath = os.path.join(media_folder, filename)
                 
                 with open(filepath, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=524288):
@@ -139,12 +137,14 @@ class Downloader:
         except Exception as e:
             self.log(f"Error during download: {e}")
         finally:
-                
+            # Esperar a que todos los futures se completen
             for future in futures:
                 try:
-                    future.result()     
+                    future.result()
                 except Exception as e:
                     self.log(f"Error in download task: {e}")
             
-            self.shutdown_executors()   
-            self.log("All downloads completed or cancelled.")
+            self.shutdown_executors()  
+            # Verificar si la lista de futures no está vacía para asegurar que se procesaron descargas
+            if futures:
+                self.log("All downloads completed or cancelled.")
