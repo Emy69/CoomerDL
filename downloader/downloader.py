@@ -5,6 +5,7 @@ import os
 from urllib.parse import urljoin
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import time  
 
 class Downloader:
     def __init__(self, download_folder, log_callback=None, download_images=True, 
@@ -41,6 +42,22 @@ class Downloader:
         self.video_executor.shutdown(wait=False)
         if self.enable_widgets_callback:
             self.enable_widgets_callback()
+
+    def safe_request(self, url, max_retries=5):
+        retry_wait = 1  # Comienza con 1 segundo
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, stream=True, headers=self.headers)
+                response.raise_for_status()
+                return response
+            except (requests.ConnectionError, requests.HTTPError, requests.TooManyRedirects) as e:
+                self.log(f"Retry {attempt + 1}: Error {e}, waiting {retry_wait} seconds before retrying.")
+                time.sleep(retry_wait)
+                retry_wait *= 2  # Incrementa el tiempo de espera exponencialmente
+            except requests.exceptions.RequestException as e:
+                self.log(f"Non-retryable error: {e}")
+                break
+        return None
 
     def generate_image_links(self, start_url):
         image_urls = []
@@ -89,27 +106,29 @@ class Downloader:
         self.log(f"Starting download: {media_type} #{media_idx+1} from {page_url}")
         
         try:
-            with self.session.get(media_url, stream=True, headers=self.headers) as r:
-                r.raise_for_status()
-                
-                media_folder = os.path.join(self.download_folder, user_id, "videos" if media_type == "video" else "images")
-                os.makedirs(media_folder, exist_ok=True)
-                
-                filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
-                filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-                filepath = os.path.join(media_folder, filename)
-                
-                with open(filepath, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=524288):
-                        if self.cancel_requested.is_set():
-                            f.close()
-                            os.remove(filepath)
-                            self.log(f"Download cancelled for: {media_type} #{media_idx+1} from {page_url}")
-                            break
-                        f.write(chunk)
-                
-                if not self.cancel_requested.is_set():
-                    self.log(f"Download success: {media_type} #{media_idx+1} from {page_url}")
+            response = self.safe_request(media_url)
+            if response is None:
+                self.log(f"Failed to download after multiple retries: {media_url}")
+                return
+
+            media_folder = os.path.join(self.download_folder, user_id, "videos" if media_type == "video" else "images")
+            os.makedirs(media_folder, exist_ok=True)
+            
+            filename = download_name if download_name else os.path.basename(media_url).split('?')[0]
+            filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+            filepath = os.path.join(media_folder, filename)
+            
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=524288):
+                    if self.cancel_requested.is_set():
+                        f.close()
+                        os.remove(filepath)
+                        self.log(f"Download cancelled for: {media_type} #{media_idx+1} from {page_url}")
+                        break
+                    f.write(chunk)
+            
+            if not self.cancel_requested.is_set():
+                self.log(f"Download success: {media_type} #{media_idx+1} from {page_url}")
         
         except Exception as e:
             self.log(f"Error downloading: {e}")
