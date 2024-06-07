@@ -16,11 +16,14 @@ from downloader.downloader import Downloader
 from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
 
+# Definir la versión como una variable global
+VERSION = "V0.5.5.2"
+
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
         super().__init__()
-        self.title("Downloader [V0.5.5]")
+        self.title(f"Downloader [{VERSION}]")
         self.setup_window()
         self.patch_notes = PatchNotes(self, self.tr)
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
@@ -33,7 +36,12 @@ class ImageDownloaderApp(ctk.CTk):
         self.update_queue = queue.Queue()
         self.check_update_queue()
         self.protocol("WM_DELETE_WINDOW", self.on_app_close)
-    
+        
+        self.download_folder = self.load_download_folder() 
+        if self.download_folder:
+            self.folder_path.configure(text=self.download_folder)
+
+
     def on_app_close(self):
         if hasattr(self, 'active_downloader') and self.active_downloader:
             self.active_downloader.request_cancel()     
@@ -160,7 +168,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_videos_check.configure(text=self.tr("Descargar Vídeos"))
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
-        self.title(self.tr("Downloader [V0.5]"))
+        self.title(self.tr(f"Downloader [{VERSION}]"))
         
         # Actualizar textos del menú
         self.file_menu.entryconfigure(0, label=self.tr("Configuraciones"))
@@ -188,7 +196,7 @@ class ImageDownloaderApp(ctk.CTk):
         about_window.geometry("400x350")
         about_window.grab_set()
         
-        title_label = ctk.CTkLabel(about_window, text="Downloader [V0.5.5]", font=("Arial", 14, "bold"))
+        title_label = ctk.CTkLabel(about_window, text=f"Downloader [{VERSION}]", font=("Arial", 14, "bold"))
         title_label.pack(pady=(10, 5))
 
         description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
@@ -214,7 +222,7 @@ class ImageDownloaderApp(ctk.CTk):
             root=self,
             enable_widgets_callback=self.enable_widgets,
             headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, como Gecko) Chrome/58.0.3029.110 Safari/537.36',
                 'Referer': 'https://www.erome.com/'
             },
             log_callback=self.add_log_message_safe,
@@ -245,13 +253,12 @@ class ImageDownloaderApp(ctk.CTk):
             download_videos=self.download_videos_check.get()
         )
 
-        
-        
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
             self.download_folder = folder_selected
             self.folder_path.configure(text=folder_selected)
+            self.save_download_folder(folder_selected) 
 
     def start_download(self):
         url = self.url_entry.get("1.0", "end-1c").strip()
@@ -340,3 +347,22 @@ class ImageDownloaderApp(ctk.CTk):
     def enable_widgets(self):
         self.update_queue.put(lambda: self.download_button.configure(state="normal"))
         self.update_queue.put(lambda: self.cancel_button.configure(state="disabled"))
+
+    def save_download_folder(self, folder_path):
+        config = {'download_folder': folder_path}
+        with open('resources/config/download_path/download_folder.json', 'w') as config_file:
+            json.dump(config, config_file)
+
+
+    def load_download_folder(self):
+        config_path = 'resources/config/download_path/download_folder.json'
+        if not Path(config_path).exists():
+            with open(config_path, 'w') as config_file:
+                json.dump({}, config_file)  # Crear archivo vacío
+        try:
+            with open(config_path, 'r') as config_file:
+                config = json.load(config_file)
+                return config.get('download_folder', '')  
+        except json.JSONDecodeError:
+            return ''
+
