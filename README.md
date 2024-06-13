@@ -4,14 +4,14 @@
 
 # Coomer Downloader App 
 It is a desktop application developed in Python, which allows users to easily download images and videos. Using an intuitive graphical user interface (GUI), users can simply enter the URL and download.
+
 ## Supported pages
 - https://coomer.su/
 - https://kemono.su/
 - https://www.erome.com/
 - https://bunkr-albums.io/ (only images)
 
-## Features.
-    
+## Features
 ### Downloading images and videos
 Support to download both types of media efficiently.
 
@@ -19,40 +19,67 @@ Support to download both types of media efficiently.
 If you have any problem or want to communicate with me join my [discord server](https://discord.gg/ku8gSPsesh)
 
 ## Downloads
-
 - **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
-
 
 ## Screenshot
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-04-27.png)
-
-
 
 ## Getting Started
 
 ### Prerequisites
 - Python 3.8 or higher.
 
+### Warning
+- In some Linux distributions, `tkinter` might not be installed by default. You may need to install it manually.
+
 ### Installation
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/Emy69/CoomerDL.git
-```
+#### For Windows
 
-```bash
-cd CoomerDL
-```
+1. **Clone the repository**
+    ```bash
+    git clone https://github.com/Emy69/CoomerDL.git
+    cd CoomerDL
+    ```
 
 2. **Install the dependencies**
-```bash
-pip install -r requirements.txt
-```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 3. **Usage**
-```bash
-python main.py
-```
+    ```bash
+    python main.py
+    ```
+
+#### For Linux
+
+1. **Clone the repository**
+    ```bash
+    git clone https://github.com/Emy69/CoomerDL.git
+    cd CoomerDL
+    ```
+
+2. **Install the dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. **Install `tkinter` if not already installed**
+    - For Debian/Ubuntu based distributions:
+        ```bash
+        sudo apt-get install python3-tk
+        ```
+    - For Red Hat/Fedora based distributions:
+        ```bash
+        sudo dnf install python3-tkinter
+        ```
+
+4. **Usage**
+    ```bash
+    python main.py
+    ```
+
 ## Contributing
 
 Contributions are welcome! If you're interested in enhancing the Coomer Downloader App, please follow these steps to contribute:
@@ -81,4 +108,5 @@ Contributions are welcome! If you're interested in enhancing the Coomer Download
 ### Getting Help
 
 If you need help with your contributions, feel free to raise issues on the project's issue tracker or contact the maintainers directly.
+
 
