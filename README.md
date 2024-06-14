@@ -16,7 +16,10 @@ It is a desktop application developed in Python, which allows users to easily do
 Support to download both types of media efficiently.
 
 ## Discord
-If you have any problem or want to communicate with me join my [discord server](https://discord.gg/ku8gSPsesh)
+If you have any problem or want to communicate with me, join my Discord server by clicking the button below:
+
+[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
+
 
 ## Downloads
 - **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
