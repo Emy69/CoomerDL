@@ -43,5 +43,17 @@
     "Selecciona_idioma":"言語を選択",
     "ConfiguracionDescarga":"ダウンロード",
     "Por favor, selecciona una carpeta de descarga.":"ダウンロードフォルダを選択してください",
-    "Selecciona idioma":"言語を選択"
+    "Selecciona idioma":"言語を選択",
+    "Iniciando descarga...": "ダウンロードを開始しています...",
+    "Descargando post único...": "単一投稿をダウンロード中...",
+    "Descargando todo el contenido del usuario...": "ユーザーの全コンテンツをダウンロード中...",
+    "Descargar todo el contenido": "すべてのコンテンツをダウンロード",
+    "¿Desea descargar todo el contenido del usuario?": "ユーザーの全コンテンツをダウンロードしますか？",
+    "No se pudo extraer el servicio.": "サービスを抽出できませんでした。",
+    "Extrayendo ID del post del URL: {url}": "URLから投稿IDを抽出中: {url}",
+    "ID del post extraído: {post_id}": "抽出された投稿ID: {post_id}",
+    "No se pudo extraer el ID del post.": "投稿IDを抽出できませんでした。",
+    "Extrayendo ID del usuario del URL: {url}": "URLからユーザーIDを抽出中: {url}",
+    "ID del usuario extraído: {user_id}": "抽出されたユーザーID: {user_id}",
+    "No se pudo extraer el ID del usuario.": "ユーザーIDを抽出できませんでした。"
 }

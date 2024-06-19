@@ -31,3 +31,5 @@ Thumbs.db
 *.csv
 setup.py
 test.py 
+descargas_test/
+coomer.py

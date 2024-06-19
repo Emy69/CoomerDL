@@ -43,5 +43,17 @@
     "Selecciona_idioma":"Выберите язык",
     "ConfiguracionDescarga":"Скачать",
     "Por favor, selecciona una carpeta de descarga.":"Выберите папку для передачи",
-    "Selecciona idioma":"Выберите язык"
+    "Selecciona idioma":"Выберите язык",
+    "Iniciando descarga...": "Начало загрузки...",
+    "Descargando post único...": "Загрузка единственного поста...",
+    "Descargando todo el contenido del usuario...": "Загрузка всего контента пользователя...",
+    "Descargar todo el contenido": "Скачать весь контент",
+    "¿Desea descargar todo el contenido del usuario?": "Вы хотите скачать весь контент пользователя?",
+    "No se pudo extraer el servicio.": "Не удалось извлечь сервис.",
+    "Extrayendo ID del post del URL: {url}": "Извлечение ID поста из URL: {url}",
+    "ID del post extraído: {post_id}": "Извлеченный ID поста: {post_id}",
+    "No se pudo extraer el ID del post.": "Не удалось извлечь ID поста.",
+    "Extrayendo ID del usuario del URL: {url}": "Извлечение ID пользователя из URL: {url}",
+    "ID del usuario extraído: {user_id}": "Извлеченный ID пользователя: {user_id}",
+    "No se pudo extraer el ID del usuario.": "Не удалось извлечь ID пользователя."
 }

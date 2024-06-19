@@ -43,5 +43,17 @@
     "Selecciona_idioma":"Select a language:",
     "ConfiguracionDescarga":"Downloads",
     "Por favor, selecciona una carpeta de descarga.":"Please select a download folder",
-    "Selecciona idioma":"Select language"
+    "Selecciona idioma":"Select language",
+    "Iniciando descarga...": "Starting download...",
+    "Descargando post único...": "Downloading single post...",
+    "Descargando todo el contenido del usuario...": "Downloading all user content...",
+    "Descargar todo el contenido": "Download all content",
+    "¿Desea descargar todo el contenido del usuario?": "Do you want to download all user content?",
+    "No se pudo extraer el servicio.": "Could not extract the service.",
+    "Extrayendo ID del post del URL: {url}": "Extracting post ID from URL: {url}",
+    "ID del post extraído: {post_id}": "Extracted post ID: {post_id}",
+    "No se pudo extraer el ID del post.": "Could not extract the post ID.",
+    "Extrayendo ID del usuario del URL: {url}": "Extracting user ID from URL: {url}",
+    "ID del usuario extraído: {user_id}": "Extracted user ID: {user_id}",
+    "No se pudo extraer el ID del usuario.": "Could not extract the user ID."
 }

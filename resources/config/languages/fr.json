@@ -43,5 +43,17 @@
     "Selecciona_idioma":"Sélectionner une langue",
     "ConfiguracionDescarga":"Téléchargements",
     "Por favor, selecciona una carpeta de descarga.":"Veuillez sélectionner un dossier de téléchargement",
-    "Selecciona idioma":"Sélection de la langue"
+    "Selecciona idioma":"Sélection de la langue",
+    "Iniciando descarga...": "Démarrage du téléchargement...",
+    "Descargando post único...": "Téléchargement de la publication unique...",
+    "Descargando todo el contenido del usuario...": "Téléchargement de tout le contenu de l'utilisateur...",
+    "Descargar todo el contenido": "Télécharger tout le contenu",
+    "¿Desea descargar todo el contenido del usuario?": "Voulez-vous télécharger tout le contenu de l'utilisateur ?",
+    "No se pudo extraer el servicio.": "Impossible d'extraire le service.",
+    "Extrayendo ID del post del URL: {url}": "Extraction de l'ID de la publication de l'URL: {url}",
+    "ID del post extraído: {post_id}": "ID de la publication extrait: {post_id}",
+    "No se pudo extraer el ID del post.": "Impossible d'extraire l'ID de la publication.",
+    "Extrayendo ID del usuario del URL: {url}": "Extraction de l'ID de l'utilisateur de l'URL: {url}",
+    "ID del usuario extraído: {user_id}": "ID de l'utilisateur extrait: {user_id}",
+    "No se pudo extraer el ID del usuario.": "Impossible d'extraire l'ID de l'utilisateur."
 }

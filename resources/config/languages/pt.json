@@ -43,5 +43,17 @@
     "Selecciona_idioma":"Selecionar uma língua",
     "ConfiguracionDescarga":"Transferências",
     "Por favor, selecciona una carpeta de descarga.":"Seleccione uma pasta de transferência",
-    "Selecciona idioma":"Selecionar a língua"
+    "Selecciona idioma":"Selecionar a língua",
+    "Iniciando descarga...": "Iniciando download...",
+    "Descargando post único...": "Baixando postagem única...",
+    "Descargando todo el contenido del usuario...": "Baixando todo o conteúdo do usuário...",
+    "Descargar todo el contenido": "Baixar todo o conteúdo",
+    "¿Desea descargar todo el contenido del usuario?": "Você deseja baixar todo o conteúdo do usuário?",
+    "No se pudo extraer el servicio.": "Não foi possível extrair o serviço.",
+    "Extrayendo ID del post del URL: {url}": "Extraindo ID da postagem do URL: {url}",
+    "ID del post extraído: {post_id}": "ID da postagem extraída: {post_id}",
+    "No se pudo extraer el ID del post.": "Não foi possível extrair o ID da postagem.",
+    "Extrayendo ID del usuario del URL: {url}": "Extraindo ID do usuário do URL: {url}",
+    "ID del usuario extraído: {user_id}": "ID do usuário extraído: {user_id}",
+    "No se pudo extraer el ID del usuario.": "Não foi possível extrair o ID do usuário."
 }

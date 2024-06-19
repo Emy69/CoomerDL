@@ -43,5 +43,17 @@
     "Selecciona_idioma":"选择语言",
     "ConfiguracionDescarga":"下载",
     "Por favor, selecciona una carpeta de descarga.":"请选择下载文件夹",
-    "Selecciona idioma":"选择语言"
+    "Selecciona idioma":"选择语言",
+    "Iniciando descarga...": "开始下载...",
+    "Descargando post único...": "下载单个帖子...",
+    "Descargando todo el contenido del usuario...": "下载用户的所有内容...",
+    "Descargar todo el contenido": "下载所有内容",
+    "¿Desea descargar todo el contenido del usuario?": "您要下载用户的所有内容吗？",
+    "No se pudo extraer el servicio.": "无法提取服务。",
+    "Extrayendo ID del post del URL: {url}": "从URL中提取帖子ID: {url}",
+    "ID del post extraído: {post_id}": "提取的帖子ID: {post_id}",
+    "No se pudo extraer el ID del post.": "无法提取帖子ID。",
+    "Extrayendo ID del usuario del URL: {url}": "从URL中提取用户ID: {url}",
+    "ID del usuario extraído: {user_id}": "提取的用户ID: {user_id}",
+    "No se pudo extraer el ID del usuario.": "无法提取用户ID。"
 }
