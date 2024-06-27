@@ -1,6 +1,5 @@
 ![Windows Compatibility](https://img.shields.io/badge/Windows-10%2C%2011-blue)
 ![Linux Compatibility](https://img.shields.io/badge/Linux-Compatible-green)
-![macOS Compatibility](https://img.shields.io/badge/macOS-Coming%20Soon-lightgrey)
 
 # Coomer Downloader App
 
@@ -10,18 +9,18 @@ Coomer Downloader App is a desktop application developed in Python that allows u
 
 - [Features](#features)
 - [Supported Pages](#supported-pages)
-- [Screenshot](#screenshot)
-- [Installation](#installation)
-- [Usage](#usage)
 - [Contributing](#contributing)
 - [Community](#community)
-- [FAQ](#faq)
+- [Screenshot](#screenshot)
+- [Clone and Setup](#clone-and-setup)
+- [Usage](#usage)
+- [Downloads](#downloads)
 
 ## Features
 
 ### Downloading images and videos
 
-Support for efficiently downloading both types of media.
+Coomer Downloader App supports downloading both images and videos efficiently. Users can simply enter the URL of the media they want to download, and the app will handle the rest. It ensures a smooth downloading experience by supporting multiple threads for faster downloads, providing progress updates, and handling various file formats including .jpg, .png, .mp4, and .mkv. Additionally, the app can manage large download queues.
 
 ## Supported Pages
 
@@ -30,11 +29,21 @@ Support for efficiently downloading both types of media.
 - [erome.com](https://www.erome.com/)
 - [bunkr-albums.io](https://bunkr-albums.io/) (images only)
 
+## Community
+
+If you have any issues or want to communicate with me, join my Discord server by clicking the button below:
+
+[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
+
+## Downloads
+
+- **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
+
 ## Screenshot
 
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-04-27.png)
 
-## Installation
+## Clone and Setup
 
 ### Prerequisites
 
@@ -132,19 +141,7 @@ Contributions are welcome! If you are interested in enhancing the Coomer Downloa
 6. **Wait for Feedback**
    - The project maintainers will review your pull request. Based on their feedback, you might need to make additional changes.
 
-## Community
+### Getting Help
 
-If you have any issues or want to communicate with me, join my Discord server by clicking the button below:
-
-[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
-
-## FAQ
-
-**How do I report a problem or bug?**
-- You can report issues or bugs in the [Issues section](https://github.com/Emy69/CoomerDL/issues) of the repository.
-
-**Can I contribute to the project?**
-- Absolutely! All contributions are welcome.
-
-
+If you need help with your contributions, feel free to raise issues on the project's issue tracker or contact the maintainers directly.
 
