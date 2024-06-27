@@ -5,16 +5,6 @@
 
 Coomer Downloader App is a desktop application developed in Python that allows users to easily download images and videos from URLs. The application provides an intuitive graphical user interface (GUI) to simplify the process.
 
-## Table of Contents
-
-- [Features](#features)
-- [Supported Pages](#supported-pages)
-- [Contributing](#contributing)
-- [Community](#community)
-- [Usage](#usage)
-- [Clone and Setup](#clone-and-setup)
-- [Downloads](#downloads)
-
 ## Features
 
 ### Downloading images and videos
