@@ -11,9 +11,8 @@ Coomer Downloader App is a desktop application developed in Python that allows u
 - [Supported Pages](#supported-pages)
 - [Contributing](#contributing)
 - [Community](#community)
-- [Screenshot](#screenshot)
-- [Clone and Setup](#clone-and-setup)
 - [Usage](#usage)
+- [Clone and Setup](#clone-and-setup)
 - [Downloads](#downloads)
 
 ## Features
@@ -39,9 +38,13 @@ If you have any issues or want to communicate with me, join my Discord server by
 
 - **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
 
-## Screenshot
+## Usage
 
-![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-04-27.png)
+1. Open the application.
+2. Enter the URL of the image or video you want to download.
+3. Click the download button and wait for the process to complete.
+
+[![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
 
 ## Clone and Setup
 
@@ -108,12 +111,6 @@ If you have any issues or want to communicate with me, join my Discord server by
     ```bash
     python main.py
     ```
-
-## Usage
-
-1. Open the application.
-2. Enter the URL of the image or video you want to download.
-3. Click the download button and wait for the process to complete.
 
 ## Contributing
 
