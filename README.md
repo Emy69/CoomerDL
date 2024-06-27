@@ -2,114 +2,149 @@
 ![Linux Compatibility](https://img.shields.io/badge/Linux-Compatible-green)
 ![macOS Compatibility](https://img.shields.io/badge/macOS-Coming%20Soon-lightgrey)
 
-# Coomer Downloader App 
-It is a desktop application developed in Python, which allows users to easily download images and videos. Using an intuitive graphical user interface (GUI), users can simply enter the URL and download.
+# Coomer Downloader App
 
-## Supported pages
-- https://coomer.su/
-- https://kemono.su/
-- https://www.erome.com/
-- https://bunkr-albums.io/ (only images)
+Coomer Downloader App is a desktop application developed in Python that allows users to easily download images and videos from URLs. The application provides an intuitive graphical user interface (GUI) to simplify the process.
+
+## Table of Contents
+
+- [Features](#features)
+- [Supported Pages](#supported-pages)
+- [Screenshot](#screenshot)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [Community](#community)
+- [FAQ](#faq)
 
 ## Features
+
 ### Downloading images and videos
-Support to download both types of media efficiently.
 
-## Discord
-If you have any problem or want to communicate with me, join my Discord server by clicking the button below:
+Support for efficiently downloading both types of media.
 
-[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
+## Supported Pages
 
-
-## Downloads
-- **Download the Latest Version**: Visit the [releases page](https://github.com/Emy69/CoomerDL/releases) to download the latest version of the application.
+- [coomer.su](https://coomer.su/)
+- [kemono.su](https://kemono.su/)
+- [erome.com](https://www.erome.com/)
+- [bunkr-albums.io](https://bunkr-albums.io/) (images only)
 
 ## Screenshot
+
 ![Screenshot](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/Screenshot%202024-04-27.png)
 
-## Getting Started
+## Installation
 
 ### Prerequisites
+
 - Python 3.8 or higher.
 
 ### Warning
-- In some Linux distributions, `tkinter` might not be installed by default. You may need to install it manually.
 
-### Installation
+- In some Linux distributions, tkinter may not be installed by default. You might need to install it manually.
 
-#### For Windows
+### For Windows
 
 1. **Clone the repository**
+
     ```bash
     git clone https://github.com/Emy69/CoomerDL.git
     cd CoomerDL
     ```
 
 2. **Install the dependencies**
+
     ```bash
     pip install -r requirements.txt
     ```
 
 3. **Usage**
+
     ```bash
     python main.py
     ```
 
-#### For Linux
+### For Linux
 
 1. **Clone the repository**
+
     ```bash
     git clone https://github.com/Emy69/CoomerDL.git
     cd CoomerDL
     ```
 
 2. **Install the dependencies**
+
     ```bash
     pip install -r requirements.txt
     ```
 
-3. **Install `tkinter` if not already installed**
+3. **Install tkinter if not installed**
+
     - For Debian/Ubuntu based distributions:
+
         ```bash
         sudo apt-get install python3-tk
         ```
+
     - For Red Hat/Fedora based distributions:
+
         ```bash
         sudo dnf install python3-tkinter
         ```
 
 4. **Usage**
+
     ```bash
     python main.py
     ```
 
+## Usage
+
+1. Open the application.
+2. Enter the URL of the image or video you want to download.
+3. Click the download button and wait for the process to complete.
+
 ## Contributing
 
-Contributions are welcome! If you're interested in enhancing the Coomer Downloader App, please follow these steps to contribute:
+Contributions are welcome! If you are interested in enhancing the Coomer Downloader App, please follow these steps to contribute:
 
 1. **Fork the Repository**
-   - Begin by forking the project to your GitHub account. You can do this by visiting the [repository's main page](https://github.com/Emy69/CoomerDL) and clicking the fork button.
+   - Start by forking the project to your GitHub account. You can do this by visiting the [main page of the repository](https://github.com/Emy69/CoomerDL) and clicking the fork button.
 
 2. **Create a Branch**
    - Create a branch in your forked repository for your changes:
+
      ```bash
      git checkout -b feature-branch-name
      ```
 
 3. **Make Your Changes**
-   - Implement your changes and enhancements on your feature branch. Make sure to adhere to the coding standards and guidelines of the project.
+   - Implement your changes and enhancements in your feature branch. Ensure you adhere to the coding standards and guidelines of the project.
 
 4. **Run Tests**
-   - If the project has any tests, run them to ensure that your changes don't break existing functionality.
+   - If the project has tests, run them to ensure your changes do not break existing functionality.
 
 5. **Submit a Pull Request**
-   - Once you're ready, submit a pull request from your fork back to the original repository. Provide a clear description of your changes and any other information that might help the reviewers understand your contributions.
+   - Once ready, submit a pull request from your fork back to the original repository. Provide a clear description of your changes and any other information that might help the reviewers understand your contributions.
 
 6. **Wait for Feedback**
    - The project maintainers will review your pull request. Based on their feedback, you might need to make additional changes.
 
-### Getting Help
+## Community
 
-If you need help with your contributions, feel free to raise issues on the project's issue tracker or contact the maintainers directly.
+If you have any issues or want to communicate with me, join my Discord server by clicking the button below:
+
+[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
+
+## FAQ
+
+**How do I report a problem or bug?**
+- You can report issues or bugs in the [Issues section](https://github.com/Emy69/CoomerDL/issues) of the repository.
+
+**Can I contribute to the project?**
+- Absolutely! All contributions are welcome.
+
 
 
