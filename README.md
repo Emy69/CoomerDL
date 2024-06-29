@@ -34,4 +34,4 @@ If you have any issues or want to communicate with me, join my Discord server by
 2. Enter the URL of the image or video you want to download.
 3. Click the download button and wait for the process to complete.
 
-[![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
+![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
