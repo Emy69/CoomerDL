@@ -361,9 +361,12 @@ class ImageDownloaderApp(ctk.CTk):
 
     def load_download_folder(self):
         config_path = 'resources/config/download_path/download_folder.json'
-        if not Path(config_path).exists:
+        config_dir = Path(config_path).parent
+        if not config_dir.exists():
+            config_dir.mkdir(parents=True)
+        if not Path(config_path).exists():
             with open(config_path, 'w') as config_file:
-                json.dump({}, config_file)
+                json.dump({'download_folder': ''}, config_file)
         try:
             with open(config_path, 'r') as config_file:
                 config = json.load(config_file)
