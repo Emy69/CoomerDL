@@ -1,0 +1,538 @@
+{
+    "URL de la página web:": {
+        "es": "URL de la página web:",
+        "en": "Website URL:",
+        "fr": "URL du site Web :",
+        "ja": "ウェブサイトのURL：",
+        "ru": "URL веб-страницы:",
+        "zh": "网站 URL:"
+    },
+    "Seleccionar Carpeta": {
+        "es": "Seleccionar Carpeta",
+        "en": "Select Folder",
+        "fr": "Sélectionner un dossier",
+        "ja": "フォルダーを選択",
+        "ru": "Выбрать папку",
+        "zh": "选择文件夹"
+    },
+    "Descargar Imágenes": {
+        "es": "Descargar Imágenes",
+        "en": "Download Images",
+        "fr": "Télécharger des images",
+        "ja": "画像をダウンロード",
+        "ru": "Загрузить изображения",
+        "zh": "下载图片"
+    },
+    "Descargar Vídeos": {
+        "es": "Descargar Vídeos",
+        "en": "Download Videos",
+        "fr": "Télécharger des vidéos",
+        "ja": "ビデオをダウンロード",
+        "ru": "Загрузить видео",
+        "zh": "下载视频"
+    },
+    "Descargar Comprimidos": {
+        "es": "Descargar Comprimidos",
+        "en": "Download Compressed",
+        "fr": "Télécharger des fichiers compressés",
+        "ja": "圧縮ファイルをダウンロード",
+        "ru": "Скачать сжатые файлы",
+        "zh": "下载压缩文件"
+    },
+    "Descargar": {
+        "es": "Descargar",
+        "en": "Download",
+        "fr": "Télécharger",
+        "ja": "ダウンロード",
+        "ru": "Скачать",
+        "zh": "下载"
+    },
+    "Cancelar Descarga": {
+        "es": "Cancelar Descarga",
+        "en": "Cancel Download",
+        "fr": "Annuler le téléchargement",
+        "ja": "ダウンロードをキャンセル",
+        "ru": "Отменить загрузку",
+        "zh": "取消下载"
+    },
+    "Buscar actualizaciones": {
+        "es": "Buscar actualizaciones",
+        "en": "Check for updates",
+        "fr": "Rechercher des mises à jour",
+        "ja": "アップデートを確認する",
+        "ru": "Проверить обновления",
+        "zh": "检查更新"
+    },
+    "Pegar": {
+        "es": "Pegar",
+        "en": "Paste",
+        "fr": "Coller",
+        "ja": "貼り付け",
+        "ru": "Вставить",
+        "zh": "粘贴"
+    },
+    "Configuraciones": {
+        "es": "Configuraciones",
+        "en": "Settings",
+        "fr": "Paramètres",
+        "ja": "設定",
+        "ru": "Настройки",
+        "zh": "设置"
+    },
+    "Salir": {
+        "es": "Salir",
+        "en": "Exit",
+        "fr": "Quitter",
+        "ja": "終了",
+        "ru": "Выход",
+        "zh": "退出"
+    },
+    "Añadir a Favoritos": {
+        "es": "Añadir a Favoritos",
+        "en": "Add to Favorites",
+        "fr": "Ajouter aux favoris",
+        "ja": "お気に入りに追加",
+        "ru": "Добавить в избранное",
+        "zh": "添加到收藏夹"
+    },
+    "Ver Favoritos": {
+        "es": "Ver Favoritos",
+        "en": "View Favorites",
+        "fr": "Voir les favoris",
+        "ja": "お気に入りを見る",
+        "ru": "Просмотр избранного",
+        "zh": "查看收藏夹"
+    },
+    "Acerca de": {
+        "es": "Acerca de",
+        "en": "About",
+        "fr": "À propos",
+        "ja": "約",
+        "ru": "О",
+        "zh": "关于"
+    },
+    "Notas de Parche": {
+        "es": "Notas de Parche",
+        "en": "Patch Notes",
+        "fr": "Notes de patch",
+        "ja": "パッチノート",
+        "ru": "Заметки о патче",
+        "zh": "补丁说明"
+    },
+    "Error": {
+        "es": "Error",
+        "en": "Error",
+        "fr": "Erreur",
+        "ja": "エラー",
+        "ru": "Ошибка",
+        "zh": "错误"
+    },
+    "La descarga ha sido cancelada.": {
+        "es": "La descarga ha sido cancelada.",
+        "en": "The download has been cancelled.",
+        "fr": "Le téléchargement a été annulé.",
+        "ja": "ダウンロードがキャンセルされました。",
+        "ru": "Загрузка была отменена.",
+        "zh": "下载已取消。"
+    },
+    "cancel_download": {
+        "es": "La descarga ha sido cancelada.",
+        "en": "Download has been cancelled.",
+        "fr": "Le téléchargement a été annulé.",
+        "ja": "ダウンロードがキャンセルされました。",
+        "ru": "Загрузка была отменена.",
+        "zh": "下载已取消。"
+    },
+    "create_folder_error": {
+        "es": "Error al crear la carpeta: {error}",
+        "en": "Error creating folder: {error}",
+        "fr": "Erreur lors de la création du dossier : {error}",
+        "ja": "フォルダの作成中にエラーが発生しました: {error}",
+        "ru": "Ошибка при создании папки: {error}",
+        "zh": "创建文件夹时出错：{error}"
+    },
+    "choose_new_folder_name": {
+        "es": "No se pudo crear la carpeta: {folder_name}\n¿Desea elegir un nuevo nombre?",
+        "en": "Couldn't create folder: {folder_name}\nWould you like to choose a new name?",
+        "fr": "Impossible de créer le dossier : {folder_name}\nVoulez-vous choisir un nouveau nom ?",
+        "ja": "フォルダを作成できませんでした: {folder_name}\n新しい名前を選択しますか？",
+        "ru": "Не удалось создать папку: {folder_name}\nХотите выбрать новое имя?",
+        "zh": "无法创建文件夹：{folder_name}\n要选择新名称吗？"
+    },
+    "new_folder_name": {
+        "es": "Ingrese el nuevo nombre de la carpeta:",
+        "en": "Enter new folder name:",
+        "fr": "Entrez le nouveau nom du dossier :",
+        "ja": "新しいフォルダー名を入力してください：",
+        "ru": "Введите новое имя папки:",
+        "zh": "输入新文件夹名称："
+    },
+    "folder_creation_failed": {
+        "es": "No se pudo crear la carpeta: {folder_name}\nError: {error}",
+        "en": "Could not create folder: {folder_name}\nError: {error}",
+        "fr": "Impossible de créer le dossier : {folder_name}\nErreur : {error}",
+        "ja": "フォルダを作成できませんでした: {folder_name}\nエラー: {error}",
+        "ru": "Не удалось создать папку: {folder_name}\nОшибка: {error}",
+        "zh": "无法创建文件夹：{folder_name}\n错误：{error}"
+    },
+    "start_download_video": {
+        "es": "Iniciando la descarga del video: {file_path}",
+        "en": "Starting video download: {file_path}",
+        "fr": "Début du téléchargement de la vidéo : {file_path}",
+        "ja": "ビデオのダウンロードを開始しています：{file_path}",
+        "ru": "Начало загрузки видео: {file_path}",
+        "zh": "开始视频下载：{file_path}"
+    },
+    "download_successful": {
+        "es": "Descarga exitosa: {resource_type}, archivo: {file_path}",
+        "en": "Download successful: {resource_type}, file: {file_path}",
+        "fr": "Téléchargement réussi : {resource_type}, fichier : {file_path}",
+        "ja": "ダウンロード成功: {resource_type}、ファイル: {file_path}",
+        "ru": "Загрузка успешна: {resource_type}, файл: {file_path}",
+        "zh": "下载成功：{resource_type}，文件：{file_path}"
+    },
+    "download_error": {
+        "es": "Error de descarga: {resource_type}, código de estado: {status_code}",
+        "en": "Download error: {resource_type}, status code: {status_code}",
+        "fr": "Erreur de téléchargement : {resource_type}, code d'état : {status_code}",
+        "ja": "ダウンロードエラー: {resource_type}、ステータスコード: {status_code}",
+        "ru": "Ошибка загрузки: {resource_type}, код состояния: {status_code}",
+        "zh": "下载错误：{resource_type}，状态代码：{status_code}"
+    },
+    "access_page_error": {
+        "es": "Error al acceder a la página {page_url}. Código de estado: {status_code}",
+        "en": "Error accessing page {page_url}. Status code: {status_code}",
+        "fr": "Erreur d'accès à la page {page_url}. Code d'état : {status_code}",
+        "ja": "ページ{page_url}にアクセスできませんでした。ステータスコード：{status_code}",
+        "ru": "Ошибка доступа к странице {page_url}. Код состояния: {status_code}",
+        "zh": "访问页面{page_url}时出错。状态代码：{status_code}"
+    },
+    "unknown_album": {
+        "es": "Álbum desconocido",
+        "en": "Unknown Album",
+        "fr": "Album inconnu",
+        "ja": "不明なアルバム",
+        "ru": "Неизвестный альбом",
+        "zh": "未知专辑"
+    },
+    "carpeta_descarga": {
+        "es": "Por favor, selecciona una carpeta de descarga.",
+        "en": "Please select a download folder.",
+        "fr": "Veuillez sélectionner un dossier de téléchargement.",
+        "ja": "ダウンロードフォルダを選択してください。",
+        "ru": "Пожалуйста, выберите папку для загрузки.",
+        "zh": "请选择下载文件夹。"
+    },
+    "Archivo": {
+        "es": "Archivo",
+        "en": "File",
+        "fr": "Fichier",
+        "ja": "ファイル",
+        "ru": "Файл",
+        "zh": "文件"
+    },
+    "Favoritos": {
+        "es": "Favoritos",
+        "en": "Favorites",
+        "fr": "Favoris",
+        "ja": "お気に入り",
+        "ru": "Избранное",
+        "zh": "收藏夹"
+    },
+    "No_mostrar": {
+        "es": "No mostrar de nuevo",
+        "en": "Do not show again",
+        "fr": "Ne plus montrer",
+        "ja": "再表示しない",
+        "ru": "Больше не показывать",
+        "zh": "不再显示"
+    },
+    "coming_soon": {
+        "es": "Próximamente",
+        "en": "Coming soon",
+        "fr": "Bientôt disponible",
+        "ja": "近日公開",
+        "ru": "Скоро будет",
+        "zh": "即将推出"
+    },
+    "Descarga_Bunkr": {
+        "es": "Iniciando descarga desde Bunkr...",
+        "en": "Starting download from Bunkr...",
+        "fr": "Démarrage du téléchargement depuis Bunkr...",
+        "ja": "Bunkrからダウンロードを開始...",
+        "ru": "Начало загрузки с Bunkr...",
+        "zh": "从 Bunkr 开始下载..."
+    },
+    "Descarga_Erome": {
+        "es": "Iniciando descarga desde Erome...",
+        "en": "Starting download from Erome...",
+        "fr": "Démarrage du téléchargement depuis Erome...",
+        "ja": "Eromeからダウンロードを開始...",
+        "ru": "Начало загрузки с Erome...",
+        "zh": "从 Erome 开始下载..."
+    },
+    "URL_album": {
+        "es": "URL del álbum detectada, procediendo a descargar el álbum.",
+        "en": "Album URL detected, proceeding to download album.",
+        "fr": "URL de l'album détectée, téléchargement de l'album en cours.",
+        "ja": "アルバムのURLが検出されました。アルバムのダウンロードを開始します。",
+        "ru": "Обнаружен URL альбома, продолжаем загрузку альбома.",
+        "zh": "检测到专辑 URL，正在下载专辑。"
+    },
+    "URL_perfil": {
+        "es": "URL del perfil detectada, procediendo a descargar el perfil.",
+        "en": "Profile URL detected, proceeding to download profile.",
+        "fr": "URL de profil détectée, téléchargement du profil en cours.",
+        "ja": "プロフィールのURLが検出されました。プロフィールのダウンロードを開始します。",
+        "ru": "Обнаружен URL профиля, продолжаем загрузку профиля.",
+        "zh": "检测到个人资料 URL，正在下载个人资料。"
+    },
+    "enlaces_validos": {
+        "es": "No se encontraron enlaces de descarga válidos.",
+        "en": "No valid download links were found.",
+        "fr": "Aucun lien de téléchargement valide trouvé.",
+        "ja": "有効なダウンロードリンクが見つかりませんでした。",
+        "ru": "Не найдено допустимых ссылок для загрузки.",
+        "zh": "未找到有效的下载链接。"
+    },
+    "album_download_complete": {
+        "es": "Descarga del álbum '{album_name}' completada.",
+        "en": "Album download '{album_name}' completed.",
+        "fr": "Téléchargement de l'album '{album_name}' terminé.",
+        "ja": "アルバム'{album_name}'のダウンロードが完了しました。",
+        "ru": "Загрузка альбома '{album_name}' завершена.",
+        "zh": "专辑'{album_name}'下载完成。"
+    },
+    "profile_download_complete": {
+        "es": "Descarga del perfil '{profile_name}' completada.",
+        "en": "Profile download '{profile_name}' completed.",
+        "fr": "Téléchargement du profil '{profile_name}' terminé.",
+        "ja": "プロフィール'{profile_name}'のダウンロードが完了しました。",
+        "ru": "Загрузка профиля '{profile_name}' завершена.",
+        "zh": "个人资料'{profile_name}'下载完成。"
+    },
+    "OK": {
+        "es": "OK",
+        "en": "OK",
+        "fr": "OK",
+        "ja": "OK",
+        "ru": "OK",
+        "zh": "OK"
+    },
+    "Idioma": {
+        "es": "Idioma",
+        "en": "Language",
+        "fr": "Langue",
+        "ja": "言語",
+        "ru": "Язык",
+        "zh": "语言"
+    },
+    "Aplicar": {
+        "es": "Aplicar",
+        "en": "Apply",
+        "fr": "Appliquer",
+        "ja": "適用する",
+        "ru": "Применить",
+        "zh": "应用"
+    },
+    "Selecciona_idioma": {
+        "es": "Selecciona un idioma:",
+        "en": "Select a language:",
+        "fr": "Sélectionnez une langue :",
+        "ja": "言語を選択してください：",
+        "ru": "Выберите язык:",
+        "zh": "选择一种语言："
+    },
+    "ConfiguracionDescarga": {
+        "es": "Configuración de Descargas",
+        "en": "Download Settings",
+        "fr": "Paramètres de téléchargement",
+        "ja": "ダウンロード設定",
+        "ru": "Настройки загрузки",
+        "zh": "下载设置"
+    },
+    "Por favor, selecciona una carpeta de descarga.": {
+        "es": "Por favor, selecciona una carpeta de descarga.",
+        "en": "Please select a download folder.",
+        "fr": "Veuillez sélectionner un dossier de téléchargement.",
+        "ja": "ダウンロードフォルダーを選択してください。",
+        "ru": "Пожалуйста, выберите папку для загрузки.",
+        "zh": "请选择下载文件夹。"
+    },
+    "Selecciona idioma": {
+        "es": "Selecciona idioma",
+        "en": "Select language",
+        "fr": "Sélectionnez la langue",
+        "ja": "言語を選択",
+        "ru": "Выберите язык",
+        "zh": "选择语言"
+    },
+    "Iniciando descarga...": {
+        "es": "Iniciando descarga...",
+        "en": "Starting download...",
+        "fr": "Début du téléchargement...",
+        "ja": "ダウンロードを開始しています...",
+        "ru": "Начало загрузки...",
+        "zh": "开始下载..."
+    },
+    "Descargando post único...": {
+        "es": "Descargando post único...",
+        "en": "Downloading single post...",
+        "fr": "Téléchargement du post unique...",
+        "ja": "単一の投稿をダウンロードしています...",
+        "ru": "Загрузка одного поста...",
+        "zh": "正在下载单个帖子..."
+    },
+    "Descargando todo el contenido del usuario...": {
+        "es": "Descargando todo el contenido del usuario...",
+        "en": "Downloading all user content...",
+        "fr": "Téléchargement de tout le contenu de l'utilisateur...",
+        "ja": "ユーザーのすべてのコンテンツをダウンロードしています...",
+        "ru": "Загрузка всего контента пользователя...",
+        "zh": "下载所有用户内容..."
+    },
+    "Descargar todo el contenido": {
+        "es": "Descargar todo el contenido",
+        "en": "Download all content",
+        "fr": "Tout télécharger",
+        "ja": "すべてのコンテンツをダウンロード",
+        "ru": "Скачать весь контент",
+        "zh": "下载所有内容"
+    },
+    "¿Desea descargar todo el contenido del usuario?": {
+        "es": "¿Desea descargar todo el contenido del usuario?",
+        "en": "Do you want to download all user content?",
+        "fr": "Voulez-vous télécharger tout le contenu de l'utilisateur ?",
+        "ja": "ユーザーのすべてのコンテンツをダウンロードしますか？",
+        "ru": "Хотите скачать весь контент пользователя?",
+        "zh": "您想下载所有用户内容吗？"
+    },
+    "No se pudo extraer el servicio.": {
+        "es": "No se pudo extraer el servicio.",
+        "en": "Could not extract the service.",
+        "fr": "Impossible d'extraire le service.",
+        "ja": "サービスを抽出できませんでした。",
+        "ru": "Не удалось извлечь услугу.",
+        "zh": "无法提取服务。"
+    },
+    "Extrayendo ID del post del URL: {url}": {
+        "es": "Extrayendo ID del post del URL: {url}",
+        "en": "Extracting post ID from URL: {url}",
+        "fr": "Extraction de l'ID du post de l'URL : {url}",
+        "ja": "URLから投稿IDを抽出しています：{url}",
+        "ru": "Извлечение ID поста из URL: {url}",
+        "zh": "从 URL 提取帖子 ID：{url}"
+    },
+    "ID del post extraído: {post_id}": {
+        "es": "ID del post extraído: {post_id}",
+        "en": "Extracted post ID: {post_id}",
+        "fr": "ID du post extrait : {post_id}",
+        "ja": "抽出された投稿ID：{post_id}",
+        "ru": "Извлеченный ID поста: {post_id}",
+        "zh": "提取的帖子 ID：{post_id}"
+    },
+    "No se pudo extraer el ID del post.": {
+        "es": "No se pudo extraer el ID del post.",
+        "en": "Could not extract the post ID.",
+        "fr": "Impossible d'extraire l'ID du post.",
+        "ja": "投稿IDを抽出できませんでした。",
+        "ru": "Не удалось извлечь ID поста.",
+        "zh": "无法提取帖子 ID。"
+    },
+    "Extrayendo ID del usuario del URL: {url}": {
+        "es": "Extrayendo ID del usuario del URL: {url}",
+        "en": "Extracting user ID from URL: {url}",
+        "fr": "Extraction de l'ID utilisateur de l'URL : {url}",
+        "ja": "URLからユーザーIDを抽出しています：{url}",
+        "ru": "Извлечение ID пользователя из URL: {url}",
+        "zh": "从 URL 提取用户 ID：{url}"
+    },
+    "ID del usuario extraído: {user_id}": {
+        "es": "ID del usuario extraído: {user_id}",
+        "en": "Extracted user ID: {user_id}",
+        "fr": "ID utilisateur extrait : {user_id}",
+        "ja": "抽出されたユーザーID：{user_id}",
+        "ru": "Извлеченный ID пользователя: {user_id}",
+        "zh": "提取的用户 ID：{user_id}"
+    },
+    "No se pudo extraer el ID del usuario.": {
+        "es": "No se pudo extraer el ID del usuario.",
+        "en": "Could not extract the user ID.",
+        "fr": "Impossible d'extraire l'ID utilisateur.",
+        "ja": "ユーザーIDを抽出できませんでした。",
+        "ru": "Не удалось извлечь ID пользователя.",
+        "zh": "无法提取用户 ID。"
+    },
+    "Desarrollado por: Emy69": {
+        "es": "Desarrollado por: Emy69",
+        "en": "Developed by: Emy69",
+        "fr": "Développé par : Emy69",
+        "ja": "開発者：Emy69",
+        "ru": "Разработано: Emy69",
+        "zh": "开发者：Emy69"
+    },
+    "Versión": {
+        "es": "Versión",
+        "en": "Version",
+        "fr": "Version",
+        "ja": "バージョン",
+        "ru": "Версия",
+        "zh": "版本"
+    },
+    "Repositorio": {
+        "es": "Repositorio",
+        "en": "Repository",
+        "fr": "Dépôt",
+        "ja": "リポジトリ",
+        "ru": "Репозиторий",
+        "zh": "储存库"
+    },
+    "Compatible con:": {
+        "es": "Compatible con:",
+        "en": "Compatible with:",
+        "fr": "Compatible avec :",
+        "ja": "対応機種：",
+        "ru": "Совместимость с:",
+        "zh": "兼容："
+    },
+    "Actualización disponible": {
+        "es": "Actualización disponible",
+        "en": "Update available",
+        "fr": "Mise à jour disponible",
+        "ja": "利用可能な更新",
+        "ru": "Доступно обновление",
+        "zh": "可用更新"
+    },
+    "Hay una nueva versión disponible: {latest_version}\n¿Deseas ir a la página de descargas?": {
+        "es": "Hay una nueva versión disponible: {latest_version}\n¿Deseas ir a la página de descargas?",
+        "en": "A new version is available: {latest_version}\nWould you like to go to the download page?",
+        "fr": "Une nouvelle version est disponible : {latest_version}\nVoulez-vous aller à la page de téléchargement ?",
+        "ja": "新しいバージョンが利用可能です：{latest_version}\nダウンロードページに行きますか？",
+        "ru": "Доступна новая версия: {latest_version}\nХотите перейти на страницу загрузки?",
+        "zh": "有新版本可用：{latest_version}\n要去下载页面吗？"
+    },
+    "Tu software está actualizado.": {
+        "es": "Tu software está actualizado.",
+        "en": "Your software is up to date.",
+        "fr": "Votre logiciel est à jour.",
+        "ja": "ソフトウェアは最新です。",
+        "ru": "Ваше программное обеспечение обновлено.",
+        "zh": "您的软件是最新的。"
+    },
+    "No se pudo verificar si hay actualizaciones.\nError: {e}": {
+        "es": "No se pudo verificar si hay actualizaciones.\nError: {e}",
+        "en": "Could not check for updates.\nError: {e}",
+        "fr": "Impossible de vérifier les mises à jour.\nErreur : {e}",
+        "ja": "更新を確認できませんでした。\nエラー：{e}",
+        "ru": "Не удалось проверить наличие обновлений.\nОшибка: {e}",
+        "zh": "无法检查更新。\n错误：{e}"
+    },
+    "Buscar": {
+        "es": "Buscar",
+        "en": "Search",
+        "fr": "Rechercher",
+        "ja": "検索",
+        "ru": "Поиск",
+        "zh": "搜索"
+    }
+}

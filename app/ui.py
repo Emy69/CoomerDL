@@ -65,9 +65,10 @@ class ImageDownloaderApp(ctk.CTk):
             return 'en'
 
     def load_translations(self, lang):
-        path = f"resources/config/languages/{lang}.json"
+        path = "resources/config/languages/translations.json"
         with open(path, 'r', encoding='utf-8') as file:
-            self.translations = json.load(file)
+            all_translations = json.load(file)
+            self.translations = {key: value.get(lang, key) for key, value in all_translations.items()}
     
     def tr(self, text):
         return self.translations.get(text, text)
@@ -181,7 +182,7 @@ class ImageDownloaderApp(ctk.CTk):
             root=self,
             enable_widgets_callback=self.enable_widgets,
             headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, como Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, как Gecko) Chrome/58.0.3029.110 Safari/537.36',
                 'Referer': 'https://www.erome.com/'
             },
             log_callback=self.add_log_message_safe
@@ -360,7 +361,7 @@ class ImageDownloaderApp(ctk.CTk):
 
     def load_download_folder(self):
         config_path = 'resources/config/download_path/download_folder.json'
-        if not Path(config_path).exists():
+        if not Path(config_path).exists:
             with open(config_path, 'w') as config_file:
                 json.dump({}, config_file)
         try:
