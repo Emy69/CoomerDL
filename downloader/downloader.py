@@ -2,15 +2,14 @@ import re
 import threading
 import requests
 import os
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote_plus, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from threading import Semaphore
-from tkinter import messagebox
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, download_images=True, 
-                 download_videos=True, enable_widgets_callback=None, update_speed_callback=None, headers=None):
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_speed_callback=None, headers=None,
+                 download_images=True, download_videos=True, download_compressed=True):
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -21,17 +20,27 @@ class Downloader:
             'Accept': 'application/json',
         }
         self.media_counter = 0
+        self.session = requests.Session()
+        self.executor = ThreadPoolExecutor(max_workers=10)
+        self.rate_limit = Semaphore(10)
+        self.download_mode = "multi"
+        self.max_workers = 10
+        self.video_extensions = ('.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v')
+        self.image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')
+        self.document_extensions = ('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx')
+        self.compressed_extensions = ('.zip', '.rar', '.7z', '.tar', '.gz')
         self.download_images = download_images
         self.download_videos = download_videos
-        self.session = requests.Session()
-        self.executor = ThreadPoolExecutor(max_workers=10)  # Incrementa el número de trabajadores
-        self.rate_limit = Semaphore(10)  # Permite más solicitudes concurrentes
-        self.video_extensions = ('.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv')
-        self.image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')
+        self.download_compressed = download_compressed
 
     def log(self, message):
         if self.log_callback:
             self.log_callback(message)
+
+    def set_download_mode(self, mode, max_workers):
+        self.download_mode = mode
+        self.max_workers = max_workers
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def request_cancel(self):
         self.cancel_requested.set()
@@ -39,7 +48,8 @@ class Downloader:
         self.shutdown_executor()
 
     def shutdown_executor(self):
-        self.executor.shutdown(wait=False)
+        if self.executor:
+            self.executor.shutdown(wait=False)
         if self.enable_widgets_callback:
             self.enable_widgets_callback()
 
@@ -58,18 +68,24 @@ class Downloader:
                 time.sleep(retry_wait)
                 retry_wait *= 2
             except requests.exceptions.RequestException as e:
-                self.log(f"Non-retryable error: {e}")
-                break
+                if e.response and e.response.status_code == 429:
+                    self.log(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying.")
+                    time.sleep(retry_wait)
+                    retry_wait *= 2
+                else:
+                    self.log(f"Non-retryable error: {e}")
+                    break
         return None
 
     def fetch_user_posts(self, site, user_id, service, specific_post_id=None):
         all_posts = []
         offset = 0
+        user_id_encoded = quote_plus(user_id)
 
         while True:
             if self.cancel_requested.is_set():
                 return all_posts
-            api_url = f"https://{site}.su/api/v1/{service}/user/{user_id}?o={offset}"
+            api_url = f"https://{site}.su/api/v1/{service}/user/{user_id_encoded}?o={offset}"
             self.log(f"Fetching user posts from {api_url}")
             try:
                 with self.rate_limit:
@@ -106,26 +122,34 @@ class Downloader:
 
         return media_urls
 
+    def get_media_folder(self, extension, user_id):
+        if extension in self.video_extensions:
+            folder_name = "videos"
+        elif extension in self.image_extensions:
+            folder_name = "images"
+        elif extension in self.document_extensions:
+            folder_name = "documents"
+        elif extension in self.compressed_extensions:
+            folder_name = "compressed"
+        else:
+            folder_name = "other"
+
+        media_folder = os.path.join(self.download_folder, user_id, folder_name)
+        return media_folder
+
     def process_media_element(self, media_url, user_id):
         if self.cancel_requested.is_set():
             return
 
         extension = os.path.splitext(media_url)[1].lower()
-        if extension in self.video_extensions:
-            if not self.download_videos:
-                self.log(f"Skipping video: {media_url}")
-                return
-            media_type = "video"
-        elif extension in self.image_extensions:
-            if not self.download_images:
-                self.log(f"Skipping image: {media_url}")
-                return
-            media_type = "image"
-        else:
-            self.log(f"Unsupported media type: {extension}. Skipping {media_url}")
+
+        if (extension in self.image_extensions and not self.download_images) or \
+           (extension in self.video_extensions and not self.download_videos) or \
+           (extension in self.compressed_extensions and not self.download_compressed):
+            self.log(f"Skipping {media_url} due to download settings.")
             return
 
-        self.log(f"Starting download: {media_type} from {media_url}")
+        self.log(f"Starting download from {media_url}")
 
         try:
             response = self.safe_request(media_url)
@@ -133,7 +157,7 @@ class Downloader:
                 self.log(f"Failed to download after multiple retries: {media_url}")
                 return
 
-            media_folder = os.path.join(self.download_folder, user_id, "videos" if media_type == "video" else "images")
+            media_folder = self.get_media_folder(extension, user_id)
             os.makedirs(media_folder, exist_ok=True)
 
             filename = os.path.basename(media_url).split('?')[0]
@@ -141,16 +165,16 @@ class Downloader:
             filepath = os.path.join(media_folder, filename)
 
             with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=1048576):  # 1 MB chunks
+                for chunk in response.iter_content(chunk_size=1048576):
                     if self.cancel_requested.is_set():
                         f.close()
                         os.remove(filepath)
-                        self.log(f"Download cancelled for: {media_type} from {media_url}")
+                        self.log(f"Download cancelled from {media_url}")
                         return
                     f.write(chunk)
 
             if not self.cancel_requested.is_set():
-                self.log(f"Download success: {media_type} from {media_url}")
+                self.log(f"Download success from {media_url}")
 
         except Exception as e:
             self.log(f"Error downloading: {e}")
@@ -163,7 +187,7 @@ class Downloader:
             return
         
         if not download_all:
-            posts = posts[:50]  # Limita a la primera página (primeros 50 posts)
+            posts = posts[:50]
 
         futures = []
 
@@ -171,12 +195,16 @@ class Downloader:
             for post in posts:
                 media_urls = self.process_post(post)
                 for media_url in media_urls:
-                    future = self.executor.submit(self.process_media_element, media_url, user_id)
-                    futures.append(future)
+                    if self.download_mode == 'queue':
+                        self.process_media_element(media_url, user_id)
+                    else:
+                        future = self.executor.submit(self.process_media_element, media_url, user_id)
+                        futures.append(future)
 
-            for future in as_completed(futures):
-                if self.cancel_requested.is_set():
-                    break
+            if self.download_mode == 'multi':
+                for future in as_completed(futures):
+                    if self.cancel_requested.is_set():
+                        break
 
         except Exception as e:
             self.log(f"Error during download: {e}")
@@ -184,10 +212,7 @@ class Downloader:
             self.shutdown_executor()
             self.log("All downloads completed or cancelled.")
 
-    def download_single_post(self, site, post_id, service, user_id, download_images=True, download_videos=True):
-        self.download_images = download_images
-        self.download_videos = download_videos
-
+    def download_single_post(self, site, post_id, service, user_id):
         post = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
         if not post:
             self.log("No post found for this ID.")
@@ -199,12 +224,16 @@ class Downloader:
 
         try:
             for media_url in media_urls:
-                future = self.executor.submit(self.process_media_element, media_url, user_id)
-                futures.append(future)
+                if self.download_mode == 'queue':
+                    self.process_media_element(media_url, user_id)
+                else:
+                    future = self.executor.submit(self.process_media_element, media_url, user_id)
+                    futures.append(future)
 
-            for future in as_completed(futures):
-                if self.cancel_requested.is_set():
-                    break
+            if self.download_mode == 'multi':
+                for future in as_completed(futures):
+                    if self.cancel_requested.is_set():
+                        break
 
         except Exception as e:
             self.log(f"Error during download: {e}")

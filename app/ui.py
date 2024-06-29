@@ -18,7 +18,7 @@ from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
 
 # Definir la versión como una variable global
-VERSION = "V0.6 - BETA"
+VERSION = "CoomerV0.6.0"
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -27,10 +27,11 @@ class ImageDownloaderApp(ctk.CTk):
         self.title(f"Downloader [{VERSION}]")
         self.setup_window()
         self.patch_notes = PatchNotes(self, self.tr)
-        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference)
+        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION)
         
         lang = self.load_language_preference()
         self.load_translations(lang)
+
         
         self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         self.initialize_ui()
@@ -108,11 +109,12 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_videos_check.pack(side='left', padx=10)
         self.download_videos_check.select()
 
+        self.download_compressed_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Comprimidos"))
+        self.download_compressed_check.pack(side='left', padx=10)
+        self.download_compressed_check.select()
+
         self.action_frame = ctk.CTkFrame(self)
         self.action_frame.pack(pady=10, fill='x', padx=20)
-
-        """self.download_speed_label = ctk.CTkLabel(self.action_frame, text=self.tr("Velocidad de descarga: 0 KB/s"))
-        self.download_speed_label.pack(side='left', padx=10)"""
 
         self.download_button = ctk.CTkButton(self.action_frame, text=self.tr("Descargar"), command=self.start_download)
         self.download_button.pack(side='left', padx=10)
@@ -147,23 +149,12 @@ class ImageDownloaderApp(ctk.CTk):
         self.favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
         self.menubar.add_cascade(label=self.tr("Favoritos"), menu=self.favorites_menu)
 
-        # Menú Acerca de
-        self.about_menu = tk.Menu(self.menubar, tearoff=0)
-        self.about_menu.add_command(label=self.tr("Acerca de"), command=self.show_about)
-        self.site_logos = {
-            "Erome": "resources/img/logos/erome_logo.png",
-            "Bunkr": "resources/img/logos/bunkr_logo.png",
-            "Coomer.su": "resources/img/logos/coomer_logo.png",
-            "Kemono.su": "resources/img/logos/kemono_logo.png",
-        }
-        self.menubar.add_cascade(label=self.tr("Acerca de"), menu=self.about_menu)
-        self.about_menu.add_command(label=self.tr("Notas de Parche"), command=self.patch_notes.show_patch_notes)
-
     def update_ui_texts(self):
         self.url_label.configure(text=self.tr("URL de la página web:"))
         self.browse_button.configure(text=self.tr("Seleccionar Carpeta"))
         self.download_images_check.configure(text=self.tr("Descargar Imágenes"))
         self.download_videos_check.configure(text=self.tr("Descargar Vídeos"))
+        self.download_compressed_check.configure(text=self.tr("Descargar Comprimidos"))
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
         self.title(self.tr(f"Downloader [{VERSION}]"))
@@ -172,8 +163,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.file_menu.entryconfigure(2, label=self.tr("Salir"))
         self.favorites_menu.entryconfigure(0, label=self.tr("Añadir a Favoritos"))
         self.favorites_menu.entryconfigure(1, label=self.tr("Ver Favoritos"))
-        self.about_menu.entryconfigure(0, label=self.tr("Acerca de"))
-        self.about_menu.entryconfigure(1, label=self.tr("Notas de Parche"))
 
     def add_to_favorites(self):
         messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
@@ -187,33 +176,6 @@ class ImageDownloaderApp(ctk.CTk):
         photoimg = ImageTk.PhotoImage(img)
         return photoimg
 
-    def show_about(self):
-        about_window = ctk.CTkToplevel(self)
-        about_window.title("Acerca de")
-        about_window.geometry("400x350")
-        about_window.grab_set()
-        
-        title_label = ctk.CTkLabel(about_window, text=f"Downloader [{VERSION}]", font=("Arial", 14, "bold"))
-        title_label.pack(pady=(10, 5))
-
-        description_label = ctk.CTkLabel(about_window, text=self.tr("Desarrollado por: Emy69\n\nCompatible con:"))
-        description_label.pack(pady=(0, 20))
-        
-        for site, logo_path in self.site_logos.items():
-            site_frame = ctk.CTkFrame(about_window)
-            site_frame.pack(fill='x', padx=20, pady=5)
-            
-            logo_image = self.create_photoimage(logo_path)
-            logo_label = tk.Label(site_frame, image=logo_image)
-            logo_label.image = logo_image
-            logo_label.pack(side='left', padx=10)
-            
-            site_label = ctk.CTkLabel(site_frame, text=site)
-            site_label.pack(side='left')
-
-        ok_button = ctk.CTkButton(about_window, text="OK", command=about_window.destroy)
-        ok_button.pack(pady=10)
-
     def setup_erome_downloader(self):
         self.erome_downloader = EromeDownloader(
             root=self,
@@ -222,9 +184,7 @@ class ImageDownloaderApp(ctk.CTk):
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, como Gecko) Chrome/58.0.3029.110 Safari/537.36',
                 'Referer': 'https://www.erome.com/'
             },
-            log_callback=self.add_log_message_safe,
-            download_images=self.download_images_check.get(),
-            download_videos=self.download_videos_check.get()
+            log_callback=self.add_log_message_safe
         )
 
     def setup_bunkr_downloader(self):
@@ -248,7 +208,8 @@ class ImageDownloaderApp(ctk.CTk):
                 'Referer': 'https://coomer.su/',
             },
             download_images=self.download_images_check.get(),
-            download_videos=self.download_videos_check.get()
+            download_videos=self.download_videos_check.get(),
+            download_compressed=self.download_compressed_check.get()
         )
 
     def select_folder(self):
@@ -264,9 +225,6 @@ class ImageDownloaderApp(ctk.CTk):
             messagebox.showerror(self.tr("Error"), self.tr("Por favor, selecciona una carpeta de descarga."))
             return
 
-        download_images = self.download_images_check.get()
-        download_videos = self.download_videos_check.get()
-
         self.download_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
 
@@ -276,10 +234,10 @@ class ImageDownloaderApp(ctk.CTk):
             self.active_downloader = self.erome_downloader
             if "/a/" in url:
                 self.add_log_message_safe(self.tr("URL del álbum"))
-                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, download_images, download_videos))
+                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder))
             else:
                 self.add_log_message_safe(self.tr("URL del perfil"))
-                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, download_images, download_videos))
+                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder))
         elif "bunkr.si" in url:
             self.add_log_message_safe(self.tr("Descargando Bunkr"))
             self.setup_bunkr_downloader()
@@ -319,7 +277,7 @@ class ImageDownloaderApp(ctk.CTk):
         post_id = self.extract_post_id(url)
         user_id = self.extract_user_id(url)
         if post_id and user_id:
-            self.active_downloader.download_single_post(site, post_id, service, user_id, self.download_images_check.get(), self.download_videos_check.get())
+            self.active_downloader.download_single_post(site, post_id, service, user_id)
 
     def extract_service(self, url):
         match = re.search(r"https://(coomer|kemono).su/([^/]+)/user", url)
@@ -333,21 +291,9 @@ class ImageDownloaderApp(ctk.CTk):
             messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el servicio."))
             return None, None
 
-    def extract_post_id(self, url):
-        self.add_log_message_safe(self.tr(f"Extrayendo ID del post del URL: {url}"))
-        match = re.search(r'/post/([a-zA-Z0-9_]+)', url)
-        if match:
-            post_id = match.group(1)
-            self.add_log_message_safe(self.tr(f"ID del post extraído: {post_id}"))
-            return post_id
-        else:
-            self.add_log_message_safe(self.tr("No se pudo extraer el ID del post."))
-            messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el ID del post."))
-            return None
-
     def extract_user_id(self, url):
         self.add_log_message_safe(self.tr(f"Extrayendo ID del usuario del URL: {url}"))
-        match = re.search(r'/user/([a-zA-Z0-9_]+)', url)
+        match = re.search(r'/user/([^/?]+)', url)
         if match:
             user_id = match.group(1)
             self.add_log_message_safe(self.tr(f"ID del usuario extraído: {user_id}"))
@@ -355,6 +301,17 @@ class ImageDownloaderApp(ctk.CTk):
         else:
             self.add_log_message_safe(self.tr("No se pudo extraer el ID del usuario."))
             messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el ID del usuario."))
+            return None
+
+    def extract_post_id(self, url):
+        match = re.search(r'/post/([^/?]+)', url)
+        if match:
+            post_id = match.group(1)
+            self.add_log_message_safe(self.tr(f"ID del post extraído: {post_id}"))
+            return post_id
+        else:
+            self.add_log_message_safe(self.tr("No se pudo extraer el ID del post."))
+            messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el ID del post."))
             return None
 
     def cancel_download(self):
