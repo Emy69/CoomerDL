@@ -6,9 +6,10 @@ from urllib.parse import urljoin, quote_plus, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from threading import Semaphore
+from collections import defaultdict
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_speed_callback=None, headers=None,
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None,update_speed_callback=None, headers=None,
                  download_images=True, download_videos=True, download_compressed=True):
         self.download_folder = download_folder
         self.log_callback = log_callback
@@ -32,6 +33,7 @@ class Downloader:
         self.download_images = download_images
         self.download_videos = download_videos
         self.download_compressed = download_compressed
+        self.futures = []
 
     def log(self, message):
         if self.log_callback:
@@ -44,14 +46,16 @@ class Downloader:
 
     def request_cancel(self):
         self.cancel_requested.set()
-        self.log("Download cancelled.")
-        self.shutdown_executor()
+        self.log("Download cancellation requested.")
+        for future in self.futures:
+            future.cancel()
 
     def shutdown_executor(self):
         if self.executor:
-            self.executor.shutdown(wait=False)
+            self.executor.shutdown(wait=True) 
         if self.enable_widgets_callback:
             self.enable_widgets_callback()
+        self.log("All downloads completed or cancelled.")
 
     def safe_request(self, url, max_retries=5):
         retry_wait = 1
@@ -144,8 +148,8 @@ class Downloader:
         extension = os.path.splitext(media_url)[1].lower()
 
         if (extension in self.image_extensions and not self.download_images) or \
-           (extension in self.video_extensions and not self.download_videos) or \
-           (extension in self.compressed_extensions and not self.download_compressed):
+        (extension in self.video_extensions and not self.download_videos) or \
+        (extension in self.compressed_extensions and not self.download_compressed):
             self.log(f"Skipping {media_url} due to download settings.")
             return
 
@@ -164,6 +168,9 @@ class Downloader:
             filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
             filepath = os.path.join(media_folder, filename)
 
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
+
             with open(filepath, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1048576):
                     if self.cancel_requested.is_set():
@@ -172,6 +179,8 @@ class Downloader:
                         self.log(f"Download cancelled from {media_url}")
                         return
                     f.write(chunk)
+                    downloaded_size += len(chunk)
+                    self.update_speed_callback(downloaded_size, total_size)  # Actualiza la barra de progreso
 
             if not self.cancel_requested.is_set():
                 self.log(f"Download success from {media_url}")
@@ -190,10 +199,17 @@ class Downloader:
             posts = posts[:50]
 
         futures = []
+        grouped_media_urls = defaultdict(list)
+
+        # Agrupar URLs por subdominio
+        for post in posts:
+            media_urls = self.process_post(post)
+            for media_url in media_urls:
+                subdomain = urlparse(media_url).netloc
+                grouped_media_urls[subdomain].append(media_url)
 
         try:
-            for post in posts:
-                media_urls = self.process_post(post)
+            for subdomain, media_urls in grouped_media_urls.items():
                 for media_url in media_urls:
                     if self.download_mode == 'queue':
                         self.process_media_element(media_url, user_id)
@@ -222,13 +238,21 @@ class Downloader:
         media_urls = self.process_post(post[0])
         futures = []
 
+        grouped_media_urls = defaultdict(list)
+
+        # Agrupar URLs por subdominio
+        for media_url in media_urls:
+            subdomain = urlparse(media_url).netloc
+            grouped_media_urls[subdomain].append(media_url)
+
         try:
-            for media_url in media_urls:
-                if self.download_mode == 'queue':
-                    self.process_media_element(media_url, user_id)
-                else:
-                    future = self.executor.submit(self.process_media_element, media_url, user_id)
-                    futures.append(future)
+            for subdomain, media_urls in grouped_media_urls.items():
+                for media_url in media_urls:
+                    if self.download_mode == 'queue':
+                        self.process_media_element(media_url, user_id)
+                    else:
+                        future = self.executor.submit(self.process_media_element, media_url, user_id)
+                        futures.append(future)
 
             if self.download_mode == 'multi':
                 for future in as_completed(futures):

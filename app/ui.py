@@ -18,7 +18,7 @@ from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
 
 # Definir la versión como una variable global
-VERSION = "CoomerV0.6.0"
+VERSION = "BETA 0.6.1"
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -74,7 +74,7 @@ class ImageDownloaderApp(ctk.CTk):
         return self.translations.get(text, text)
 
     def setup_window(self):
-        window_width, window_height = 1000, 680
+        window_width, window_height = 800, 600
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
@@ -90,10 +90,10 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_label = ctk.CTkLabel(self.input_frame, text=self.tr("URL de la página web:"))
         self.url_label.grid(row=0, column=0, sticky='w')
 
-        self.url_entry = ctk.CTkTextbox(self.input_frame, height=80, wrap="none")
+        self.url_entry = ctk.CTkEntry(self.input_frame)
         self.url_entry.grid(row=1, column=0, sticky='ew', padx=(0, 5))
 
-        self.browse_button = ctk.CTkButton(self.input_frame, height=80, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
+        self.browse_button = ctk.CTkButton(self.input_frame, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
         self.browse_button.grid(row=1, column=1, sticky='e')
 
         self.folder_path = ctk.CTkLabel(self.input_frame, text="")
@@ -128,6 +128,15 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
+
+        self.progress_frame = ctk.CTkFrame(self)
+        self.progress_frame.pack(pady=(0, 10), fill='x', padx=20)
+        
+        self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
+        self.progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
+
+        self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="0%")
+        self.progress_percentage.pack(side='left')
 
         self.context_menu = tk.Menu(self.url_entry, tearoff=0)
         self.context_menu.add_command(label=self.tr("Pegar"), command=self.paste_from_clipboard)
@@ -204,6 +213,7 @@ class ImageDownloaderApp(ctk.CTk):
             download_folder=self.download_folder,
             log_callback=self.add_log_message_safe,
             enable_widgets_callback=self.enable_widgets,
+            update_speed_callback=self.update_progress,
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://coomer.su/',
@@ -219,9 +229,18 @@ class ImageDownloaderApp(ctk.CTk):
             self.download_folder = folder_selected
             self.folder_path.configure(text=folder_selected)
             self.save_download_folder(folder_selected)
+    
+    def update_progress(self, downloaded, total):
+        if total > 0:
+            percentage = (downloaded / total) * 100
+            self.progress_bar.set(downloaded / total)
+            self.progress_percentage.configure(text=f"{percentage:.2f}%")
+        else:
+            self.progress_bar.set(0)
+            self.progress_percentage.configure(text="0%")
 
     def start_download(self):
-        url = self.url_entry.get("1.0", "end-1c").strip()
+        url = self.url_entry.get().strip()
         if not hasattr(self, 'download_folder') or not self.download_folder:
             messagebox.showerror(self.tr("Error"), self.tr("Por favor, selecciona una carpeta de descarga."))
             return
@@ -318,7 +337,6 @@ class ImageDownloaderApp(ctk.CTk):
     def cancel_download(self):
         if self.active_downloader:
             self.active_downloader.request_cancel()
-            self.add_log_message_safe(self.tr("Cancelando la descarga..."))
         else:
             self.add_log_message_safe(self.tr("No hay una descarga en curso para cancelar."))
         self.enable_widgets()
