@@ -18,7 +18,7 @@ from downloader.bunkr import BunkrDownloader
 from .settings_window import SettingsWindow
 
 # Definir la versión como una variable global
-VERSION = "BETA 0.6.1"
+VERSION = "CoomerV0.6.1"
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
