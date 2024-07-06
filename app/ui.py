@@ -517,16 +517,3 @@ class ImageDownloaderApp(ctk.CTk):
                 return config.get('download_folder', '')
         except json.JSONDecodeError:
             return ''
-        
-    def clear_progress_bars(self):
-        for file_id in list(self.progress_bars.keys()):
-            self.remove_progress_bar(file_id)
-
-    def cancel_download(self):
-        if self.active_downloader:
-            self.active_downloader.request_cancel()
-            self.active_downloader = None
-            self.clear_progress_bars()
-        else:
-            self.add_log_message_safe(self.tr("No hay una descarga en curso para cancelar."))
-        self.enable_widgets()
