@@ -9,12 +9,13 @@ from threading import Semaphore
 from collections import defaultdict
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None,update_speed_callback=None, headers=None,
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
                  download_images=True, download_videos=True, download_compressed=True):
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
-        self.update_speed_callback = update_speed_callback
+        self.update_progress_callback = update_progress_callback
+        self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
@@ -34,6 +35,8 @@ class Downloader:
         self.download_videos = download_videos
         self.download_compressed = download_compressed
         self.futures = []
+        self.total_files = 0
+        self.completed_files = 0
 
     def log(self, message):
         if self.log_callback:
@@ -180,10 +183,14 @@ class Downloader:
                         return
                     f.write(chunk)
                     downloaded_size += len(chunk)
-                    self.update_speed_callback(downloaded_size, total_size)  # Actualiza la barra de progreso
+                    if self.update_progress_callback:
+                        self.update_progress_callback(downloaded_size, total_size, file_id=media_url, file_path=filepath)  # Actualiza la barra de progreso
 
             if not self.cancel_requested.is_set():
+                self.completed_files += 1
                 self.log(f"Download success from {media_url}")
+                if self.update_global_progress_callback:
+                    self.update_global_progress_callback(self.completed_files, self.total_files)
 
         except Exception as e:
             self.log(f"Error downloading: {e}")
@@ -207,6 +214,9 @@ class Downloader:
             for media_url in media_urls:
                 subdomain = urlparse(media_url).netloc
                 grouped_media_urls[subdomain].append(media_url)
+
+        self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
+        self.completed_files = 0
 
         try:
             for subdomain, media_urls in grouped_media_urls.items():
@@ -244,6 +254,9 @@ class Downloader:
         for media_url in media_urls:
             subdomain = urlparse(media_url).netloc
             grouped_media_urls[subdomain].append(media_url)
+
+        self.total_files = len(media_urls)
+        self.completed_files = 0
 
         try:
             for subdomain, media_urls in grouped_media_urls.items():

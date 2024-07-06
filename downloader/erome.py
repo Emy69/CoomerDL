@@ -1,48 +1,48 @@
 from tkinter import messagebox, simpledialog
+import uuid
 import requests
 from bs4 import BeautifulSoup
 import os
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class EromeDownloader:
-    def __init__(self, root, log_callback=None,enable_widgets_callback=None, download_images=True, download_videos=True, headers=None, language="en"):
+    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False):
         self.root = root
         self.session = requests.Session()
-        self.headers = headers or {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
+        self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-        }
+        }).items()}
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
+        self.update_progress_callback = update_progress_callback
+        self.update_global_progress_callback = update_global_progress_callback
         self.download_images = download_images
         self.download_videos = download_videos
         self.cancel_requested = False
         self.language = language
-        self.translations = self.load_translations(language)
-    
-    def load_translations(self, language):
-        try:
-            with open(f"resources/config/languages/{language}.json", "r") as file:
-                translations = json.load(file)
-            return translations
-        except FileNotFoundError:
-            print(f"Translation file for '{language}' not found. Falling back to English.")
-            with open("resources/config/languages/en.json", "r") as file:
-                return json.load(file)
+        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.total_files = 0
+        self.completed_files = 0
+        self.is_profile_download = is_profile_download
 
-    def tr(self, key):
-        return self.translations.get(key, f"[{key} not translated]")
-
-    # Método para solicitar la cancelación del proceso de descarga
     def request_cancel(self):
         self.cancel_requested = True
-        self.log(self.tr("cancel_download"))
-        self.enable_widgets_callback()
+        self.log("Download cancelled")
+        if self.is_profile_download:
+            self.enable_widgets_callback()
 
     def log(self, message):
         if self.log_callback is not None:
             self.log_callback(message)
+
+    def shutdown_executor(self):
+        self.executor.shutdown(wait=False)
+        self.log("Executor shut down.")
+        if self.is_profile_download:
+            self.enable_widgets_callback()
 
     @staticmethod
     def clean_filename(filename):
@@ -52,72 +52,72 @@ class EromeDownloader:
         try:
             os.makedirs(folder_name, exist_ok=True)
         except OSError as e:
-            self.log(self.tr("create_folder_error").format(error=e))
-            response = messagebox.askyesno(self.tr("choose_new_folder_name").format(folder_name=folder_name), parent=self.root)
+            self.log(f"Error creating folder: {e}")
+            response = messagebox.askyesno(f"Choose new folder name: {folder_name}", parent=self.root)
             if response:
-                new_folder_name = simpledialog.askstring(self.tr("new_folder_name"), parent=self.root)
+                new_folder_name = simpledialog.askstring("New folder name", parent=self.root)
                 if new_folder_name:
                     folder_name = os.path.join(os.path.dirname(folder_name), new_folder_name)
                     try:
                         os.makedirs(folder_name, exist_ok=True)
                     except OSError as e:
-                        messagebox.showerror(self.tr("folder_creation_failed").format(folder_name=folder_name, error=e), parent=self.root)
+                        messagebox.showerror(f"Folder creation failed: {folder_name}, error: {e}", parent=self.root)
         return folder_name
 
-    
-    def download_file(self, url, file_path, resource_type):
+    def download_file(self, url, file_path, resource_type, file_id=None):
         if self.cancel_requested:
             return
 
-        # Ensure the folder where the file will be saved exists
         folder_path = os.path.dirname(file_path)
         os.makedirs(folder_path, exist_ok=True)
 
-        if resource_type == "Video":
-            self.log(self.tr("start_download_video").format(file_path=file_path))
+        self.log(f"Start downloading {resource_type}: {file_path}")
 
-        # Start the download request with streaming
         response = requests.get(url, headers=self.headers, stream=True)
-
         if response.status_code == 200:
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
+
             with open(file_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=65536):
                     if self.cancel_requested:
                         return
                     f.write(chunk)
+                    downloaded_size += len(chunk)
+                    if self.update_progress_callback:
+                        self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
 
-            self.log(self.tr("download_successful").format(resource_type=resource_type, file_path=file_path))
+            self.completed_files += 1
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
+
+            self.log(f"Download successful: {resource_type}, {file_path}")
         else:
-            self.log(self.tr("download_error").format(resource_type=resource_type, status_code=response.status_code))
-
+            self.log(f"Error downloading {resource_type}, status code: {response.status_code}")
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
             if self.cancel_requested:
                 return
+            self.log(f"Processing album URL: {page_url}")
             response = requests.get(page_url, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-
-                # Obtener y limpiar el nombre del álbum para usarlo como nombre de carpeta
-                folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else "Album Desconocido")
+                folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else "Unknown Album")
                 folder_path = self.create_folder(os.path.join(base_folder, folder_name))
                 
-                # Descarga videos
+                media_urls = []
+
                 if self.download_videos:
-                    video_urls = set()  # Conjunto para almacenar y verificar duplicados
                     videos = soup.find_all('video')
                     for video in videos:
                         source = video.find('source')
                         if source:
                             video_src = source['src']
-                            if video_src not in video_urls:  # Verificar duplicados
-                                video_urls.add(video_src)
-                                abs_video_src = urljoin(page_url, video_src)
-                                video_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_video_src)))
-                                self.download_file(abs_video_src, video_name, 'Video')
+                            abs_video_src = urljoin(page_url, video_src)
+                            video_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_video_src)))
+                            media_urls.append((abs_video_src, video_name, 'Video'))
 
-                # Descarga imágenes
                 if self.download_images:
                     image_divs = soup.select('div.img')
                     for div in image_divs:
@@ -126,40 +126,49 @@ class EromeDownloader:
                             img_src = img['data-src']
                             abs_img_src = urljoin(page_url, img_src)
                             img_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_img_src)))
-                            self.download_file(abs_img_src, img_name, 'Imagen')
-                
-                self.log(self.tr("album_download_complete").format(album_name=folder_name))
-            else:
-                self.log(f"Error al acceder a la página {page_url}. Código de estado: {response.status_code}")
-                if self.enable_widgets_callback:
-                    self.enable_widgets_callback()  
-        finally:
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()  
+                            media_urls.append((abs_img_src, img_name, 'Image'))
 
+                self.total_files += len(media_urls)
+                futures = [self.executor.submit(self.download_file, url, file_path, resource_type, str(uuid.uuid4())) for url, file_path, resource_type in media_urls]
+                for future in as_completed(futures):
+                    if self.cancel_requested:
+                        self.log("Cancelling remaining downloads.")
+                        break
+                    future.result()
+                
+                self.log(f"Album download complete: {folder_name}")
+                if not self.is_profile_download:
+                    self.enable_widgets_callback()
+            else:
+                self.log(f"Error accessing page: {page_url}, status code: {response.status_code}")
+                if not self.is_profile_download:
+                    self.enable_widgets_callback()
+        finally:
+            if not self.is_profile_download:
+                self.enable_widgets_callback()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
-            """Procesa una página de perfil, encontrando y procesando cada álbum listado."""
-            if self.cancel_requested:  
+            if self.cancel_requested:
                 return
+            self.log(f"Processing profile URL: {url}")
             response = requests.get(url, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
-                username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else "Perfil Desconocido"
-                base_folder = self.create_folder(self.clean_filename(username))
-                
+                username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else "Unknown Profile"
+                base_folder = self.create_folder(os.path.join(download_folder, self.clean_filename(username)))
                 
                 album_links = soup.find_all('a', class_='album-link')
                 for album_link in album_links:
                     album_href = album_link.get('href')
                     album_full_url = urljoin(url, album_href)
-                    self.process_album_page(album_full_url, base_folder)
+                    self.process_album_page(album_full_url, base_folder, download_images, download_videos)
                     
-                self.log(self.tr("profile_download_complete").format(profile_name=username))
+                self.log(f"Profile download complete: {username}")
+                self.enable_widgets_callback()
             else:
-                self.log(f"Error al acceder al perfil {url}. Código de estado: {response.status_code}")
+                self.log(f"Error accessing page: {url}, status code: {response.status_code}")
+                self.enable_widgets_callback()
         finally:
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()  
+            if not self.is_profile_download:
+                self.enable_widgets_callback()
