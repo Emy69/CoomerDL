@@ -16,7 +16,7 @@ Coomer Downloader App supports downloading both images and videos efficiently. U
 - [coomer.su](https://coomer.su/)
 - [kemono.su](https://kemono.su/)
 - [erome.com](https://www.erome.com/)
-- [bunkr-albums.io](https://bunkr-albums.io/) (images only)
+- [bunkr-albums.io](https://bunkr-albums.io/)
 
 ## Community
 
