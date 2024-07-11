@@ -1,3 +1,4 @@
+import re
 from tkinter import messagebox, simpledialog
 import uuid
 import requests
@@ -8,7 +9,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class EromeDownloader:
-    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False):
+    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False):
         self.root = root
         self.session = requests.Session()
         self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
@@ -27,6 +28,7 @@ class EromeDownloader:
         self.total_files = 0
         self.completed_files = 0
         self.is_profile_download = is_profile_download
+        self.direct_download = direct_download  # Nueva opción para descarga directa
 
     def request_cancel(self):
         self.cancel_requested = True
@@ -46,22 +48,22 @@ class EromeDownloader:
 
     @staticmethod
     def clean_filename(filename):
-        return filename.split('?')[0]
+        return re.sub(r'[<>:"/\\|?*]', '_', filename.split('?')[0])
 
     def create_folder(self, folder_name):
         try:
             os.makedirs(folder_name, exist_ok=True)
         except OSError as e:
             self.log(f"Error creating folder: {e}")
-            response = messagebox.askyesno(f"Choose new folder name: {folder_name}", parent=self.root)
+            response = messagebox.askyesno("Error", f"Error creating folder: {folder_name}\nWould you like to choose a new folder name?", parent=self.root)
             if response:
-                new_folder_name = simpledialog.askstring("New folder name", parent=self.root)
+                new_folder_name = simpledialog.askstring("New folder name", "Enter a new folder name:", parent=self.root)
                 if new_folder_name:
-                    folder_name = os.path.join(os.path.dirname(folder_name), new_folder_name)
+                    folder_name = os.path.join(os.path.dirname(folder_name), self.clean_filename(new_folder_name))
                     try:
                         os.makedirs(folder_name, exist_ok=True)
                     except OSError as e:
-                        messagebox.showerror(f"Folder creation failed: {folder_name}, error: {e}", parent=self.root)
+                        messagebox.showerror("Error", f"Folder creation failed: {folder_name}, error: {e}", parent=self.root)
         return folder_name
 
     def download_file(self, url, file_path, resource_type, file_id=None):
@@ -103,8 +105,11 @@ class EromeDownloader:
             response = requests.get(page_url, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else "Unknown Album")
-                folder_path = self.create_folder(os.path.join(base_folder, folder_name))
+                if not self.direct_download:
+                    folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else "Unknown Album")
+                    folder_path = self.create_folder(os.path.join(base_folder, folder_name))
+                else:
+                    folder_path = base_folder  # Utiliza la carpeta base directamente
                 
                 media_urls = []
 
@@ -136,7 +141,7 @@ class EromeDownloader:
                         break
                     future.result()
                 
-                self.log(f"Album download complete: {folder_name}")
+                self.log(f"Album download complete: {folder_name}" if not self.direct_download else "Album download complete")
                 if not self.is_profile_download:
                     self.enable_widgets_callback()
             else:
