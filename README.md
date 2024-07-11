@@ -35,3 +35,9 @@ If you have any issues or want to communicate with me, join my Discord server by
 3. Click the download button and wait for the process to complete.
 
 ![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
+
+# Support my work!
+
+If you like my project and want to support it, you can make a donation through PayPal, thank you for your support!
+
+[![Donar con PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
