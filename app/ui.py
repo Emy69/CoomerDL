@@ -249,7 +249,8 @@ class ImageDownloaderApp(ctk.CTk):
             update_global_progress_callback=self.update_global_progress,
             download_images=self.download_images_check.get(),
             download_videos=self.download_videos_check.get(),
-            is_profile_download=is_profile_download
+            is_profile_download=is_profile_download,
+            tr=self.tr
         )
 
     def setup_bunkr_downloader(self):

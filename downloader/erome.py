@@ -9,7 +9,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class EromeDownloader:
-    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False):
+    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None):
         self.root = root
         self.session = requests.Session()
         self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
@@ -29,10 +29,11 @@ class EromeDownloader:
         self.completed_files = 0
         self.is_profile_download = is_profile_download
         self.direct_download = direct_download  # Nueva opción para descarga directa
+        self.tr = tr if tr else lambda x, **kwargs: x.format(**kwargs)  # Función de traducción
 
     def request_cancel(self):
         self.cancel_requested = True
-        self.log("Download cancelled")
+        self.log(self.tr("Download cancelled"))
         if self.is_profile_download:
             self.enable_widgets_callback()
 
@@ -42,7 +43,7 @@ class EromeDownloader:
 
     def shutdown_executor(self):
         self.executor.shutdown(wait=False)
-        self.log("Executor shut down.")
+        self.log(self.tr("Executor shut down."))
         if self.is_profile_download:
             self.enable_widgets_callback()
 
@@ -54,16 +55,16 @@ class EromeDownloader:
         try:
             os.makedirs(folder_name, exist_ok=True)
         except OSError as e:
-            self.log(f"Error creating folder: {e}")
-            response = messagebox.askyesno("Error", f"Error creating folder: {folder_name}\nWould you like to choose a new folder name?", parent=self.root)
+            self.log(self.tr("Error creating folder: {error}", error=e))
+            response = messagebox.askyesno(self.tr("Error"), self.tr("Couldn't create folder: {folder_name}\nWould you like to choose a new name?", folder_name=folder_name), parent=self.root)
             if response:
-                new_folder_name = simpledialog.askstring("New folder name", "Enter a new folder name:", parent=self.root)
+                new_folder_name = simpledialog.askstring(self.tr("New folder name"), self.tr("Enter new folder name:"), parent=self.root)
                 if new_folder_name:
                     folder_name = os.path.join(os.path.dirname(folder_name), self.clean_filename(new_folder_name))
                     try:
                         os.makedirs(folder_name, exist_ok=True)
                     except OSError as e:
-                        messagebox.showerror("Error", f"Folder creation failed: {folder_name}, error: {e}", parent=self.root)
+                        messagebox.showerror(self.tr("Error"), self.tr("Could not create folder: {folder_name}\nError: {error}", folder_name=folder_name, error=e), parent=self.root)
         return folder_name
 
     def download_file(self, url, file_path, resource_type, file_id=None):
@@ -73,7 +74,7 @@ class EromeDownloader:
         folder_path = os.path.dirname(file_path)
         os.makedirs(folder_path, exist_ok=True)
 
-        self.log(f"Start downloading {resource_type}: {file_path}")
+        self.log(self.tr("Start downloading {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
 
         response = requests.get(url, headers=self.headers, stream=True)
         if response.status_code == 200:
@@ -93,20 +94,20 @@ class EromeDownloader:
             if self.update_global_progress_callback:
                 self.update_global_progress_callback(self.completed_files, self.total_files)
 
-            self.log(f"Download successful: {resource_type}, {file_path}")
+            self.log(self.tr("Download successful: {resource_type}, {file_path}", resource_type=resource_type, file_path=file_path))
         else:
-            self.log(f"Error downloading {resource_type}, status code: {response.status_code}")
+            self.log(self.tr("Error downloading {resource_type}, status code: {status_code}", resource_type=resource_type, status_code=response.status_code))
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
             if self.cancel_requested:
                 return
-            self.log(f"Processing album URL: {page_url}")
+            self.log(self.tr("Processing album URL: {page_url}", page_url=page_url))
             response = requests.get(page_url, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 if not self.direct_download:
-                    folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else "Unknown Album")
+                    folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else self.tr("Unknown Album"))
                     folder_path = self.create_folder(os.path.join(base_folder, folder_name))
                 else:
                     folder_path = base_folder  # Utiliza la carpeta base directamente
@@ -137,15 +138,15 @@ class EromeDownloader:
                 futures = [self.executor.submit(self.download_file, url, file_path, resource_type, str(uuid.uuid4())) for url, file_path, resource_type in media_urls]
                 for future in as_completed(futures):
                     if self.cancel_requested:
-                        self.log("Cancelling remaining downloads.")
+                        self.log(self.tr("Cancelling remaining downloads."))
                         break
                     future.result()
                 
-                self.log(f"Album download complete: {folder_name}" if not self.direct_download else "Album download complete")
+                self.log(self.tr("Album download complete: {folder_name}", folder_name=folder_name) if not self.direct_download else self.tr("Album download complete"))
                 if not self.is_profile_download:
                     self.enable_widgets_callback()
             else:
-                self.log(f"Error accessing page: {page_url}, status code: {response.status_code}")
+                self.log(self.tr("Error accessing page: {page_url}, status code: {status_code}", page_url=page_url, status_code=response.status_code))
                 if not self.is_profile_download:
                     self.enable_widgets_callback()
         finally:
@@ -156,11 +157,11 @@ class EromeDownloader:
         try:
             if self.cancel_requested:
                 return
-            self.log(f"Processing profile URL: {url}")
+            self.log(self.tr("Processing profile URL: {url}", url=url))
             response = requests.get(url, headers=self.headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else "Unknown Profile"
+                username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else self.tr("Unknown Profile")
                 base_folder = self.create_folder(os.path.join(download_folder, self.clean_filename(username)))
                 
                 album_links = soup.find_all('a', class_='album-link')
@@ -169,10 +170,10 @@ class EromeDownloader:
                     album_full_url = urljoin(url, album_href)
                     self.process_album_page(album_full_url, base_folder, download_images, download_videos)
                     
-                self.log(f"Profile download complete: {username}")
+                self.log(self.tr("Profile download complete: {username}", username=username))
                 self.enable_widgets_callback()
             else:
-                self.log(f"Error accessing page: {url}, status code: {response.status_code}")
+                self.log(self.tr("Error accessing page: {url}, status code: {status_code}", url=url, status_code=response.status_code))
                 self.enable_widgets_callback()
         finally:
             if not self.is_profile_download:
