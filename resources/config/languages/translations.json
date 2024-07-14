@@ -246,5 +246,269 @@
         "ja": "投稿IDを抽出できませんでした。",
         "ru": "Не удалось извлечь ID поста.",
         "zh": "无法提取帖子 ID。"
+    },
+    "Tu software está actualizado.": {
+        "es": "Tu software está actualizado.",
+        "en": "Your software is up to date.",
+        "fr": "Votre logiciel est à jour.",
+        "ja": "ソフトウェアは最新です。",
+        "ru": "Ваше программное обеспечение обновлено.",
+        "zh": "您的软件是最新的。"
+    },
+    "No se pudo verificar si hay actualizaciones.\nError: {e}": {
+        "es": "No se pudo verificar si hay actualizaciones.\nError: {e}",
+        "en": "Could not check for updates.\nError: {e}",
+        "fr": "Impossible de vérifier les mises à jour.\nErreur : {e}",
+        "ja": "更新を確認できませんでした。\nエラー：{e}",
+        "ru": "Не удалось проверить наличие обновлений.\nОшибка: {e}",
+        "zh": "无法检查更新。\n错误：{e}"
+    },
+    "Buscar": {
+        "es": "Buscar",
+        "en": "Search",
+        "fr": "Rechercher",
+        "ja": "検索",
+        "ru": "Поиск",
+        "zh": "搜索"
+    },
+    "Hay una nueva versión disponible: {latest_version}\n¿Deseas ir a la página de descargas?": {
+        "es": "Hay una nueva versión disponible: {latest_version}\n¿Deseas ir a la página de descargas?",
+        "en": "A new version is available: {latest_version}\nWould you like to go to the download page?",
+        "fr": "Une nouvelle version est disponible : {latest_version}\nVoulez-vous aller à la page de téléchargement ?",
+        "ja": "新しいバージョンが利用可能です：{latest_version}\nダウンロードページに行きますか？",
+        "ru": "Доступна новая версия: {latest_version}\nХотите перейти на страницу загрузки?",
+        "zh": "有新版本可用：{latest_version}\n要去下载页面吗？"
+    },
+    "Desarrollado por: Emy69": {
+        "es": "Desarrollado por: Emy69",
+        "en": "Developed by: Emy69",
+        "fr": "Développé par : Emy69",
+        "ja": "開発者：Emy69",
+        "ru": "Разработано: Emy69",
+        "zh": "开发者：Emy69"
+    },
+    "Versión": {
+        "es": "Versión",
+        "en": "Version",
+        "fr": "Version",
+        "ja": "バージョン",
+        "ru": "Версия",
+        "zh": "版本"
+    },
+    "Repositorio": {
+        "es": "Repositorio",
+        "en": "Repository",
+        "fr": "Dépôt",
+        "ja": "リポジトリ",
+        "ru": "Репозиторий",
+        "zh": "储存库"
+    },
+    "Compatible con:": {
+        "es": "Compatible con:",
+        "en": "Compatible with:",
+        "fr": "Compatible avec :",
+        "ja": "対応機種：",
+        "ru": "Совместимость с:",
+        "zh": "兼容："
+    },
+    "Actualización disponible": {
+        "es": "Actualización disponible",
+        "en": "Update available",
+        "fr": "Mise à jour disponible",
+        "ja": "利用可能な更新",
+        "ru": "Доступно обновление",
+        "zh": "可用更新"
+    },
+    "¿Desea descargar todo el contenido del usuario?": {
+        "es": "¿Desea descargar todo el contenido del usuario?",
+        "en": "Do you want to download all user content?",
+        "fr": "Voulez-vous télécharger tout le contenu de l'utilisateur ?",
+        "ja": "ユーザーのすべてのコンテンツをダウンロードしますか？",
+        "ru": "Хотите скачать весь контент пользователя?",
+        "zh": "您想下载所有用户内容吗？"
+    },
+    "Descargar todo el contenido": {
+        "es": "Descargar todo el contenido",
+        "en": "Download all content",
+        "fr": "Tout télécharger",
+        "ja": "すべてのコンテンツをダウンロード",
+        "ru": "Скачать весь контент",
+        "zh": "下载所有内容"
+    },
+    "Descargando todo el contenido del usuario...": {
+        "es": "Descargando todo el contenido del usuario...",
+        "en": "Downloading all user content...",
+        "fr": "Téléchargement de tout le contenu de l'utilisateur...",
+        "ja": "ユーザーのすべてのコンテンツをダウンロードしています...",
+        "ru": "Загрузка всего контента пользователя...",
+        "zh": "下载所有用户内容..."
+    },
+    "OK": {
+        "es": "OK",
+        "en": "OK",
+        "fr": "OK",
+        "ja": "OK",
+        "ru": "OK",
+        "zh": "OK"
+    },
+    "Idioma": {
+        "es": "Idioma",
+        "en": "Language",
+        "fr": "Langue",
+        "ja": "言語",
+        "ru": "Язык",
+        "zh": "语言"
+    },
+    "Aplicar": {
+        "es": "Aplicar",
+        "en": "Apply",
+        "fr": "Appliquer",
+        "ja": "適用する",
+        "ru": "Применить",
+        "zh": "应用"
+    },
+    "Selecciona_idioma": {
+        "es": "Selecciona un idioma:",
+        "en": "Select a language:",
+        "fr": "Sélectionnez une langue :",
+        "ja": "言語を選択してください：",
+        "ru": "Выберите язык:",
+        "zh": "选择一种语言："
+    },
+    "ConfiguracionDescarga": {
+        "es": "Configuración de Descargas",
+        "en": "Download Settings",
+        "fr": "Paramètres de téléchargement",
+        "ja": "ダウンロード設定",
+        "ru": "Настройки загрузки",
+        "zh": "下载设置"
+    },
+    "Por favor, selecciona una carpeta de descarga.": {
+        "es": "Por favor, selecciona una carpeta de descarga.",
+        "en": "Please select a download folder.",
+        "fr": "Veuillez sélectionner un dossier de téléchargement.",
+        "ja": "ダウンロードフォルダーを選択してください。",
+        "ru": "Пожалуйста, выберите папку для загрузки.",
+        "zh": "请选择下载文件夹。"
+    },
+    "Selecciona idioma": {
+        "es": "Selecciona idioma",
+        "en": "Select language",
+        "fr": "Sélectionnez la langue",
+        "ja": "言語を選択",
+        "ru": "Выберите язык",
+        "zh": "选择语言"
+    },
+    "unknown_album": {
+        "es": "Álbum desconocido",
+        "en": "Unknown Album",
+        "fr": "Album inconnu",
+        "ja": "不明なアルバム",
+        "ru": "Неизвестный альбом",
+        "zh": "未知专辑"
+    },
+    "carpeta_descarga": {
+        "es": "Por favor, selecciona una carpeta de descarga.",
+        "en": "Please select a download folder.",
+        "fr": "Veuillez sélectionner un dossier de téléchargement.",
+        "ja": "ダウンロードフォルダを選択してください。",
+        "ru": "Пожалуйста, выберите папку для загрузки.",
+        "zh": "请选择下载文件夹。"
+    },
+    "Archivo": {
+        "es": "Archivo",
+        "en": "File",
+        "fr": "Fichier",
+        "ja": "ファイル",
+        "ru": "Файл",
+        "zh": "文件"
+    },
+    "Favoritos": {
+        "es": "Favoritos",
+        "en": "Favorites",
+        "fr": "Favoris",
+        "ja": "お気に入り",
+        "ru": "Избранное",
+        "zh": "收藏夹"
+    },
+    "No_mostrar": {
+        "es": "No mostrar de nuevo",
+        "en": "Do not show again",
+        "fr": "Ne plus montrer",
+        "ja": "再表示しない",
+        "ru": "Больше не показывать",
+        "zh": "不再显示"
+    },
+    "Buscar actualizaciones": {
+        "es": "Buscar actualizaciones",
+        "en": "Check for updates",
+        "fr": "Rechercher des mises à jour",
+        "ja": "アップデートを確認する",
+        "ru": "Проверить обновления",
+        "zh": "检查更新"
+    },
+    "Pegar": {
+        "es": "Pegar",
+        "en": "Paste",
+        "fr": "Coller",
+        "ja": "貼り付け",
+        "ru": "Вставить",
+        "zh": "粘贴"
+    },
+    "Configuraciones": {
+        "es": "Configuraciones",
+        "en": "Settings",
+        "fr": "Paramètres",
+        "ja": "設定",
+        "ru": "Настройки",
+        "zh": "设置"
+    },
+    "Salir": {
+        "es": "Salir",
+        "en": "Exit",
+        "fr": "Quitter",
+        "ja": "終了",
+        "ru": "Выход",
+        "zh": "退出"
+    },
+    "Añadir a Favoritos": {
+        "es": "Añadir a Favoritos",
+        "en": "Add to Favorites",
+        "fr": "Ajouter aux favoris",
+        "ja": "お気に入りに追加",
+        "ru": "Добавить в избранное",
+        "zh": "添加到收藏夹"
+    },
+    "Ver Favoritos": {
+        "es": "Ver Favoritos",
+        "en": "View Favorites",
+        "fr": "Voir les favoris",
+        "ja": "お気に入りを見る",
+        "ru": "Просмотр избранного",
+        "zh": "查看收藏夹"
+    },
+    "Acerca de": {
+        "es": "Acerca de",
+        "en": "About",
+        "fr": "À propos",
+        "ja": "約",
+        "ru": "О",
+        "zh": "关于"
+    },
+    "Notas de Parche": {
+        "es": "Notas de Parche",
+        "en": "Patch Notes",
+        "fr": "Notes de patch",
+        "ja": "パッチノート",
+        "ru": "Заметки о патче",
+        "zh": "补丁说明"
+    },
+    "Error": {
+        "es": "Error",
+        "en": "Error",
+        "fr": "Erreur",
+        "ja": "エラー",
+        "ru": "Ошибка",
+        "zh": "错误"
     }
 }
