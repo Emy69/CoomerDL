@@ -1,4 +1,52 @@
 {
+    "All downloads completed or cancelled.": {
+        "es": "Todas las descargas completadas o canceladas.",
+        "en": "All downloads completed or cancelled.",
+        "fr": "Tous les téléchargements terminés ou annulés.",
+        "ja": "すべてのダウンロードが完了またはキャンセルされました。",
+        "ru": "Все загрузки завершены или отменены.",
+        "zh": "所有下载已完成或取消。"
+    },
+    "Download success from {media_url}": {
+        "es": "Descarga exitosa desde {media_url}",
+        "en": "Download success from {media_url}",
+        "fr": "Téléchargement réussi depuis {media_url}",
+        "ja": "{media_url} からのダウンロードに成功しました",
+        "ru": "Загрузка успешна с {media_url}",
+        "zh": "从 {media_url} 下载成功"
+    },
+    "Fetching user posts from {api_url}": {
+        "es": "Obteniendo publicaciones de usuario desde {api_url}",
+        "en": "Fetching user posts from {api_url}",
+        "fr": "Récupération des publications des utilisateurs depuis {api_url}",
+        "ja": "{api_url}からユーザーポストを取得中",
+        "ru": "Получение сообщений пользователя с {api_url}",
+        "zh": "从 {api_url} 获取用户帖子"
+    },
+    "Error fetching user posts: {e}": {
+        "es": "Error obteniendo publicaciones de usuario: {e}",
+        "en": "Error fetching user posts: {e}",
+        "fr": "Erreur lors de la récupération des publications des utilisateurs : {e}",
+        "ja": "ユーザーポストを取得中のエラー：{e}",
+        "ru": "Ошибка при получении сообщений пользователя: {e}",
+        "zh": "获取用户帖子时出错：{e}"
+    },
+    "Servicio extraído: {service} del sitio: {site}":{
+        "es": "Servicio extraído: {service} del sitio: {site}",
+        "en": "Service extracted: {service} from site: {site}",
+        "fr": "Service récupéré : {service} du site : {site}",
+        "ja": "サイト：{site}から取得したサービス：{service}。",
+        "ru": "Получен сервис: {service} с сайта: {site}",
+        "zh": "检索到的服务：{service}，来自站点：{site}。"
+    },
+    "URL no válida": {
+        "es": "URL no válida",
+        "en": "Invalid URL",
+        "fr": "URL non valide",
+        "ja": "無効なURL",
+        "ru": "Недопустимый URL",
+        "zh": "无效 URL:"
+    },
     "URL de la página web:": {
         "es": "URL de la página web:",
         "en": "Website URL:",
@@ -254,6 +302,15 @@
         "ja": "近日公開",
         "ru": "Скоро будет",
         "zh": "即将推出"
+    },
+
+    "Starting download from {media_url}": {
+        "es": "Iniciando descarga desde {media_url}",
+        "en": "Starting download from {media_url}",
+        "fr": "Début du téléchargement depuis {media_url}",
+        "ja": "{media_url}からのダウンロードを開始しています",
+        "ru": "Начало загрузки с {media_url}",
+        "zh": "开始从 {media_url} 下载"
     },
     "Descarga_Bunkr": {
         "es": "Iniciando descarga desde Bunkr...",

@@ -11,13 +11,14 @@ import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image, ImageTk
 
-from .patch_notes import PatchNotes
-from .settings_window import SettingsWindow
+from app.patch_notes import PatchNotes  # Cambiado a importación absoluta
+from app.settings_window import SettingsWindow  # Cambiado a importación absoluta
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
-VERSION = "CoomerV0.6.2"
+
+VERSION = "CoomerV0.6.2.1"
 
 # Application class
 class ImageDownloaderApp(ctk.CTk):
@@ -44,6 +45,9 @@ class ImageDownloaderApp(ctk.CTk):
         
         # Initialize UI
         self.initialize_ui()
+        
+        self.update_ui_texts()  
+
         self.update_queue = queue.Queue()
         self.check_update_queue()
         self.protocol("WM_DELETE_WINDOW", self.on_app_close)
@@ -86,8 +90,11 @@ class ImageDownloaderApp(ctk.CTk):
             all_translations = json.load(file)
             self.translations = {key: value.get(lang, key) for key, value in all_translations.items()}
     
-    def tr(self, text):
-        return self.translations.get(text, text)
+    def tr(self, text, **kwargs):
+        translated_text = self.translations.get(text, text)
+        if kwargs:
+            translated_text = translated_text.format(**kwargs)
+        return translated_text
 
     # Window setup
     def setup_window(self):
@@ -193,6 +200,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.favorites_menu.add_command(label=self.tr("Añadir a Favoritos"), command=self.add_to_favorites)
         self.favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
         self.menubar.add_cascade(label=self.tr("Favoritos"), menu=self.favorites_menu)
+        
+        # Actualizar textos después de inicializar la UI
+        self.update_ui_texts()
 
     # Update UI texts
     def update_ui_texts(self):
@@ -268,7 +278,8 @@ class ImageDownloaderApp(ctk.CTk):
             },
             download_images=self.download_images_check.get(),
             download_videos=self.download_videos_check.get(),
-            download_compressed=self.download_compressed_check.get()
+            download_compressed=self.download_compressed_check.get(),
+            tr=self.tr
         )
 
     # Folder selection
@@ -412,7 +423,7 @@ class ImageDownloaderApp(ctk.CTk):
         if match:
             site = match.group(1)
             service = match.group(2)
-            self.add_log_message_safe(self.tr(f"Servicio extraído: {service} del sitio: {site}"))
+            self.add_log_message_safe(self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site))
             return site, service
         else:
             self.add_log_message_safe(self.tr("No se pudo extraer el servicio."))
@@ -420,11 +431,11 @@ class ImageDownloaderApp(ctk.CTk):
             return None, None
 
     def extract_user_id(self, url):
-        self.add_log_message_safe(self.tr(f"Extrayendo ID del usuario del URL: {url}"))
+        self.add_log_message_safe(self.tr("Extrayendo ID del usuario del URL: {url}", url=url))
         match = re.search(r'/user/([^/?]+)', url)
         if match:
             user_id = match.group(1)
-            self.add_log_message_safe(self.tr(f"ID del usuario extraído: {user_id}"))
+            self.add_log_message_safe(self.tr("ID del usuario extraído: {user_id}", user_id=user_id))
             return user_id
         else:
             self.add_log_message_safe(self.tr("No se pudo extraer el ID del usuario."))
@@ -435,7 +446,7 @@ class ImageDownloaderApp(ctk.CTk):
         match = re.search(r'/post/([^/?]+)', url)
         if match:
             post_id = match.group(1)
-            self.add_log_message_safe(self.tr(f"ID del post extraído: {post_id}"))
+            self.add_log_message_safe(self.tr("ID del post extraído: {post_id}", post_id=post_id))
             return post_id
         else:
             self.add_log_message_safe(self.tr("No se pudo extraer el ID del post."))

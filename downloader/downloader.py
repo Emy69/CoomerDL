@@ -10,7 +10,7 @@ from collections import defaultdict
 
 class Downloader:
     def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
-                 download_images=True, download_videos=True, download_compressed=True):
+                 download_images=True, download_videos=True, download_compressed=True, tr=None):
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -37,10 +37,12 @@ class Downloader:
         self.futures = []
         self.total_files = 0
         self.completed_files = 0
+        self.tr = tr
+        self.shutdown_called = False  
 
     def log(self, message):
         if self.log_callback:
-            self.log_callback(message)
+            self.log_callback(self.tr(message) if self.tr else message)
 
     def set_download_mode(self, mode, max_workers):
         self.download_mode = mode
@@ -49,16 +51,18 @@ class Downloader:
 
     def request_cancel(self):
         self.cancel_requested.set()
-        self.log("Download cancellation requested.")
+        self.log(self.tr("Download cancellation requested."))
         for future in self.futures:
             future.cancel()
 
     def shutdown_executor(self):
-        if self.executor:
-            self.executor.shutdown(wait=True) 
-        if self.enable_widgets_callback:
-            self.enable_widgets_callback()
-        self.log("All downloads completed or cancelled.")
+        if not self.shutdown_called:
+            self.shutdown_called = True  
+            if self.executor:
+                self.executor.shutdown(wait=True) 
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()
+            self.log(self.tr("All downloads completed or cancelled."))
 
     def safe_request(self, url, max_retries=5):
         retry_wait = 1
@@ -71,16 +75,16 @@ class Downloader:
                 response.raise_for_status()
                 return response
             except (requests.ConnectionError, requests.HTTPError, requests.TooManyRedirects) as e:
-                self.log(f"Retry {attempt + 1}: Error {e}, waiting {retry_wait} seconds before retrying.")
+                self.log(self.tr(f"Retry {attempt + 1}: Error {e}, waiting {retry_wait} seconds before retrying."))
                 time.sleep(retry_wait)
                 retry_wait *= 2
             except requests.exceptions.RequestException as e:
                 if e.response and e.response.status_code == 429:
-                    self.log(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying.")
+                    self.log(self.tr(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying."))
                     time.sleep(retry_wait)
                     retry_wait *= 2
                 else:
-                    self.log(f"Non-retryable error: {e}")
+                    self.log(self.tr(f"Non-retryable error: {e}"))
                     break
         return None
 
@@ -93,7 +97,7 @@ class Downloader:
             if self.cancel_requested.is_set():
                 return all_posts
             api_url = f"https://{site}.su/api/v1/{service}/user/{user_id_encoded}?o={offset}"
-            self.log(f"Fetching user posts from {api_url}")
+            self.log(self.tr("Fetching user posts from {api_url}", api_url=api_url))
             try:
                 with self.rate_limit:
                     response = self.session.get(api_url, headers=self.headers)
@@ -108,7 +112,7 @@ class Downloader:
                 all_posts.extend(posts)
                 offset += 50
             except Exception as e:
-                self.log(f"Error fetching user posts: {e}")
+                self.log(self.tr("Error fetching user posts: {e}", e=e))
                 break
 
         if specific_post_id:
@@ -153,15 +157,15 @@ class Downloader:
         if (extension in self.image_extensions and not self.download_images) or \
         (extension in self.video_extensions and not self.download_videos) or \
         (extension in self.compressed_extensions and not self.download_compressed):
-            self.log(f"Skipping {media_url} due to download settings.")
+            self.log(self.tr("Skipping {media_url} due to download settings.", media_url=media_url))
             return
 
-        self.log(f"Starting download from {media_url}")
+        self.log(self.tr("Starting download from {media_url}", media_url=media_url))
 
         try:
             response = self.safe_request(media_url)
             if response is None:
-                self.log(f"Failed to download after multiple retries: {media_url}")
+                self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
                 return
 
             media_folder = self.get_media_folder(extension, user_id)
@@ -179,7 +183,7 @@ class Downloader:
                     if self.cancel_requested.is_set():
                         f.close()
                         os.remove(filepath)
-                        self.log(f"Download cancelled from {media_url}")
+                        self.log(self.tr("Download cancelled from {media_url}", media_url=media_url))
                         return
                     f.write(chunk)
                     downloaded_size += len(chunk)
@@ -188,37 +192,75 @@ class Downloader:
 
             if not self.cancel_requested.is_set():
                 self.completed_files += 1
-                self.log(f"Download success from {media_url}")
+                self.log(self.tr("Download success from {media_url}", media_url=media_url))
                 if self.update_global_progress_callback:
                     self.update_global_progress_callback(self.completed_files, self.total_files)
 
         except Exception as e:
-            self.log(f"Error downloading: {e}")
+            self.log(self.tr("Error downloading: {e}", e=e))
+
 
     def download_media(self, site, user_id, service, download_all):
-        posts = self.fetch_user_posts(site, user_id, service)
-        if not posts:
-            self.log("No posts found for this user.")
+        try:
+            posts = self.fetch_user_posts(site, user_id, service)
+            if not posts:
+                self.log(self.tr("No posts found for this user."))
+                return
+            
+            if not download_all:
+                posts = posts[:50]
+
+            futures = []
+            grouped_media_urls = defaultdict(list)
+
+            # Agrupar URLs por subdominio
+            for post in posts:
+                media_urls = self.process_post(post)
+                for media_url in media_urls:
+                    subdomain = urlparse(media_url).netloc
+                    grouped_media_urls[subdomain].append(media_url)
+
+            self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
+            self.completed_files = 0
+
+            for subdomain, media_urls in grouped_media_urls.items():
+                for media_url in media_urls:
+                    if self.download_mode == 'queue':
+                        self.process_media_element(media_url, user_id)
+                    else:
+                        future = self.executor.submit(self.process_media_element, media_url, user_id)
+                        futures.append(future)
+
+            if self.download_mode == 'multi':
+                for future in as_completed(futures):
+                    if self.cancel_requested.is_set():
+                        break
+
+        except Exception as e:
+            self.log(self.tr(f"Error during download: {e}"))
+        finally:
             self.shutdown_executor()
-            return
-        
-        if not download_all:
-            posts = posts[:50]
 
-        futures = []
-        grouped_media_urls = defaultdict(list)
+    def download_single_post(self, site, post_id, service, user_id):
+        try:
+            post = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
+            if not post:
+                self.log(self.tr("No post found for this ID."))
+                return
+            
+            media_urls = self.process_post(post[0])
+            futures = []
 
-        # Agrupar URLs por subdominio
-        for post in posts:
-            media_urls = self.process_post(post)
+            grouped_media_urls = defaultdict(list)
+
+            # Agrupar URLs por subdominio
             for media_url in media_urls:
                 subdomain = urlparse(media_url).netloc
                 grouped_media_urls[subdomain].append(media_url)
 
-        self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
-        self.completed_files = 0
+            self.total_files = len(media_urls)
+            self.completed_files = 0
 
-        try:
             for subdomain, media_urls in grouped_media_urls.items():
                 for media_url in media_urls:
                     if self.download_mode == 'queue':
@@ -233,59 +275,18 @@ class Downloader:
                         break
 
         except Exception as e:
-            self.log(f"Error during download: {e}")
+            self.log(self.tr(f"Error during download: {e}"))
         finally:
             self.shutdown_executor()
-            self.log("All downloads completed or cancelled.")
-
-    def download_single_post(self, site, post_id, service, user_id):
-        post = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
-        if not post:
-            self.log("No post found for this ID.")
-            self.shutdown_executor()
-            return
-        
-        media_urls = self.process_post(post[0])
-        futures = []
-
-        grouped_media_urls = defaultdict(list)
-
-        # Agrupar URLs por subdominio
-        for media_url in media_urls:
-            subdomain = urlparse(media_url).netloc
-            grouped_media_urls[subdomain].append(media_url)
-
-        self.total_files = len(media_urls)
-        self.completed_files = 0
-
-        try:
-            for subdomain, media_urls in grouped_media_urls.items():
-                for media_url in media_urls:
-                    if self.download_mode == 'queue':
-                        self.process_media_element(media_url, user_id)
-                    else:
-                        future = self.executor.submit(self.process_media_element, media_url, user_id)
-                        futures.append(future)
-
-            if self.download_mode == 'multi':
-                for future in as_completed(futures):
-                    if self.cancel_requested.is_set():
-                        break
-
-        except Exception as e:
-            self.log(f"Error during download: {e}")
-        finally:
-            self.shutdown_executor()
-            self.log("All downloads completed or cancelled.")
     
     def fetch_single_post(self, site, post_id, service):
         api_url = f"https://{site}.su/api/v1/{service}/post/{post_id}"
-        self.log(f"Fetching post from {api_url}")
+        self.log(self.tr(f"Fetching post from {api_url}"))
         try:
             with self.rate_limit:
                 response = self.session.get(api_url, headers=self.headers)
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.log(f"Error fetching post: {e}")
+            self.log(self.tr(f"Error fetching post: {e}"))
             return None
