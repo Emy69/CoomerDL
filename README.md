@@ -3,14 +3,25 @@
 
 # Coomer Downloader App
 
-Coomer Downloader App is a desktop application developed in Python that allows users to easily download images and videos from URLs. The application provides an intuitive graphical user interface (GUI) to simplify the process.
+**Coomer Downloader App** is a desktop application developed in Python that allows users to easily download images and videos from URLs. The application provides an intuitive graphical user interface (GUI) to simplify the process.
 
 ## Features
 
-### Downloading images and videos
+### Downloading Images and Videos
 
-Coomer Downloader App supports downloading both images and videos efficiently. Users can simply enter the URL of the media they want to download, and the app will handle the rest. It ensures a smooth downloading experience by supporting multiple threads for faster downloads, providing progress updates, and handling various file formats including .jpg, .png, .mp4, and .mkv. Additionally, the app can manage large download queues.
+**Coomer Downloader App** supports efficient downloading of both images and videos. Users can simply enter the URL of the media they wish to download, and the app will handle the rest. Key features include:
 
+- **Multithreaded Downloads**: Ensures a smooth downloading experience by supporting multiple threads for faster downloads.
+- **Progress Updates**: Provides real-time progress updates during the download process.
+- **Large Download Queues**: Capable of managing large download queues efficiently.
+
+The app supports various file extensions for different types of media:
+
+- **Video Extensions**: `.mp4`, `.mkv`, `.webm`, `.mov`, `.avi`, `.flv`, `.wmv`, `.m4v`
+- **Image Extensions**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`
+- **Document Extensions**: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`
+- **Compressed Extensions**: `.zip`, `.rar`, `.7z`, `.tar`, `.gz`
+  
 ## Supported Pages
 
 - [coomer.su](https://coomer.su/)
