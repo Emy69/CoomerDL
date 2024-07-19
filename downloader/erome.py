@@ -7,15 +7,18 @@ import os
 from urllib.parse import urljoin, quote
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import datetime
+from pathlib import Path
 
 class EromeDownloader:
-    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None):
+    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
         self.root = root
         self.session = requests.Session()
         self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
         }).items()}
+        self.log_messages = []  # Almacenar los mensajes de log
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
         self.update_progress_callback = update_progress_callback
@@ -24,7 +27,7 @@ class EromeDownloader:
         self.download_videos = download_videos
         self.cancel_requested = False
         self.language = language
-        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.total_files = 0
         self.completed_files = 0
         self.is_profile_download = is_profile_download
@@ -40,7 +43,7 @@ class EromeDownloader:
     def log(self, message):
         if self.log_callback is not None:
             self.log_callback(message)
-
+        self.log_messages.append(message)  
     def shutdown_executor(self):
         self.executor.shutdown(wait=False)
         self.log(self.tr("Executor shut down."))
@@ -152,6 +155,7 @@ class EromeDownloader:
         finally:
             if not self.is_profile_download:
                 self.enable_widgets_callback()
+            self.export_logs()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
@@ -178,3 +182,15 @@ class EromeDownloader:
         finally:
             if not self.is_profile_download:
                 self.enable_widgets_callback()
+            self.export_logs()
+
+    def export_logs(self):
+        log_folder = "resources/config/logs/"
+        Path(log_folder).mkdir(parents=True, exist_ok=True)
+        log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        try:
+            with open(log_file_path, 'w') as file:
+                file.write("\n".join(self.log_messages))
+            self.log(self.tr("Logs exported successfully to {path}", path=log_file_path))
+        except Exception as e:
+            self.log(self.tr(f"Failed to export logs: {e}"))

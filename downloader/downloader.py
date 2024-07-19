@@ -1,3 +1,4 @@
+# downloader/downloader.py
 import re
 import threading
 import requests
@@ -9,7 +10,7 @@ from threading import Semaphore
 from collections import defaultdict
 
 class Downloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
+    def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
                  download_images=True, download_videos=True, download_compressed=True, tr=None):
         self.download_folder = download_folder
         self.log_callback = log_callback
@@ -23,10 +24,10 @@ class Downloader:
         }
         self.media_counter = 0
         self.session = requests.Session()
-        self.executor = ThreadPoolExecutor(max_workers=10)
-        self.rate_limit = Semaphore(10)
+        self.max_workers = max_workers
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+        self.rate_limit = Semaphore(self.max_workers)
         self.download_mode = "multi"
-        self.max_workers = 10
         self.video_extensions = ('.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v')
         self.image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')
         self.document_extensions = ('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx')
@@ -48,6 +49,7 @@ class Downloader:
         self.download_mode = mode
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.rate_limit = Semaphore(max_workers)
 
     def request_cancel(self):
         self.cancel_requested.set()

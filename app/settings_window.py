@@ -43,6 +43,7 @@ class SettingsWindow:
         # Añadir botones de navegación
         self.create_nav_button(nav_frame, "Idioma", self.show_language_settings)
         self.create_nav_button(nav_frame, "Buscar actualizaciones", self.show_update_settings)
+        self.create_nav_button(nav_frame, "Descargas", self.show_download_settings)
         self.create_nav_button(nav_frame, "Acerca de", self.show_about)
 
     def create_nav_button(self, parent, text, command):
@@ -60,6 +61,27 @@ class SettingsWindow:
 
         apply_button = ctk.CTkButton(self.content_frame, text=self.translate("Aplicar"), command=lambda: self.apply_language_settings(language_combobox.get()))
         apply_button.pack(pady=10)
+
+    def show_download_settings(self):
+        self.clear_frame(self.content_frame)
+
+        download_label = ctk.CTkLabel(self.content_frame, text=self.translate("Opciones de Descarga"), font=("Helvetica", 16, "bold"))
+        download_label.pack(pady=10)
+
+        max_downloads_label = ctk.CTkLabel(self.content_frame, text=self.translate("Descargas Simultáneas"))
+        max_downloads_label.pack(pady=10)
+
+        self.max_downloads_combobox = ctk.CTkComboBox(self.content_frame, values=[str(i) for i in range(1, 11)], state='readonly')
+        self.max_downloads_combobox.set("3")  # Valor predeterminado
+        self.max_downloads_combobox.pack(pady=10)
+
+        apply_button = ctk.CTkButton(self.content_frame, text=self.translate("Aplicar"), command=self.apply_download_settings)
+        apply_button.pack(pady=10)
+
+    def apply_download_settings(self):
+        max_downloads = int(self.max_downloads_combobox.get())
+        self.parent.update_max_downloads(max_downloads)
+        messagebox.showinfo(self.translate("Configuraciones"), self.translate("Configuraciones de descarga actualizadas"))
 
     def show_general_settings(self):
         self.clear_frame(self.content_frame)
@@ -167,4 +189,3 @@ class SettingsWindow:
         except requests.RequestException as e:
             messagebox.showerror(self.translate("Error"),
                                  self.translate(f"No se pudo verificar si hay actualizaciones.\nError: {e}"))
-

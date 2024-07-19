@@ -5,9 +5,10 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, urljoin
 import uuid
+import re
 
 class BunkrDownloader:
-    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None):
+    def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None, max_workers=5):
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -20,7 +21,7 @@ class BunkrDownloader:
             'Accept-Language': 'en-US,en;q=0.9',
         }
         self.cancel_requested = False
-        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.total_files = 0
         self.completed_files = 0
 
@@ -29,7 +30,6 @@ class BunkrDownloader:
         full_message = f"{domain}: {message}"
         if self.log_callback:
             self.log_callback(full_message)
-        #print(full_message)  # Print log messages to console for debugging
 
     def request_cancel(self):
         self.cancel_requested = True
@@ -39,6 +39,9 @@ class BunkrDownloader:
     def shutdown_executor(self):
         self.executor.shutdown(wait=False)
         self.log("Executor shut down.")
+
+    def clean_filename(self, filename):
+        return re.sub(r'[<>:"/\\|?*\u200b]', '_', filename)
 
     def download_file(self, url_media, ruta_carpeta, file_id):
         if self.cancel_requested:
@@ -93,6 +96,7 @@ class BunkrDownloader:
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 folder_name = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'}).text.strip()
+                folder_name = self.clean_filename(folder_name)  # Limpia el nombre de la carpeta
                 ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
                 

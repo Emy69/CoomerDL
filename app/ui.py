@@ -17,7 +17,6 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
-
 VERSION = "CoomerV0.6.2.1"
 
 # Application class
@@ -54,6 +53,7 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.download_start_time = None
         self.errors = []
+        self.max_downloads = 3
         
         # Load download folder
         self.download_folder = self.load_download_folder() 
@@ -201,6 +201,12 @@ class ImageDownloaderApp(ctk.CTk):
         self.favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
         self.menubar.add_cascade(label=self.tr("Favoritos"), menu=self.favorites_menu)
         
+        footer = ctk.CTkFrame(self, height=30, corner_radius=0)
+        footer.pack(side="bottom", fill="x")
+        
+        footer_label = ctk.CTkLabel(footer, text="https://github.com/Emy69/CoomerDL", font=("Arial", 10))
+        footer_label.pack(side="right", padx=20)
+
         # Actualizar textos después de inicializar la UI
         self.update_ui_texts()
 
@@ -241,7 +247,7 @@ class ImageDownloaderApp(ctk.CTk):
             root=self,
             enable_widgets_callback=self.enable_widgets,
             headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, как Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, como Gecko) Chrome/58.0.3029.110 Safari/537.36',
                 'Referer': 'https://www.erome.com/'
             },
             log_callback=self.add_log_message_safe,
@@ -250,6 +256,7 @@ class ImageDownloaderApp(ctk.CTk):
             download_images=self.download_images_check.get(),
             download_videos=self.download_videos_check.get(),
             is_profile_download=is_profile_download,
+            max_workers=self.max_downloads,
             tr=self.tr
         )
 
@@ -263,7 +270,8 @@ class ImageDownloaderApp(ctk.CTk):
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://bunkr.si/',
-            }
+            },
+            max_workers=self.max_downloads
         )
 
     def setup_general_downloader(self):
@@ -280,7 +288,8 @@ class ImageDownloaderApp(ctk.CTk):
             download_images=self.download_images_check.get(),
             download_videos=self.download_videos_check.get(),
             download_compressed=self.download_compressed_check.get(),
-            tr=self.tr
+            tr=self.tr,
+            max_workers=self.max_downloads 
         )
 
     # Folder selection
@@ -407,16 +416,20 @@ class ImageDownloaderApp(ctk.CTk):
         user_id = self.extract_user_id(url)
         if user_id:
             download_info = self.active_downloader.download_media(site, user_id, service, download_all)
-            if download_info:  
-                self.add_log_message_safe(f"Download info: {download_info}")  
+            if download_info:
+                self.add_log_message_safe(f"Download info: {download_info}")
+            # Llamar a export_logs al finalizar la descarga
+            self.export_logs()
     
     def start_post_download(self, url, site, service):
         post_id = self.extract_post_id(url)
         user_id = self.extract_user_id(url)
         if post_id and user_id:
             download_info = self.active_downloader.download_single_post(site, post_id, service, user_id)
-            if download_info:  
-                self.add_log_message_safe(f"Download info: {download_info}")  
+            if download_info:
+                self.add_log_message_safe(f"Download info: {download_info}")
+            # Llamar a export_logs al finalizar la descarga
+            self.export_logs()
 
     # URL extraction helpers
     def extract_service(self, url):
@@ -477,6 +490,18 @@ class ImageDownloaderApp(ctk.CTk):
             self.log_textbox.yview_moveto(1)
         self.after(0, log_in_main_thread)
 
+    # Export logs to a file
+    def export_logs(self):
+        log_folder = "resources/config/logs/"
+        Path(log_folder).mkdir(parents=True, exist_ok=True)
+        log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        try:
+            with open(log_file_path, 'w') as file:
+                file.write(self.log_textbox.get("1.0", tk.END))
+            self.add_log_message_safe(self.tr("Logs exportados exitosamente a {path}", path=log_file_path))
+        except Exception as e:
+            self.add_log_message_safe(self.tr(f"No se pudo exportar los logs: {e}"))
+
     # Clipboard operations
     def copy_to_clipboard(self):
         self.clipboard_clear()
@@ -529,3 +554,7 @@ class ImageDownloaderApp(ctk.CTk):
                 return config.get('download_folder', '')
         except json.JSONDecodeError:
             return ''
+
+    # Update max downloads
+    def update_max_downloads(self, max_downloads):
+        self.max_downloads = max_downloads
