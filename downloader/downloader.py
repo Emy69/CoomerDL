@@ -38,6 +38,7 @@ class Downloader:
         self.futures = []
         self.total_files = 0
         self.completed_files = 0
+        self.skipped_files = []  
         self.tr = tr
         self.shutdown_called = False  
 
@@ -176,6 +177,12 @@ class Downloader:
             filename = os.path.basename(media_url).split('?')[0]
             filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
             filepath = os.path.join(media_folder, filename)
+
+            # Verificar si el archivo ya existe
+            if os.path.exists(filepath):
+                self.log(self.tr("File already exists, skipping: {filepath}", filepath=filepath))
+                self.skipped_files.append(filepath)
+                return
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0

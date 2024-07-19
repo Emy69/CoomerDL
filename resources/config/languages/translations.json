@@ -1,4 +1,18 @@
 {
+    "File already exists, skipping: {filepath}": {
+        "es": "El archivo ya existe, omitiendo: {filepath}",
+        "en": "File already exists, skipping: {filepath}",
+        "ja": "ファイルは既に存在します、スキップします: {filepath}",
+        "ru": "Файл уже существует, пропуск: {filepath}",
+        "zh": "文件已存在，跳过: {filepath}"
+    },
+    "Archivos saltados por ya estar descargados": {
+        "es": "Archivos saltados por ya estar descargados",
+        "en": "Files skipped because they were already downloaded",
+        "ja": "既にダウンロードされたためスキップされたファイル",
+        "ru": "Файлы пропущены, так как они уже были загружены",
+        "zh": "文件已下载，跳过"
+    },
     "Total de archivos descargados": {
         "es": "Total de archivos descargados",
         "en": "Total files downloaded",

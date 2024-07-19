@@ -505,15 +505,19 @@ class ImageDownloaderApp(ctk.CTk):
             if self.active_downloader:
                 total_files = self.active_downloader.total_files
                 completed_files = self.active_downloader.completed_files
+                skipped_files = self.active_downloader.skipped_files
             else:
                 total_files = 0
                 completed_files = 0
+                skipped_files = []
             
             total_images = completed_files if self.download_images_check.get() else 0
             total_videos = completed_files if self.download_videos_check.get() else 0
             errors = len(self.errors)
             warnings = len(self.warnings)
             duration = datetime.datetime.now() - self.download_start_time
+
+            skipped_files_summary = "\n".join(skipped_files)
 
             summary = (
                 f"{self.tr('Total de archivos descargados')}: {total_files}\n"
@@ -522,6 +526,7 @@ class ImageDownloaderApp(ctk.CTk):
                 f"{self.tr('Errores')}: {errors}\n"
                 f"{self.tr('Advertencias')}: {warnings}\n"
                 f"{self.tr('Tiempo total de descarga')}: {duration}\n\n"
+                f"{self.tr('Archivos saltados por ya estar descargados')}:\n{skipped_files_summary}\n\n"
             )
 
             with open(log_file_path, 'w') as file:
