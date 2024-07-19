@@ -1,4 +1,40 @@
 {
+    "Opciones de Descarga": {
+        "es": "Opciones de Descarga",
+        "en": "Download Options",
+        "ja": "ダウンロードオプション",
+        "ru": "Параметры загрузки",
+        "zh": "下载选项"
+    },
+    "Descargas Simultáneas": {
+        "es": "Descargas Simultáneas",
+        "en": "Simultaneous Downloads",
+        "ja": "同時ダウンロード",
+        "ru": "Одновременные загрузки",
+        "zh": "同时下载"
+    },
+    "Descargas": {
+        "es": "Descargas",
+        "en": "Downloads",
+        "ja": "ダウンロード",
+        "ru": "Загрузки",
+        "zh": "下载"
+    },
+    "Configuraciones de descarga actualizadas": {
+        "es": "Configuraciones de descarga actualizadas",
+        "en": "Download settings updated",
+        "ja": "ダウンロード設定が更新されました",
+        "ru": "Настройки загрузки обновлены",
+        "zh": "下载设置已更新"
+    },
+    "Logs exportados exitosamente a {path}":{
+        "es": "Logs exportados exitosamente a {path}",
+        "en": "Logs successfully exported to {path}",
+        "fr": "Les journaux ont été exportés avec succès vers {path}",
+        "ja": "パス}にログが正常にエクスポートされました。",
+        "ru": "Журналы успешно экспортированы в {path}",
+        "zh": "日志成功导出到 {path}"
+    },
     "All downloads completed or cancelled.": {
         "es": "Todas las descargas completadas o canceladas.",
         "en": "All downloads completed or cancelled.",
@@ -88,12 +124,12 @@
         "zh": "下载视频"
     },
     "Descargar Comprimidos": {
-        "es": "Descargar Comprimidos",
-        "en": "Download Compressed",
-        "fr": "Télécharger des fichiers compressés",
-        "ja": "圧縮ファイルをダウンロード",
-        "ru": "Скачать сжатые файлы",
-        "zh": "下载压缩文件"
+        "es": "Descargar Zips",
+        "en": "Download Zips",
+        "fr": "Télécharger les Zips",
+        "ja": "Zipsのダウンロード",
+        "ru": "Скачать Zips",
+        "zh": "下载压缩包"
     },
     "Descargar": {
         "es": "Descargar",
