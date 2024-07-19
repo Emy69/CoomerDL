@@ -53,6 +53,7 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.download_start_time = None
         self.errors = []
+        self.warnings = []
         self.max_downloads = 3
         
         # Load download folder
@@ -483,6 +484,11 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Log messages safely
     def add_log_message_safe(self, message):
+        if "error" in message.lower():
+            self.errors.append(message)
+        if "warning" in message.lower():
+            self.warnings.append(message)
+
         def log_in_main_thread():
             self.log_textbox.configure(state='normal')
             self.log_textbox.insert('end', message + '\n')
@@ -496,7 +502,30 @@ class ImageDownloaderApp(ctk.CTk):
         Path(log_folder).mkdir(parents=True, exist_ok=True)
         log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         try:
+            if self.active_downloader:
+                total_files = self.active_downloader.total_files
+                completed_files = self.active_downloader.completed_files
+            else:
+                total_files = 0
+                completed_files = 0
+            
+            total_images = completed_files if self.download_images_check.get() else 0
+            total_videos = completed_files if self.download_videos_check.get() else 0
+            errors = len(self.errors)
+            warnings = len(self.warnings)
+            duration = datetime.datetime.now() - self.download_start_time
+
+            summary = (
+                f"{self.tr('Total de archivos descargados')}: {total_files}\n"
+                f"{self.tr('Total de imágenes descargadas')}: {total_images}\n"
+                f"{self.tr('Total de videos descargados')}: {total_videos}\n"
+                f"{self.tr('Errores')}: {errors}\n"
+                f"{self.tr('Advertencias')}: {warnings}\n"
+                f"{self.tr('Tiempo total de descarga')}: {duration}\n\n"
+            )
+
             with open(log_file_path, 'w') as file:
+                file.write(summary)
                 file.write(self.log_textbox.get("1.0", tk.END))
             self.add_log_message_safe(self.tr("Logs exportados exitosamente a {path}", path=log_file_path))
         except Exception as e:

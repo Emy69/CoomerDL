@@ -1,4 +1,52 @@
 {
+    "Total de archivos descargados": {
+        "es": "Total de archivos descargados",
+        "en": "Total files downloaded",
+        "fr": "Total de fichiers téléchargés",
+        "ja": "ダウンロードされたファイルの合計",
+        "ru": "Всего загружено файлов",
+        "zh": "下载的文件总数"
+    },
+    "Total de imágenes descargadas": {
+        "es": "Total de imágenes descargadas",
+        "en": "Total images downloaded",
+        "fr": "Total d'images téléchargées",
+        "ja": "ダウンロードされた画像の合計",
+        "ru": "Всего загружено изображений",
+        "zh": "下载的图片总数"
+    },
+    "Total de videos descargados": {
+        "es": "Total de videos descargados",
+        "en": "Total videos downloaded",
+        "fr": "Total de vidéos téléchargées",
+        "ja": "ダウンロードされたビデオの合計",
+        "ru": "Всего загружено видео",
+        "zh": "下载的视频总数"
+    },
+    "Errores": {
+        "es": "Errores",
+        "en": "Errors",
+        "fr": "Erreurs",
+        "ja": "エラー",
+        "ru": "Ошибки",
+        "zh": "错误"
+    },
+    "Advertencias": {
+        "es": "Advertencias",
+        "en": "Warnings",
+        "fr": "Avertissements",
+        "ja": "警告",
+        "ru": "Предупреждения",
+        "zh": "警告"
+    },
+    "Tiempo total de descarga": {
+        "es": "Tiempo total de descarga",
+        "en": "Total download time",
+        "fr": "Temps total de téléchargement",
+        "ja": "総ダウンロード時間",
+        "ru": "Общее время загрузки",
+        "zh": "总下载时间"
+    },   
     "Opciones de Descarga": {
         "es": "Opciones de Descarga",
         "en": "Download Options",
