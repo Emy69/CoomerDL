@@ -34,3 +34,4 @@ setup.py
 test.py 
 descargas_test/
 coomer.py
+resources/config/logs/*
