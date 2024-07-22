@@ -538,18 +538,42 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Clipboard operations
     def copy_to_clipboard(self):
-        self.clipboard_clear()
-        self.clipboard_append(self.url_entry.selection_get())
+        try:
+            selected_text = self.url_entry.selection_get()
+            if selected_text:
+                self.clipboard_clear()
+                self.clipboard_append(selected_text)
+            else:
+                self.add_log_message_safe(self.tr("No hay texto seleccionado para copiar."))
+        except tk.TclError:
+            self.add_log_message_safe(self.tr("No hay texto seleccionado para copiar."))
 
     def paste_from_clipboard(self):
         try:
-            self.url_entry.insert(tk.INSERT, self.clipboard_get())
-        except tk.TclError:
-            pass
+            clipboard_text = self.clipboard_get()
+            if clipboard_text:
+                try:
+                    self.url_entry.delete("sel.first", "sel.last")  # Elimina el texto seleccionado si hay alguno
+                except tk.TclError:
+                    pass
+                self.url_entry.insert(tk.INSERT, clipboard_text)
+            else:
+                self.add_log_message_safe(self.tr("No hay texto en el portapapeles para pegar."))
+        except tk.TclError as e:
+            self.add_log_message_safe(self.tr(f"Error al pegar desde el portapapeles: {e}"))
 
     def cut_to_clipboard(self):
-        self.copy_to_clipboard()
-        self.url_entry.delete("sel.first", "sel.last")
+        try:
+            selected_text = self.url_entry.selection_get()
+            if selected_text:
+                self.clipboard_clear()
+                self.clipboard_append(selected_text)
+                self.url_entry.delete("sel.first", "sel.last")
+            else:
+                self.add_log_message_safe(self.tr("No hay texto seleccionado para cortar."))
+        except tk.TclError:
+            self.add_log_message_safe(self.tr("No hay texto seleccionado para cortar."))
+
 
     # Show context menu
     def show_context_menu(self, event):
