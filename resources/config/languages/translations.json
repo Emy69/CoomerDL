@@ -1,4 +1,31 @@
-{
+{   
+        "Error al copiar al portapapeles: no hay texto seleccionado": {
+        "es": "Error al copiar al portapapeles: no hay texto seleccionado",
+        "en": "Error copying to clipboard: no text selected",
+        "ja": "クリップボードにコピーエラー：選択されたテキストがありません",
+        "zh": "复制到剪贴板时出错：未选择文本",
+        "fr": "Erreur de copie dans le presse-papiers : aucun texte sélectionné",
+        "pt": "Erro ao copiar para a área de transferência: nenhum texto selecionado",
+        "ru": "Ошибка копирования в буфер обмена: не выбран текст"
+    },
+    "Error al pegar desde el portapapeles": {
+        "es": "Error al pegar desde el portapapeles",
+        "en": "Error pasting from clipboard",
+        "ja": "クリップボードから貼り付けエラー",
+        "zh": "从剪贴板粘贴时出错",
+        "fr": "Erreur de collage depuis le presse-papiers",
+        "pt": "Erro ao colar da área de transferência",
+        "ru": "Ошибка вставки из буфера обмена"
+    },
+    "Error al cortar al portapapeles: no hay texto seleccionado": {
+        "es": "Error al cortar al portapapeles: no hay texto seleccionado",
+        "en": "Error cutting to clipboard: no text selected",
+        "ja": "クリップボードへのカットエラー：選択されたテキストがありません",
+        "zh": "剪切到剪贴板时出错：未选择文本",
+        "fr": "Erreur de découpe dans le presse-papiers : aucun texte sélectionné",
+        "pt": "Erro ao cortar para a área de transferência: nenhum texto selecionado",
+        "ru": "Ошибка вырезания в буфер обмена: не выбран текст"
+    },
     "File already exists, skipping: {filepath}": {
         "es": "El archivo ya existe, omitiendo: {filepath}",
         "en": "File already exists, skipping: {filepath}",
