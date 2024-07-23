@@ -1,6 +1,7 @@
 import datetime
 import json
 import queue
+import sys
 import re
 import threading
 import tkinter as tk
@@ -107,7 +108,8 @@ class ImageDownloaderApp(ctk.CTk):
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-        self.iconbitmap("resources/img/window.ico")
+        if sys.platform == "win32":
+            self.iconbitmap("resources/img/window.ico")
 
     # Initialize UI components
     def initialize_ui(self):
