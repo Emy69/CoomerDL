@@ -92,7 +92,7 @@ class Downloader:
                     break
         return None
 
-    def fetch_user_posts(self, site, user_id, service, specific_post_id=None, initial_offset=0):
+    def fetch_user_posts(self, site, user_id, service, specific_post_id=None, initial_offset=0, log_fetching=True):
         all_posts = []
         offset = initial_offset
         user_id_encoded = quote_plus(user_id)
@@ -101,7 +101,8 @@ class Downloader:
             if self.cancel_requested.is_set():
                 return all_posts
             api_url = f"https://{site}.su/api/v1/{service}/user/{user_id_encoded}?o={offset}"
-            self.log(self.tr("Fetching user posts from {api_url}", api_url=api_url))
+            if log_fetching:
+                self.log(self.tr("Fetching user posts from {api_url}", api_url=api_url))
             try:
                 with self.rate_limit:
                     response = self.session.get(api_url, headers=self.headers)
@@ -220,11 +221,11 @@ class Downloader:
 
     def download_media(self, site, user_id, service, download_all, initial_offset=0):
         try:
-            posts = self.fetch_user_posts(site, user_id, service, initial_offset=initial_offset)
+            posts = self.fetch_user_posts(site, user_id, service, initial_offset=initial_offset, log_fetching=download_all)
             if not posts:
                 self.log(self.tr("No posts found for this user."))
                 return
-            
+
             if not download_all:
                 posts = posts[:50]
 
