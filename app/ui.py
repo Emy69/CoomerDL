@@ -54,7 +54,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_start_time = None
         self.errors = []
         self.warnings = []
-        self.max_downloads = 3
+        self.max_downloads = self.settings_window.settings.get('max_downloads', 3)
         
         # Load download folder
         self.download_folder = self.load_download_folder() 

@@ -1,5 +1,13 @@
 {   
-        "Error al copiar al portapapeles: no hay texto seleccionado": {
+    "Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429.": {
+        "es": "Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429.",
+        "en": "For Coomer and Kemono, a maximum of 3-5 simultaneous downloads is recommended to avoid 429 errors.",
+        "ja": "CoomerとKemonoでは、429エラーを避けるために同時ダウンロードの最大数を3-5つにすることをお勧めします。",
+        "zh": "对于Coomer和Kemono，建议最多进行3-5个同时下载，以避免429错误。",
+        "fr": "Pour Coomer et Kemono, un maximum de 3-5 téléchargements simultanés est recommandé pour éviter les erreurs 429.",
+        "ru": "Для Coomer и Kemono рекомендуется не более 3-5 одновременных загрузок, чтобы избежать ошибок 429."
+    },
+    "Error al copiar al portapapeles: no hay texto seleccionado": {
         "es": "Error al copiar al portapapeles: no hay texto seleccionado",
         "en": "Error copying to clipboard: no text selected",
         "ja": "クリップボードにコピーエラー：選択されたテキストがありません",

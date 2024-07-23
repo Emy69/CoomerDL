@@ -1,3 +1,5 @@
+import json
+import os
 from tkinter import messagebox
 import customtkinter as ctk
 import tkinter as tk
@@ -6,13 +8,15 @@ import webbrowser
 import requests 
 
 class SettingsWindow:
+    CONFIG_PATH = 'resources/config/settings.json'
+
     def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version):
         self.parent = parent
         self.translate = translate
         self.load_translations = load_translations_func
         self.update_ui_texts = update_ui_texts_func
         self.save_language_preference = save_language_preference_func
-        self.version = version  # Guardar la versión como un atributo de la instancia
+        self.version = version
         self.languages = {
             "Español": "es",
             "English": "en",
@@ -22,6 +26,23 @@ class SettingsWindow:
             "Português": "pt",
             "Русский": "ru"
         }
+
+        self.settings = self.load_settings()
+    
+    def load_settings(self):
+        if not os.path.exists(self.CONFIG_PATH):
+            return {'max_downloads': 3}  # Valor predeterminado
+
+        try:
+            with open(self.CONFIG_PATH, 'r') as file:
+                return json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {'max_downloads': 3}  # Valor predeterminado
+
+    def save_settings(self):
+        os.makedirs(os.path.dirname(self.CONFIG_PATH), exist_ok=True)
+        with open(self.CONFIG_PATH, 'w') as file:
+            json.dump(self.settings, file)
 
     def open_settings(self):
         self.settings_window = ctk.CTkToplevel(self.parent)
@@ -72,14 +93,26 @@ class SettingsWindow:
         max_downloads_label.pack(pady=10)
 
         self.max_downloads_combobox = ctk.CTkComboBox(self.content_frame, values=[str(i) for i in range(1, 11)], state='readonly')
-        self.max_downloads_combobox.set("3")  # Valor predeterminado
+        self.max_downloads_combobox.set(str(self.settings.get('max_downloads', 3)))
         self.max_downloads_combobox.pack(pady=10)
 
         apply_button = ctk.CTkButton(self.content_frame, text=self.translate("Aplicar"), command=self.apply_download_settings)
         apply_button.pack(pady=10)
 
+        # Obtener el ancho de la pantalla
+        screen_width = self.content_frame.winfo_screenwidth()
+
+        # Calcular el ancho máximo permitido para el label (por ejemplo, 80% del ancho de la pantalla)
+        max_label_width = int(screen_width * 0.8)
+
+        # Agregar mensaje de advertencia con ancho máximo
+        warning_label = ctk.CTkLabel(self.content_frame, text=self.translate("Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429."), font=("Helvetica", 12, "italic"), text_color="yellow", wraplength=max_label_width)
+        warning_label.pack(pady=10)
+
     def apply_download_settings(self):
         max_downloads = int(self.max_downloads_combobox.get())
+        self.settings['max_downloads'] = max_downloads
+        self.save_settings()
         self.parent.update_max_downloads(max_downloads)
         messagebox.showinfo(self.translate("Configuraciones"), self.translate("Configuraciones de descarga actualizadas"))
 
