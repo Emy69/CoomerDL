@@ -1,12 +1,12 @@
-import re
-import threading
-import requests
-import os
-from urllib.parse import urljoin, quote_plus, urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
-from threading import Semaphore
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Semaphore
+from urllib.parse import quote_plus, urlencode, urljoin, urlparse
+import os
+import re
+import requests
+import threading
+import time
 
 class Downloader:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
@@ -92,7 +92,7 @@ class Downloader:
                     break
         return None
 
-    def fetch_user_posts(self, site, user_id, service, specific_post_id=None, initial_offset=0, log_fetching=True):
+    def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
         all_posts = []
         offset = initial_offset
         user_id_encoded = quote_plus(user_id)
@@ -100,7 +100,14 @@ class Downloader:
         while True:
             if self.cancel_requested.is_set():
                 return all_posts
-            api_url = f"https://{site}.su/api/v1/{service}/user/{user_id_encoded}?o={offset}"
+
+            api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}"
+            url_query = { "o": offset }
+            if query is not None:
+              url_query["q"] = query
+
+            api_url += "?" + urlencode(url_query)
+
             if log_fetching:
                 self.log(self.tr("Fetching user posts from {api_url}", api_url=api_url))
             try:
@@ -219,9 +226,9 @@ class Downloader:
             self.failed_files.append(media_url)  # Agrega URL a archivos fallidos
 
 
-    def download_media(self, site, user_id, service, download_all, initial_offset=0):
+    def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
         try:
-            posts = self.fetch_user_posts(site, user_id, service, initial_offset=initial_offset, log_fetching=download_all)
+            posts = self.fetch_user_posts(site, user_id, service, query=query, initial_offset=initial_offset, log_fetching=download_all)
             if not posts:
                 self.log(self.tr("No posts found for this user."))
                 return
