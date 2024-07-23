@@ -1,4 +1,3 @@
-# downloader/downloader.py
 import re
 import threading
 import requests
@@ -39,6 +38,8 @@ class Downloader:
         self.total_files = 0
         self.completed_files = 0
         self.skipped_files = []  
+        self.failed_files = []
+        self.start_time = None
         self.tr = tr
         self.shutdown_called = False  
 
@@ -91,9 +92,9 @@ class Downloader:
                     break
         return None
 
-    def fetch_user_posts(self, site, user_id, service, specific_post_id=None):
+    def fetch_user_posts(self, site, user_id, service, specific_post_id=None, initial_offset=0):
         all_posts = []
-        offset = 0
+        offset = initial_offset
         user_id_encoded = quote_plus(user_id)
 
         while True:
@@ -169,6 +170,7 @@ class Downloader:
             response = self.safe_request(media_url)
             if response is None:
                 self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
+                self.failed_files.append(media_url)  # Agrega URL a archivos fallidos
                 return
 
             media_folder = self.get_media_folder(extension, user_id)
@@ -186,6 +188,7 @@ class Downloader:
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
+            self.start_time = time.time()  # Tiempo de inicio de la descarga
 
             with open(filepath, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1048576):
@@ -196,8 +199,13 @@ class Downloader:
                         return
                     f.write(chunk)
                     downloaded_size += len(chunk)
+                    
+                    elapsed_time = time.time() - self.start_time
+                    speed = downloaded_size / elapsed_time  # bytes por segundo
+                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0  # ETA en segundos
+                    
                     if self.update_progress_callback:
-                        self.update_progress_callback(downloaded_size, total_size, file_id=media_url, file_path=filepath)  # Actualiza la barra de progreso
+                        self.update_progress_callback(downloaded_size, total_size, file_id=media_url, file_path=filepath, speed=speed, eta=remaining_time)
 
             if not self.cancel_requested.is_set():
                 self.completed_files += 1
@@ -207,11 +215,12 @@ class Downloader:
 
         except Exception as e:
             self.log(self.tr("Error downloading: {e}", e=e))
+            self.failed_files.append(media_url)  # Agrega URL a archivos fallidos
 
 
-    def download_media(self, site, user_id, service, download_all):
+    def download_media(self, site, user_id, service, download_all, initial_offset=0):
         try:
-            posts = self.fetch_user_posts(site, user_id, service)
+            posts = self.fetch_user_posts(site, user_id, service, initial_offset=initial_offset)
             if not posts:
                 self.log(self.tr("No posts found for this user."))
                 return
@@ -244,6 +253,15 @@ class Downloader:
                 for future in as_completed(futures):
                     if self.cancel_requested.is_set():
                         break
+
+            # Reintentar descargas fallidas después de que se completen todas las demás
+            if self.failed_files:
+                self.log(self.tr("Retrying failed downloads..."))
+                for media_url in self.failed_files:
+                    if self.cancel_requested.is_set():
+                        break
+                    self.process_media_element(media_url, user_id)
+                self.failed_files.clear()
 
         except Exception as e:
             self.log(self.tr(f"Error during download: {e}"))
@@ -282,6 +300,15 @@ class Downloader:
                 for future in as_completed(futures):
                     if self.cancel_requested.is_set():
                         break
+
+            # Reintentar descargas fallidas después de que se completen todas las demás
+            if self.failed_files:
+                self.log(self.tr("Retrying failed downloads..."))
+                for media_url in self.failed_files:
+                    if self.cancel_requested.is_set():
+                        break
+                    self.process_media_element(media_url, user_id)
+                self.failed_files.clear()
 
         except Exception as e:
             self.log(self.tr(f"Error during download: {e}"))

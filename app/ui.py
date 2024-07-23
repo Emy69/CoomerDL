@@ -5,14 +5,14 @@ import re
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import Image, PhotoImage, filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext
 
 import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image, ImageTk
 
-from app.patch_notes import PatchNotes  # Cambiado a importación absoluta
-from app.settings_window import SettingsWindow  # Cambiado a importación absoluta
+from app.patch_notes import PatchNotes
+from app.settings_window import SettingsWindow
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
@@ -63,10 +63,14 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Application close event
     def on_app_close(self):
-        if hasattr(self, 'active_downloader') and self.active_downloader:
-            self.active_downloader.request_cancel()
-            self.active_downloader.shutdown_executor()
-        self.destroy()
+        if hasattr(self, 'active_downloader') and self.active_downloader and not self.active_downloader.cancel_requested.is_set():
+            # Mostrar advertencia si hay una descarga activa
+            messagebox.showwarning(
+                self.tr("Descarga Activa"),
+                self.tr("Hay una descarga en progreso. Por favor, cancela la descarga antes de cerrar.")
+            )
+        else:
+            self.destroy()
 
     # Save and load language preferences
     def save_language_preference(self, language_code):
@@ -204,9 +208,12 @@ class ImageDownloaderApp(ctk.CTk):
         
         footer = ctk.CTkFrame(self, height=30, corner_radius=0)
         footer.pack(side="bottom", fill="x")
-        
-        footer_label = ctk.CTkLabel(footer, text="https://github.com/Emy69/CoomerDL", font=("Arial", 10))
-        footer_label.pack(side="right", padx=20)
+
+        self.footer_eta_label = ctk.CTkLabel(footer, text="", font=("Arial", 10))
+        self.footer_eta_label.pack(side="left", padx=20)
+
+        self.footer_speed_label = ctk.CTkLabel(footer, text="", font=("Arial", 10))
+        self.footer_speed_label.pack(side="right", padx=20)
 
         # Actualizar textos después de inicializar la UI
         self.update_ui_texts()
@@ -302,7 +309,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.save_download_folder(folder_selected)
     
     # Progress management
-    def update_progress(self, downloaded, total, file_id=None, file_path=None):
+    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
         if total > 0:
             percentage = (downloaded / total) * 100
             if file_id is None:
@@ -327,6 +334,12 @@ class ImageDownloaderApp(ctk.CTk):
             else:
                 if file_id in self.progress_bars:
                     self.progress_bars[file_id][0].set(0)
+
+        if speed is not None and eta is not None:
+            speed_text = f"Speed: {speed / 1024:.2f} KB/s" if speed < 1048576 else f"Speed: {speed / 1048576:.2f} MB/s"
+            eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
+            self.footer_speed_label.configure(text=speed_text)
+            self.footer_eta_label.configure(text=eta_text)
 
     def remove_progress_bar(self, file_id):
         if file_id in self.progress_bars:
@@ -372,6 +385,10 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_start_time = datetime.datetime.now()
         self.errors = []
 
+        # Extraer el offset de la URL si está presente
+        offset_match = re.search(r"\?o=(\d+)", url)
+        initial_offset = int(offset_match.group(1)) if offset_match else 0
+
         if "erome.com" in url:
             self.add_log_message_safe(self.tr("Descargando Erome"))
             is_profile_download = "/a/" not in url
@@ -403,7 +420,7 @@ class ImageDownloaderApp(ctk.CTk):
                     download_all = True
                 else:
                     download_all = False
-                download_thread = threading.Thread(target=self.start_profile_download, args=(url, site, service, download_all))
+                download_thread = threading.Thread(target=self.start_profile_download, args=(url, site, service, download_all, initial_offset))
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
@@ -413,10 +430,10 @@ class ImageDownloaderApp(ctk.CTk):
 
         download_thread.start()
 
-    def start_profile_download(self, url, site, service, download_all):
+    def start_profile_download(self, url, site, service, download_all, initial_offset):
         user_id = self.extract_user_id(url)
         if user_id:
-            download_info = self.active_downloader.download_media(site, user_id, service, download_all)
+            download_info = self.active_downloader.download_media(site, user_id, service, download_all, initial_offset)
             if download_info:
                 self.add_log_message_safe(f"Download info: {download_info}")
             # Llamar a export_logs al finalizar la descarga
@@ -506,10 +523,12 @@ class ImageDownloaderApp(ctk.CTk):
                 total_files = self.active_downloader.total_files
                 completed_files = self.active_downloader.completed_files
                 skipped_files = self.active_downloader.skipped_files
+                failed_files = self.active_downloader.failed_files
             else:
                 total_files = 0
                 completed_files = 0
                 skipped_files = []
+                failed_files = []
             
             total_images = completed_files if self.download_images_check.get() else 0
             total_videos = completed_files if self.download_videos_check.get() else 0
@@ -518,6 +537,7 @@ class ImageDownloaderApp(ctk.CTk):
             duration = datetime.datetime.now() - self.download_start_time
 
             skipped_files_summary = "\n".join(skipped_files)
+            failed_files_summary = "\n".join(failed_files)
 
             summary = (
                 f"{self.tr('Total de archivos descargados')}: {total_files}\n"
@@ -527,6 +547,7 @@ class ImageDownloaderApp(ctk.CTk):
                 f"{self.tr('Advertencias')}: {warnings}\n"
                 f"{self.tr('Tiempo total de descarga')}: {duration}\n\n"
                 f"{self.tr('Archivos saltados por ya estar descargados')}:\n{skipped_files_summary}\n\n"
+                f"{self.tr('Archivos fallidos')}:\n{failed_files_summary}\n\n"
             )
 
             with open(log_file_path, 'w') as file:
