@@ -188,6 +188,18 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
 
+        self.download_all_check = ctk.CTkCheckBox(self.action_frame, text=self.tr("Descargar todo el perfil"))
+        self.download_all_check.pack(side='left', padx=10)
+
+        # Etiqueta informativa
+        self.info_label = ctk.CTkLabel(self.action_frame, text="")
+        self.info_label.pack(side='left', padx=10)
+        
+        # Conectar el evento del checkbox con una función de actualización de etiqueta
+        self.download_all_check.configure(command=self.update_info_label)
+
+        self.update_info_label()
+
         # Progress frame
         self.progress_frame = ctk.CTkFrame(self)
         self.progress_frame.pack(pady=(0, 10), fill='x', padx=20)
@@ -244,6 +256,13 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Actualizar textos después de inicializar la UI
         self.update_ui_texts()
+    
+    def update_info_label(self):
+        if self.download_all_check.get():
+            self.info_label.configure(text=self.tr("Descargar todo el perfil"))
+        else:
+            self.info_label.configure(text=self.tr("Descargar solo los posts del URL proporcionado"))
+
 
     # Update UI texts
     def update_ui_texts(self):
@@ -261,6 +280,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.file_menu.entryconfigure(2, label=self.tr("Salir"))
         self.favorites_menu.entryconfigure(0, label=self.tr("Añadir a Favoritos"))
         self.favorites_menu.entryconfigure(1, label=self.tr("Ver Favoritos"))
+        self.download_all_check.configure(text=self.tr("Descargar todo el perfil"))
+        self.update_info_label()
 
     # Favorites management
     def add_to_favorites(self):
@@ -411,6 +432,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.processing_label.pack()
         self.download_start_time = datetime.datetime.now()
         self.errors = []
+        download_all = self.download_all_check.get()
 
         parsed_url = urlparse(url)
         if "erome.com" in url:
@@ -457,11 +479,7 @@ class ImageDownloaderApp(ctk.CTk):
                 download_thread = threading.Thread(target=self.start_ck_post_download, args=(site, service, user, post))
             else:
                 query, offset = extract_ck_query(parsed_url)
-                self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..."))
-                if messagebox.askyesno(self.tr("Descargar todo el contenido"), self.tr("¿Desea descargar todo el contenido del usuario?")):
-                    download_all = True
-                else:
-                    download_all = False
+                self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..." if download_all else "Descargando solo los posts del URL proporcionado..."))
                 download_thread = threading.Thread(target=self.start_ck_profile_download, args=(
                     site,
                     service,
@@ -485,6 +503,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(f"Download info: {download_info}")
         # Llamar a export_logs al finalizar la descarga
         self.export_logs()
+        self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
+        self.enable_widgets()  # Asegúrate de habilitar los widgets
     
     def start_ck_post_download(self, site, service, user, post):
         download_info = self.active_downloader.download_single_post(site, post, service, user)
@@ -492,6 +512,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(f"Download info: {download_info}")
         # Llamar a export_logs al finalizar la descarga
         self.export_logs()
+        self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
+        self.enable_widgets()  # Asegúrate de habilitar los widgets
 
     def extract_user_id(self, url):
         self.add_log_message_safe(self.tr("Extrayendo ID del usuario del URL: {url}", url=url))
@@ -643,6 +665,7 @@ class ImageDownloaderApp(ctk.CTk):
     def enable_widgets(self):
         self.update_queue.put(lambda: self.download_button.configure(state="normal"))
         self.update_queue.put(lambda: self.cancel_button.configure(state="disabled"))
+        self.update_queue.put(lambda: self.download_all_check.configure(state="normal"))
 
     # Save and load download folder
     def save_download_folder(self, folder_path):

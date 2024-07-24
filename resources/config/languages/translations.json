@@ -1,4 +1,52 @@
 {   
+    "Descargar todo el perfil": {
+        "es": "Descargar todo el perfil",
+        "en": "Download the entire profile",
+        "ja": "プロフィール全体をダウンロード",
+        "zh": "下载整个资料",
+        "fr": "Télécharger tout le profil",
+        "ru": "Скачать весь профиль"
+    },
+    "Descargar solo los posts del URL proporcionado": {
+        "es": "Descargar solo los posts del URL proporcionado",
+        "en": "Download only the posts from the provided URL",
+        "ja": "指定されたURLからのみポストをダウンロード",
+        "zh": "仅从提供的URL下载帖子",
+        "fr": "Télécharger seulement les messages de l'URL fourni",
+        "ru": "Скачать только посты по указанному URL"
+    },
+    "Descargando todo el contenido del usuario...": {
+        "es": "Descargando todo el contenido del usuario...",
+        "en": "Downloading all user content...",
+        "ja": "ユーザーの全コンテンツをダウンロード中...",
+        "zh": "正在下载用户的所有内容...",
+        "fr": "Téléchargement de tout le contenu de l'utilisateur...",
+        "ru": "Скачивание всего содержимого пользователя..."
+    },
+    "Descargando solo los posts del URL proporcionado...": {
+        "es": "Descargando solo los posts del URL proporcionado...",
+        "en": "Downloading only the posts from the provided URL...",
+        "ja": "指定されたURLからのみポストをダウンロード中...",
+        "zh": "仅从提供的URL下载帖子...",
+        "fr": "Téléchargement des messages de l'URL fourni uniquement...",
+        "ru": "Скачивание только постов по указанному URL..."
+    },
+    "Descarga Activa": {
+        "es": "Descarga Activa",
+        "en": "Active Download",
+        "ja": "アクティブなダウンロード",
+        "zh": "正在下载",
+        "fr": "Téléchargement en cours",
+        "ru": "Активная загрузка"
+    },
+    "Hay una descarga en progreso. Por favor, cancela la descarga antes de cerrar.": {
+        "es": "Hay una descarga en progreso. Por favor, cancela la descarga antes de cerrar.",
+        "en": "A download is in progress. Please cancel the download before closing.",
+        "ja": "ダウンロードが進行中です。閉じる前にダウンロードをキャンセルしてください。",
+        "zh": "正在下载。请在关闭前取消下载。",
+        "fr": "Un téléchargement est en cours. Veuillez annuler le téléchargement avant de fermer.",
+        "ru": "Загрузка в процессе. Пожалуйста, отмените загрузку перед закрытием."
+    },
     "Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429.": {
         "es": "Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429.",
         "en": "For Coomer and Kemono, a maximum of 3-5 simultaneous downloads is recommended to avoid 429 errors.",
@@ -464,14 +512,6 @@
         "ja": "すべてのコンテンツをダウンロード",
         "ru": "Скачать весь контент",
         "zh": "下载所有内容"
-    },
-    "Descargando todo el contenido del usuario...": {
-        "es": "Descargando todo el contenido del usuario...",
-        "en": "Downloading all user content...",
-        "fr": "Téléchargement de tout le contenu de l'utilisateur...",
-        "ja": "ユーザーのすべてのコンテンツをダウンロードしています...",
-        "ru": "Загрузка всего контента пользователя...",
-        "zh": "下载所有用户内容..."
     },
     "OK": {
         "es": "OK",
