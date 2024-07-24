@@ -1,11 +1,14 @@
 import datetime
 import json
 import queue
+import sys
 import re
 import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext
+from typing import Optional
+from urllib.parse import ParseResult, parse_qs, urlparse
 
 import customtkinter as ctk
 from customtkinter import CTkImage
@@ -18,6 +21,29 @@ from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
 VERSION = "CoomerV0.6.2.1"
+
+def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Get the service, user and post id from the url if they exist
+    """
+    match = re.search(r"/(?P<service>[^/?]+)(/user/(?P<user>[^/?]+)(/post/(?P<post>[^/?]+))?)?", url.path)
+    if match:
+        [site, service, post] = match.group("service", "user", "post")
+        return site, service, post
+    else:
+        return None, None, None
+
+def extract_ck_query(url: ParseResult) -> tuple[Optional[str], int]:
+    """
+    Try to obtain the query and offset from the url if they exist
+    """
+
+    # This is kinda contrived but query parameters are awful to get right
+    query = parse_qs(url.query)
+    q = query.get("q")[0] if query.get("q") is not None and len(query.get("q")) > 0 else None
+    o = query.get("o")[0] if query.get("o") is not None and len(query.get("o")) > 0 else "0"
+
+    return q, int(o) if str.isdigit(o) else 0
 
 # Application class
 class ImageDownloaderApp(ctk.CTk):
@@ -107,7 +133,8 @@ class ImageDownloaderApp(ctk.CTk):
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-        self.iconbitmap("resources/img/window.ico")
+        if sys.platform == "win32":
+            self.iconbitmap("resources/img/window.ico")
 
     # Initialize UI components
     def initialize_ui(self):
@@ -385,10 +412,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_start_time = datetime.datetime.now()
         self.errors = []
 
-        # Extraer el offset de la URL si está presente
-        offset_match = re.search(r"\?o=(\d+)", url)
-        initial_offset = int(offset_match.group(1)) if offset_match else 0
-
+        parsed_url = urlparse(url)
         if "erome.com" in url:
             self.add_log_message_safe(self.tr("Descargando Erome"))
             is_profile_download = "/a/" not in url
@@ -405,22 +429,47 @@ class ImageDownloaderApp(ctk.CTk):
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
             download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url,))
-        elif "https://coomer.su/" in url or "https://kemono.su/" in url:
+        elif parsed_url.netloc in ["coomer.su", "kemono.su"]:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
             self.active_downloader = self.general_downloader
-            site, service = self.extract_service(url)
 
-            if re.match(r"https://(coomer|kemono).su/.+/user/.+/post/.+", url):
+            site = f"{parsed_url.netloc}"
+            service, user, post = extract_ck_parameters(parsed_url)
+            if service is None or user is None:
+                if service is None:
+                    self.add_log_message_safe(self.tr("No se pudo extraer el servicio."))
+                    messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el servicio."))
+                else:
+                    self.add_log_message_safe(self.tr("No se pudo extraer el ID del usuario."))
+                    messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el ID del usuario."))
+
+                self.add_log_message_safe(self.tr("URL no válida"))
+                self.download_button.configure(state="normal")
+                self.cancel_button.configure(state="disabled")
+                self.processing_label.pack_forget()
+                return
+
+            self.add_log_message_safe(self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site))
+
+            if post is not None:
                 self.add_log_message_safe(self.tr("Descargando post único..."))
-                download_thread = threading.Thread(target=self.start_post_download, args=(url, site, service))
+                download_thread = threading.Thread(target=self.start_ck_post_download, args=(site, service, user, post))
             else:
+                query, offset = extract_ck_query(parsed_url)
                 self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..."))
                 if messagebox.askyesno(self.tr("Descargar todo el contenido"), self.tr("¿Desea descargar todo el contenido del usuario?")):
                     download_all = True
                 else:
                     download_all = False
-                download_thread = threading.Thread(target=self.start_profile_download, args=(url, site, service, download_all, initial_offset))
+                download_thread = threading.Thread(target=self.start_ck_profile_download, args=(
+                    site,
+                    service,
+                    user,
+                    query,
+                    download_all,
+                    offset,
+                ))
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
@@ -430,37 +479,19 @@ class ImageDownloaderApp(ctk.CTk):
 
         download_thread.start()
 
-    def start_profile_download(self, url, site, service, download_all, initial_offset):
-        user_id = self.extract_user_id(url)
-        if user_id:
-            download_info = self.active_downloader.download_media(site, user_id, service, download_all, initial_offset)
-            if download_info:
-                self.add_log_message_safe(f"Download info: {download_info}")
-            # Llamar a export_logs al finalizar la descarga
-            self.export_logs()
+    def start_ck_profile_download(self, site, service, user, query, download_all, initial_offset):
+        download_info = self.active_downloader.download_media(site, user, service, query=query, download_all=download_all, initial_offset=initial_offset)
+        if download_info:
+            self.add_log_message_safe(f"Download info: {download_info}")
+        # Llamar a export_logs al finalizar la descarga
+        self.export_logs()
     
-    def start_post_download(self, url, site, service):
-        post_id = self.extract_post_id(url)
-        user_id = self.extract_user_id(url)
-        if post_id and user_id:
-            download_info = self.active_downloader.download_single_post(site, post_id, service, user_id)
-            if download_info:
-                self.add_log_message_safe(f"Download info: {download_info}")
-            # Llamar a export_logs al finalizar la descarga
-            self.export_logs()
-
-    # URL extraction helpers
-    def extract_service(self, url):
-        match = re.search(r"https://(coomer|kemono).su/([^/]+)/user", url)
-        if match:
-            site = match.group(1)
-            service = match.group(2)
-            self.add_log_message_safe(self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site))
-            return site, service
-        else:
-            self.add_log_message_safe(self.tr("No se pudo extraer el servicio."))
-            messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el servicio."))
-            return None, None
+    def start_ck_post_download(self, site, service, user, post):
+        download_info = self.active_downloader.download_single_post(site, post, service, user)
+        if download_info:
+            self.add_log_message_safe(f"Download info: {download_info}")
+        # Llamar a export_logs al finalizar la descarga
+        self.export_logs()
 
     def extract_user_id(self, url):
         self.add_log_message_safe(self.tr("Extrayendo ID del usuario del URL: {url}", url=url))
