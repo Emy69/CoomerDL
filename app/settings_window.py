@@ -23,7 +23,6 @@ class SettingsWindow:
             "日本語": "ja",
             "中文": "zh",
             "Français": "fr",
-            "Português": "pt",
             "Русский": "ru"
         }
 
@@ -150,28 +149,10 @@ class SettingsWindow:
         repo_link = ctk.CTkButton(self.content_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"))
         repo_link.pack(pady=10)
 
-        compatible_label = ctk.CTkLabel(self.content_frame, text=self.translate("Compatible con:"), font=("Helvetica", 16, "bold"))
-        compatible_label.pack(pady=20)
+        contributors_label = ctk.CTkLabel(self.content_frame, text=self.translate("Contribuidores"), font=("Helvetica", 16, "bold"))
+        contributors_label.pack(pady=20)
 
-        self.site_logos = {
-            "Erome": "resources/img/logos/erome_logo.png",
-            "Bunkr": "resources/img/logos/bunkr_logo.png",
-            "Coomer.su": "resources/img/logos/coomer_logo.png",
-            "Kemono.su": "resources/img/logos/kemono_logo.png",
-        }
-
-        for site, logo_path in self.site_logos.items():
-            site_frame = ctk.CTkFrame(self.content_frame)
-            site_frame.pack(fill='x', padx=20, pady=10)
-
-            logo_image = self.create_photoimage(logo_path, size=(50, 50))
-            logo_label = tk.Label(site_frame, image=logo_image, bg="white")
-            logo_label.image = logo_image
-            logo_label.pack(side='left', padx=10)
-            
-            site_label = ctk.CTkLabel(site_frame, text=site, font=("Helvetica", 14))
-            site_label.pack(side='left', padx=10)
-
+        self.show_contributors()
 
     def apply_language_settings(self, selected_language_name):
         selected_language_code = self.languages[selected_language_name]
@@ -222,3 +203,31 @@ class SettingsWindow:
         except requests.RequestException as e:
             messagebox.showerror(self.translate("Error"),
                                  self.translate(f"No se pudo verificar si hay actualizaciones.\nError: {e}"))
+
+    def show_contributors(self):
+        try:
+            response = requests.get("https://api.github.com/repos/Emy69/CoomerDL/contributors")
+            response.raise_for_status()
+            contributors = response.json()
+
+            for contributor in contributors:
+                frame = ctk.CTkFrame(self.content_frame)
+                frame.pack(fill='x', padx=20, pady=10)
+
+                avatar_url = contributor["avatar_url"]
+                avatar_image = Image.open(requests.get(avatar_url, stream=True).raw)
+                avatar_image = avatar_image.resize((50, 50), Image.Resampling.LANCZOS)
+                avatar_photo = ImageTk.PhotoImage(avatar_image)
+
+                avatar_label = tk.Label(frame, image=avatar_photo)
+                avatar_label.image = avatar_photo
+                avatar_label.pack(side="left", padx=10)
+
+                name_label = ctk.CTkLabel(frame, text=contributor["login"], font=("Helvetica", 14))
+                name_label.pack(side="left", padx=10)
+
+                link_button = ctk.CTkButton(frame, text=self.translate("Perfil"), command=lambda url=contributor["html_url"]: webbrowser.open(url))
+                link_button.pack(side="left", padx=10)
+
+        except requests.RequestException as e:
+            messagebox.showerror(self.translate("Error"), self.translate(f"No se pudieron cargar los contribuidores.\nError: {e}"))

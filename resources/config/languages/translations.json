@@ -1,4 +1,12 @@
 {   
+    "Contribuidores": {
+        "es": "Contribuidores",
+        "en": "Contributors",
+        "ja": "貢献者",
+        "zh": "贡献者",
+        "fr": "Contributeurs",
+        "ru": "Участники"
+    },
     "Descargar todo el perfil": {
         "es": "Descargar todo el perfil",
         "en": "Download the entire profile",
