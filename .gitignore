@@ -33,7 +33,8 @@ Thumbs.db
 setup.py
 test.py 
 descargas_test/
-ztest/
+test/
+test/parse.py
 coomer.py
 resources/config/logs/*
 list.txt
