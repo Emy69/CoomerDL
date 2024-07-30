@@ -188,17 +188,13 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
 
-        self.download_all_check = ctk.CTkCheckBox(self.action_frame, text=self.tr("Descargar todo el perfil"))
+        self.download_all_check = ctk.CTkCheckBox(self.action_frame)
         self.download_all_check.pack(side='left', padx=10)
-
-        # Etiqueta informativa
-        self.info_label = ctk.CTkLabel(self.action_frame, text="")
-        self.info_label.pack(side='left', padx=10)
         
-        # Conectar el evento del checkbox con una función de actualización de etiqueta
-        self.download_all_check.configure(command=self.update_info_label)
-
-        self.update_info_label()
+        # Conectar el evento del checkbox con una función de actualización
+        self.download_all_check.configure(command=self.update_info_text)
+        
+        self.update_info_text()
 
         # Progress frame
         self.progress_frame = ctk.CTkFrame(self)
@@ -256,13 +252,12 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Actualizar textos después de inicializar la UI
         self.update_ui_texts()
-    
-    def update_info_label(self):
-        if self.download_all_check.get():
-            self.info_label.configure(text=self.tr("Descargar todo el perfil"))
-        else:
-            self.info_label.configure(text=self.tr("Descargar solo los posts del URL proporcionado"))
 
+    def update_info_text(self):
+        if self.download_all_check.get():
+            self.download_all_check.configure(text=self.tr("Descargar todo el perfil"))
+        else:
+            self.download_all_check.configure(text=self.tr("Descargar solo los posts del URL proporcionado"))
 
     # Update UI texts
     def update_ui_texts(self):
@@ -280,8 +275,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.file_menu.entryconfigure(2, label=self.tr("Salir"))
         self.favorites_menu.entryconfigure(0, label=self.tr("Añadir a Favoritos"))
         self.favorites_menu.entryconfigure(1, label=self.tr("Ver Favoritos"))
-        self.download_all_check.configure(text=self.tr("Descargar todo el perfil"))
-        self.update_info_label()
+        self.update_info_text()
 
     # Favorites management
     def add_to_favorites(self):
