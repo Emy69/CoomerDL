@@ -58,6 +58,9 @@ class ImageDownloaderApp(ctk.CTk):
         
         # Settings window
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION)
+
+        # Load settings
+        self.settings = self.settings_window.load_settings()
         
         # Language preferences
         lang = self.load_language_preference()
@@ -347,7 +350,8 @@ class ImageDownloaderApp(ctk.CTk):
             download_videos=self.download_videos_check.get(),
             download_compressed=self.download_compressed_check.get(),
             tr=self.tr,
-            max_workers=self.max_downloads 
+            max_workers=self.max_downloads,
+            folder_structure=self.settings.get('folder_structure', 'default')
         )
 
     # Folder selection

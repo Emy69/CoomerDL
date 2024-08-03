@@ -1,4 +1,38 @@
-{   "thank you for all the support": {
+{   
+    
+    "Estructura Predeterminada": {
+        "es": "Estructura Predeterminada",
+        "en": "Default Structure",
+        "fr": "Structure par défaut",
+        "ja": "デフォルトの構造",
+        "ru": "Стандартная структура",
+        "zh": "默认结构"
+    },
+    "Estructura por Publicación": {
+        "es": "Estructura por Publicación",
+        "en": "Post Structure",
+        "fr": "Structure par publication",
+        "ja": "投稿別の構造",
+        "ru": "Структура по публикациям",
+        "zh": "发布结构"
+    },
+    "Vista Previa de Estructura de Carpetas": {
+        "es": "Vista Previa de Estructura de Carpetas",
+        "en": "Folder Structure Preview",
+        "fr": "Aperçu de la structure des dossiers",
+        "ja": "フォルダー構造のプレビュー",
+        "ru": "Предварительный просмотр структуры папок",
+        "zh": "文件夹结构预览"
+    },
+    "Estructura de Carpetas": {
+        "es": "Estructura de Carpetas",
+        "en": "Folder Structure",
+        "fr": "Structure des dossiers",
+        "ja": "フォルダー構造",
+        "ru": "Структура папок",
+        "zh": "文件夹结构"
+    },
+    "thank you for all the support": {
         "es": "¡Hola a todos!\n\nQuiero agradecerles sinceramente por todo el apoyo y comentarios que me han dado sobre la aplicación. Su entusiasmo y sugerencias han sido increíblemente valiosos para mejorar el proyecto.\n\nSu continuo apoyo es muy apreciado y me motiva a seguir trabajando en nuevas actualizaciones y mejoras para que la aplicación sea aún mejor.\n\n¡Gracias por ser una parte tan importante de esta comunidad!\n",
         "en": "Hello everyone!\n\nI want to sincerely thank you for all the support and feedback you have given me about the application. Your enthusiasm and suggestions have been incredibly valuable in improving the project.\n\nYour continued support is greatly appreciated, and it motivates me to keep working on new updates and improvements to make the application even better.\n\nThank you for being such an important part of this community!\n",
         "fr": "Bonjour à tous !\n\nJe tiens à vous remercier sincèrement pour tout le soutien et les commentaires que vous m'avez donnés sur l'application. Votre enthousiasme et vos suggestions ont été extrêmement précieux pour améliorer le projet.\n\nVotre soutien continu est grandement apprécié et me motive à continuer à travailler sur de nouvelles mises à jour et améliorations pour rendre l'application encore meilleure.\n\nMerci de faire partie intégrante de cette communauté !\n",

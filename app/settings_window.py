@@ -1,11 +1,12 @@
 import json
 import os
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk
+from PIL import Image as PilImage
 import webbrowser
-import requests 
+import requests
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json'
@@ -27,40 +28,47 @@ class SettingsWindow:
         }
 
         self.settings = self.load_settings()
-    
+        self.folder_structure_icons = self.load_icons()
+
     def load_settings(self):
         if not os.path.exists(self.CONFIG_PATH):
-            return {'max_downloads': 3}  # Valor predeterminado
+            return {'max_downloads': 3, 'folder_structure': 'default'}
 
         try:
             with open(self.CONFIG_PATH, 'r') as file:
                 return json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
-            return {'max_downloads': 3}  # Valor predeterminado
+            return {'max_downloads': 3, 'folder_structure': 'default'}
 
     def save_settings(self):
         os.makedirs(os.path.dirname(self.CONFIG_PATH), exist_ok=True)
         with open(self.CONFIG_PATH, 'w') as file:
             json.dump(self.settings, file)
 
+    def load_icons(self):
+        icons = {}
+        icons['folder'] = ImageTk.PhotoImage(PilImage.open("resources/img/folder.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+        icons['image'] = ImageTk.PhotoImage(PilImage.open("resources/img/image.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+        icons['video'] = ImageTk.PhotoImage(PilImage.open("resources/img/video.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+        icons['document'] = ImageTk.PhotoImage(PilImage.open("resources/img/document.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+        icons['compressed'] = ImageTk.PhotoImage(PilImage.open("resources/img/compressed.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+        return icons
+
     def open_settings(self):
         self.settings_window = ctk.CTkToplevel(self.parent)
         self.settings_window.title(self.translate("Configuraciones"))
-        self.settings_window.geometry("800x600")
+        self.settings_window.geometry("800x700")
         self.settings_window.transient(self.parent)
         self.settings_window.grab_set()
-        self.center_window(self.settings_window, 800, 600)
-        self.settings_window.resizable(False, False)  # Hacer que la ventana no se pueda redimensionar
+        self.center_window(self.settings_window, 800, 700)
+        self.settings_window.resizable(False, False)
 
-        # Crear la barra de navegación
         nav_frame = ctk.CTkFrame(self.settings_window, width=200)
         nav_frame.pack(side="left", fill="y", padx=10, pady=10)
 
-        # Crear el marco de contenido
         self.content_frame = ctk.CTkFrame(self.settings_window)
         self.content_frame.pack(side="right", expand=True, fill="both", padx=(10, 20), pady=10)
 
-        # Añadir botones de navegación
         self.create_nav_button(nav_frame, "Idioma", self.show_language_settings)
         self.create_nav_button(nav_frame, "Buscar actualizaciones", self.show_update_settings)
         self.create_nav_button(nav_frame, "Descargas", self.show_download_settings)
@@ -95,25 +103,82 @@ class SettingsWindow:
         self.max_downloads_combobox.set(str(self.settings.get('max_downloads', 3)))
         self.max_downloads_combobox.pack(pady=10)
 
+        screen_width = self.content_frame.winfo_screenwidth()
+        max_label_width = int(screen_width * 0.8)
+
+        warning_label = ctk.CTkLabel(self.content_frame, text=self.translate("Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429."), font=("Helvetica", 12, "italic"), text_color="yellow", wraplength=max_label_width)
+        warning_label.pack(pady=10)
+
+        folder_structure_label = ctk.CTkLabel(self.content_frame, text=self.translate("Estructura de Carpetas"))
+        folder_structure_label.pack(pady=10)
+
+        self.folder_structure_combobox = ctk.CTkComboBox(self.content_frame, values=["default", "post_number"], state='readonly')
+        self.folder_structure_combobox.set(self.settings.get('folder_structure', 'default'))
+        self.folder_structure_combobox.pack(pady=10)
+
         apply_button = ctk.CTkButton(self.content_frame, text=self.translate("Aplicar"), command=self.apply_download_settings)
         apply_button.pack(pady=10)
 
-        # Obtener el ancho de la pantalla
-        screen_width = self.content_frame.winfo_screenwidth()
+        preview_frame = ctk.CTkFrame(self.content_frame)
+        preview_frame.pack(pady=10, fill="both", expand=True)
 
-        # Calcular el ancho máximo permitido para el label (por ejemplo, 80% del ancho de la pantalla)
-        max_label_width = int(screen_width * 0.8)
+        preview_label = ctk.CTkLabel(preview_frame, text=self.translate("Vista Previa de Estructura de Carpetas"), font=("Helvetica", 14, "bold"))
+        preview_label.pack(pady=10)
 
-        # Agregar mensaje de advertencia con ancho máximo
-        warning_label = ctk.CTkLabel(self.content_frame, text=self.translate("Para Coomer y Kemono, se recomienda un máximo de 3-5 descargas simultáneas para evitar errores 429."), font=("Helvetica", 12, "italic"), text_color="yellow", wraplength=max_label_width)
-        warning_label.pack(pady=10)
+        treeview_frame = ctk.CTkFrame(preview_frame)
+        treeview_frame.pack(pady=10, fill="both", expand=True)
+
+        default_tree_label = ctk.CTkLabel(treeview_frame, text=self.translate("Estructura Predeterminada"), font=("Helvetica", 12, "bold"))
+        default_tree_label.grid(row=0, column=0, padx=10, pady=5)
+
+        post_tree_label = ctk.CTkLabel(treeview_frame, text=self.translate("Estructura por Publicación"), font=("Helvetica", 12, "bold"))
+        post_tree_label.grid(row=0, column=1, padx=10, pady=5)
+
+        self.default_treeview = ttk.Treeview(treeview_frame)
+        self.default_treeview.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+
+        self.post_treeview = ttk.Treeview(treeview_frame)
+        self.post_treeview.grid(row=1, column=1, padx=10, pady=5, sticky="nsew")
+
+        treeview_frame.grid_columnconfigure(0, weight=1)
+        treeview_frame.grid_columnconfigure(1, weight=1)
+        treeview_frame.grid_rowconfigure(1, weight=1)
+
+        self.update_treeview()
 
     def apply_download_settings(self):
         max_downloads = int(self.max_downloads_combobox.get())
         self.settings['max_downloads'] = max_downloads
+        self.settings['folder_structure'] = self.folder_structure_combobox.get()
         self.save_settings()
+        self.update_treeview()  # Update the treeview when settings are applied
         self.parent.update_max_downloads(max_downloads)
         messagebox.showinfo(self.translate("Configuraciones"), self.translate("Configuraciones de descarga actualizadas"))
+
+    def update_treeview(self):
+        for item in self.default_treeview.get_children():
+            self.default_treeview.delete(item)
+        for item in self.post_treeview.get_children():
+            self.post_treeview.delete(item)
+
+        self.add_default_treeview_items()
+        self.add_post_treeview_items()
+
+    def add_default_treeview_items(self):
+        root = self.default_treeview.insert("", "end", text="User", image=self.folder_structure_icons['folder'])
+        self.default_treeview.insert(root, "end", text="images", image=self.folder_structure_icons['folder'])
+        self.default_treeview.insert(root, "end", text="videos", image=self.folder_structure_icons['folder'])
+        self.default_treeview.insert(root, "end", text="documents", image=self.folder_structure_icons['folder'])
+        self.default_treeview.insert(root, "end", text="compressed", image=self.folder_structure_icons['folder'])
+
+    def add_post_treeview_items(self):
+        root = self.post_treeview.insert("", "end", text="User", image=self.folder_structure_icons['folder'])
+        for post_number in range(1, 4):  # Add three posts as an example
+            post = self.post_treeview.insert(root, "end", text=f"post_{post_number}", image=self.folder_structure_icons['folder'])
+            self.post_treeview.insert(post, "end", text="images", image=self.folder_structure_icons['folder'])
+            self.post_treeview.insert(post, "end", text="videos", image=self.folder_structure_icons['folder'])
+            self.post_treeview.insert(post, "end", text="documents", image=self.folder_structure_icons['folder'])
+            self.post_treeview.insert(post, "end", text="compressed", image=self.folder_structure_icons['folder'])
 
     def show_general_settings(self):
         self.clear_frame(self.content_frame)
@@ -190,7 +255,7 @@ class SettingsWindow:
             response = requests.get(api_url)
             response.raise_for_status()
             latest_release = response.json()
-            latest_version = latest_release["tag_name"].lstrip('v')  # Remover prefijo 'v' si existe
+            latest_version = latest_release["tag_name"].lstrip('v')
 
             if latest_version != self.version.lstrip('v'):
                 if messagebox.askyesno(self.translate("Actualización disponible"),

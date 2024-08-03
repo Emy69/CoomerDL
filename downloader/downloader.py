@@ -10,7 +10,7 @@ import time
 
 class Downloader:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
-                 download_images=True, download_videos=True, download_compressed=True, tr=None):
+                 download_images=True, download_videos=True, download_compressed=True, tr=None, folder_structure='default'):
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -41,7 +41,8 @@ class Downloader:
         self.failed_files = []
         self.start_time = None
         self.tr = tr
-        self.shutdown_called = False  
+        self.shutdown_called = False
+        self.folder_structure = folder_structure
 
     def log(self, message):
         if self.log_callback:
@@ -145,7 +146,10 @@ class Downloader:
 
         return media_urls
 
-    def get_media_folder(self, extension, user_id):
+    def sanitize_filename(self, filename):
+        return re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+    def get_media_folder(self, extension, user_id, post_id=None):
         if extension in self.video_extensions:
             folder_name = "videos"
         elif extension in self.image_extensions:
@@ -157,10 +161,14 @@ class Downloader:
         else:
             folder_name = "other"
 
-        media_folder = os.path.join(self.download_folder, user_id, folder_name)
+        if self.folder_structure == 'post_number' and post_id:
+            media_folder = os.path.join(self.download_folder, user_id, f'post_{post_id}', folder_name)
+        else:
+            media_folder = os.path.join(self.download_folder, user_id, folder_name)
+
         return media_folder
 
-    def process_media_element(self, media_url, user_id):
+    def process_media_element(self, media_url, user_id, post_id=None):
         if self.cancel_requested.is_set():
             return
 
@@ -178,17 +186,16 @@ class Downloader:
             response = self.safe_request(media_url)
             if response is None:
                 self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
-                self.failed_files.append(media_url)  # Agrega URL a archivos fallidos
+                self.failed_files.append(media_url)
                 return
 
-            media_folder = self.get_media_folder(extension, user_id)
+            media_folder = self.get_media_folder(extension, user_id, post_id)
             os.makedirs(media_folder, exist_ok=True)
 
             filename = os.path.basename(media_url).split('?')[0]
-            filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+            filename = self.sanitize_filename(filename)
             filepath = os.path.join(media_folder, filename)
 
-            # Verificar si el archivo ya existe
             if os.path.exists(filepath):
                 self.log(self.tr("File already exists, skipping: {filepath}", filepath=filepath))
                 self.skipped_files.append(filepath)
@@ -196,7 +203,7 @@ class Downloader:
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
-            self.start_time = time.time()  # Tiempo de inicio de la descarga
+            self.start_time = time.time()
 
             with open(filepath, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1048576):
@@ -207,11 +214,11 @@ class Downloader:
                         return
                     f.write(chunk)
                     downloaded_size += len(chunk)
-                    
+
                     elapsed_time = time.time() - self.start_time
-                    speed = downloaded_size / elapsed_time  # bytes por segundo
-                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0  # ETA en segundos
-                    
+                    speed = downloaded_size / elapsed_time
+                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+
                     if self.update_progress_callback:
                         self.update_progress_callback(downloaded_size, total_size, file_id=media_url, file_path=filepath, speed=speed, eta=remaining_time)
 
@@ -223,8 +230,7 @@ class Downloader:
 
         except Exception as e:
             self.log(self.tr("Error downloading: {e}", e=e))
-            self.failed_files.append(media_url)  # Agrega URL a archivos fallidos
-
+            self.failed_files.append(media_url)
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
         try:
@@ -239,22 +245,20 @@ class Downloader:
             futures = []
             grouped_media_urls = defaultdict(list)
 
-            # Agrupar URLs por subdominio
             for post in posts:
                 media_urls = self.process_post(post)
                 for media_url in media_urls:
-                    subdomain = urlparse(media_url).netloc
-                    grouped_media_urls[subdomain].append(media_url)
+                    grouped_media_urls[post['id']].append(media_url)
 
             self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
             self.completed_files = 0
 
-            for subdomain, media_urls in grouped_media_urls.items():
+            for post_id, media_urls in grouped_media_urls.items():
                 for media_url in media_urls:
                     if self.download_mode == 'queue':
-                        self.process_media_element(media_url, user_id)
+                        self.process_media_element(media_url, user_id, post_id)
                     else:
-                        future = self.executor.submit(self.process_media_element, media_url, user_id)
+                        future = self.executor.submit(self.process_media_element, media_url, user_id, post_id)
                         futures.append(future)
 
             if self.download_mode == 'multi':
@@ -262,7 +266,6 @@ class Downloader:
                     if self.cancel_requested.is_set():
                         break
 
-            # Reintentar descargas fallidas después de que se completen todas las demás
             if self.failed_files:
                 self.log(self.tr("Retrying failed downloads..."))
                 for media_url in self.failed_files:
@@ -282,26 +285,23 @@ class Downloader:
             if not post:
                 self.log(self.tr("No post found for this ID."))
                 return
-            
+
             media_urls = self.process_post(post[0])
             futures = []
 
             grouped_media_urls = defaultdict(list)
-
-            # Agrupar URLs por subdominio
             for media_url in media_urls:
-                subdomain = urlparse(media_url).netloc
-                grouped_media_urls[subdomain].append(media_url)
+                grouped_media_urls[post[0]['id']].append(media_url)
 
             self.total_files = len(media_urls)
             self.completed_files = 0
 
-            for subdomain, media_urls in grouped_media_urls.items():
+            for post_id, media_urls in grouped_media_urls.items():
                 for media_url in media_urls:
                     if self.download_mode == 'queue':
-                        self.process_media_element(media_url, user_id)
+                        self.process_media_element(media_url, user_id, post_id)
                     else:
-                        future = self.executor.submit(self.process_media_element, media_url, user_id)
+                        future = self.executor.submit(self.process_media_element, media_url, user_id, post_id)
                         futures.append(future)
 
             if self.download_mode == 'multi':
@@ -309,7 +309,6 @@ class Downloader:
                     if self.cancel_requested.is_set():
                         break
 
-            # Reintentar descargas fallidas después de que se completen todas las demás
             if self.failed_files:
                 self.log(self.tr("Retrying failed downloads..."))
                 for media_url in self.failed_files:
