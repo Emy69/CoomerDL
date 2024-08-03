@@ -35,10 +35,10 @@ The app supports various file extensions for different types of media:
 
 - [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)
 - [English (English)]()
-- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/tree/blob/main/locales/ja/README.md)
-- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/tree/blob/main/locales/zh/README.md)
-- [Français (French)](https://github.com/Emy69/CoomerDL/tree/blob/main/locales/fr/README.md)
-- [Русский (Russian)](https://github.com/Emy69/CoomerDL/tree/blob/main/locales/ru/README.md)
+- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)
+- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)
+- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)
+- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
 
 ## Community
 
