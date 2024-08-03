@@ -21,7 +21,7 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
-VERSION = "CoomerV0.6.2.1"
+VERSION = "CoomerV0.6.3"
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """
@@ -57,7 +57,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.setup_window()
         
         # Settings window
-        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION)
+        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION, self.setup_general_downloader)
 
         # Load settings
         self.settings = self.settings_window.load_settings()
@@ -351,7 +351,7 @@ class ImageDownloaderApp(ctk.CTk):
             download_compressed=self.download_compressed_check.get(),
             tr=self.tr,
             max_workers=self.max_downloads,
-            folder_structure=self.settings.get('folder_structure', 'default')
+            folder_structure=self.settings_window.settings.get('folder_structure', 'default')
         )
 
     # Folder selection

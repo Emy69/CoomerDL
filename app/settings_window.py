@@ -11,13 +11,14 @@ import requests
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json'
 
-    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version):
+    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version, downloader):
         self.parent = parent
         self.translate = translate
         self.load_translations = load_translations_func
         self.update_ui_texts = update_ui_texts_func
         self.save_language_preference = save_language_preference_func
         self.version = version
+        self.downloader = downloader
         self.languages = {
             "Español": "es",
             "English": "en",
@@ -152,7 +153,7 @@ class SettingsWindow:
         self.settings['folder_structure'] = self.folder_structure_combobox.get()
         self.save_settings()
         self.update_treeview()  # Update the treeview when settings are applied
-        self.parent.update_max_downloads(max_downloads)
+        self.downloader() 
         messagebox.showinfo(self.translate("Configuraciones"), self.translate("Configuraciones de descarga actualizadas"))
 
     def update_treeview(self):
