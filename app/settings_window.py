@@ -49,10 +49,6 @@ class SettingsWindow:
     def load_icons(self):
         icons = {}
         icons['folder'] = ImageTk.PhotoImage(PilImage.open("resources/img/folder.png").resize((20, 20), PilImage.Resampling.LANCZOS))
-        icons['image'] = ImageTk.PhotoImage(PilImage.open("resources/img/image.png").resize((20, 20), PilImage.Resampling.LANCZOS))
-        icons['video'] = ImageTk.PhotoImage(PilImage.open("resources/img/video.png").resize((20, 20), PilImage.Resampling.LANCZOS))
-        icons['document'] = ImageTk.PhotoImage(PilImage.open("resources/img/document.png").resize((20, 20), PilImage.Resampling.LANCZOS))
-        icons['compressed'] = ImageTk.PhotoImage(PilImage.open("resources/img/compressed.png").resize((20, 20), PilImage.Resampling.LANCZOS))
         return icons
 
     def open_settings(self):
@@ -167,19 +163,27 @@ class SettingsWindow:
 
     def add_default_treeview_items(self):
         root = self.default_treeview.insert("", "end", text="User", image=self.folder_structure_icons['folder'])
-        self.default_treeview.insert(root, "end", text="images", image=self.folder_structure_icons['folder'])
-        self.default_treeview.insert(root, "end", text="videos", image=self.folder_structure_icons['folder'])
-        self.default_treeview.insert(root, "end", text="documents", image=self.folder_structure_icons['folder'])
-        self.default_treeview.insert(root, "end", text="compressed", image=self.folder_structure_icons['folder'])
+        images_node = self.default_treeview.insert(root, "end", text="images", image=self.folder_structure_icons['folder'])
+        videos_node = self.default_treeview.insert(root, "end", text="videos", image=self.folder_structure_icons['folder'])
+        documents_node = self.default_treeview.insert(root, "end", text="documents", image=self.folder_structure_icons['folder'])
+        compressed_node = self.default_treeview.insert(root, "end", text="compressed", image=self.folder_structure_icons['folder'])
+        self.default_treeview.item(root, open=True)
+        self.default_treeview.item(images_node, open=True)
+        self.default_treeview.item(videos_node, open=True)
+        self.default_treeview.item(documents_node, open=True)
+        self.default_treeview.item(compressed_node, open=True)
 
     def add_post_treeview_items(self):
         root = self.post_treeview.insert("", "end", text="User", image=self.folder_structure_icons['folder'])
-        for post_number in range(1, 4):  # Add three posts as an example
-            post = self.post_treeview.insert(root, "end", text=f"post_{post_number}", image=self.folder_structure_icons['folder'])
-            self.post_treeview.insert(post, "end", text="images", image=self.folder_structure_icons['folder'])
-            self.post_treeview.insert(post, "end", text="videos", image=self.folder_structure_icons['folder'])
-            self.post_treeview.insert(post, "end", text="documents", image=self.folder_structure_icons['folder'])
-            self.post_treeview.insert(post, "end", text="compressed", image=self.folder_structure_icons['folder'])
+        post = self.post_treeview.insert(root, "end", text=f"post_id", image=self.folder_structure_icons['folder'])
+        self.post_treeview.insert(post, "end", text="images", image=self.folder_structure_icons['folder'])
+        self.post_treeview.insert(post, "end", text="videos", image=self.folder_structure_icons['folder'])
+        self.post_treeview.insert(post, "end", text="documents", image=self.folder_structure_icons['folder'])
+        self.post_treeview.insert(post, "end", text="compressed", image=self.folder_structure_icons['folder'])
+        post2 = self.post_treeview.insert(root, "end", text=f"post_id", image=self.folder_structure_icons['folder'])
+        post3 = self.post_treeview.insert(root, "end", text=f"post_id", image=self.folder_structure_icons['folder'])
+        self.post_treeview.item(root,open=True)
+        self.post_treeview.item(post,open=True)
 
     def show_general_settings(self):
         self.clear_frame(self.content_frame)
