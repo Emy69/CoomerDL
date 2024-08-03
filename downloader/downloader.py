@@ -18,7 +18,7 @@ class Downloader:
         self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()
         self.headers = headers or {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
             'Accept': 'application/json',
         }
         self.media_counter = 0

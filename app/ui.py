@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext
 from typing import Optional
 from urllib.parse import ParseResult, parse_qs, urlparse
+import webbrowser
 
 import customtkinter as ctk
 from customtkinter import CTkImage
@@ -55,9 +56,6 @@ class ImageDownloaderApp(ctk.CTk):
         # Setup window
         self.setup_window()
         
-        # Patch notes
-        self.patch_notes = PatchNotes(self, self.tr)
-        
         # Settings window
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION)
         
@@ -65,8 +63,11 @@ class ImageDownloaderApp(ctk.CTk):
         lang = self.load_language_preference()
         self.load_translations(lang)
 
+        # Patch notes
+        self.patch_notes = PatchNotes(self, self.tr)
+
         self.progress_bars = {}
-        self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
+        #self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         
         # Initialize UI
         self.initialize_ui()
@@ -225,22 +226,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_entry.bind("<Button-3>", self.show_context_menu)
 
         # Menubar
-        self.menubar = tk.Menu(self)
-        self.config(menu=self.menubar)
+        self.create_menubar()
 
-        # Menú Archivo
-        self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label=self.tr("Salir"), command=self.quit)
-        self.menubar.add_cascade(label=self.tr("Archivo"), menu=self.file_menu)
-
-        # Menú Favoritos
-        self.favorites_menu = tk.Menu(self.menubar, tearoff=0)
-        self.favorites_menu.add_command(label=self.tr("Añadir a Favoritos"), command=self.add_to_favorites)
-        self.favorites_menu.add_command(label=self.tr("Ver Favoritos"), command=self.show_favorites)
-        self.menubar.add_cascade(label=self.tr("Favoritos"), menu=self.favorites_menu)
-        
         footer = ctk.CTkFrame(self, height=30, corner_radius=0)
         footer.pack(side="bottom", fill="x")
 
@@ -273,16 +260,37 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.file_menu.entryconfigure(0, label=self.tr("Configuraciones"))
         self.file_menu.entryconfigure(2, label=self.tr("Salir"))
-        self.favorites_menu.entryconfigure(0, label=self.tr("Añadir a Favoritos"))
-        self.favorites_menu.entryconfigure(1, label=self.tr("Ver Favoritos"))
         self.update_info_text()
 
-    # Favorites management
-    def add_to_favorites(self):
-        messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
+    def create_menubar(self):
+        self.menubar = tk.Menu(self)
+        self.config(menu=self.menubar)
 
-    def show_favorites(self):
-        messagebox.showinfo(self.tr("Favoritos"), self.tr("coming_soon"))
+        # Menú Archivo
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label=self.tr("Salir"), command=self.quit)
+        self.menubar.add_cascade(label=self.tr("Archivo"), menu=self.file_menu)
+
+        # Menú Reportar un error
+        self.report_menu = tk.Menu(self.menubar, tearoff=0)
+        self.report_menu.add_command(label=self.tr("GitHub"), command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues"))
+        self.report_menu.add_command(label=self.tr("Discord"), command=lambda: webbrowser.open("https://discord.gg/ku8gSPsesh"))
+        self.menubar.add_cascade(label=self.tr("Reportar un error"), menu=self.report_menu)
+
+        # Menú Donaciones
+        self.donate_menu = tk.Menu(self.menubar, tearoff=0)
+        self.donate_menu.add_command(label=self.tr("PayPal"), command=lambda: webbrowser.open("https://www.paypal.com/paypalme/Emy699"))
+        self.menubar.add_cascade(label=self.tr("Donaciones"), menu=self.donate_menu)
+
+        # Menú Notas
+        self.notes_menu = tk.Menu(self.menubar, tearoff=0)
+        self.notes_menu.add_command(label=self.tr("love u"), command=self.open_patch_notes)
+        self.menubar.add_cascade(label=self.tr("<3"), menu=self.notes_menu)
+    
+    def open_patch_notes(self):
+        self.patch_notes.show_patch_notes()
 
     # Image processing
     def create_photoimage(self, path, size=(32, 32)):
