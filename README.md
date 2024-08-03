@@ -21,13 +21,24 @@ The app supports various file extensions for different types of media:
 - **Image Extensions**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`
 - **Document Extensions**: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`
 - **Compressed Extensions**: `.zip`, `.rar`, `.7z`, `.tar`, `.gz`
-  
+
 ## Supported Pages
 
 - [coomer.su](https://coomer.su/)
 - [kemono.su](https://kemono.su/)
 - [erome.com](https://www.erome.com/)
 - [bunkr-albums.io](https://bunkr-albums.io/)
+
+## Language Support
+
+**Coomer Downloader App** supports multiple languages to enhance user experience. Current supported languages include:
+
+- [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)
+- [English (English)]()
+- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)
+- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)
+- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)
+- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
 
 ## Community
 
@@ -51,4 +62,4 @@ If you have any issues or want to communicate with me, join my Discord server by
 
 If you like my project and want to support it, you can make a donation through PayPal, thank you for your support!
 
-[![Donar con PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
