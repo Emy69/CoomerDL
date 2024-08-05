@@ -43,50 +43,60 @@ class BunkrDownloader:
     def clean_filename(self, filename):
         return re.sub(r'[<>:"/\\|?*\u200b]', '_', filename)
 
-    def download_file(self, url_media, ruta_carpeta, file_id):
+    def download_file(self, url_media, ruta_carpeta, file_id, resource_type):
         if self.cancel_requested:
             self.log("Download cancelled by the user.", url=url_media)
             return
 
-        max_attempts = 3
-        delay = 1
-        for attempt in range(max_attempts):
+        file_name = os.path.basename(urlparse(url_media).path)
+        file_path = os.path.join(ruta_carpeta, file_name)
+
+        if os.path.exists(file_path):
+            self.log(f"File already exists, skipping: {file_path}", url=url_media)
+            self.completed_files += 1
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
+            return
+
+        folder_path = os.path.dirname(file_path)
+        os.makedirs(folder_path, exist_ok=True)
+
+        self.log(f"Start downloading {resource_type}: {file_path}", url=url_media)
+
+        retries = 0
+        max_retries = 5
+        while retries < max_retries:
             try:
-                self.log(f"Attempting to download {url_media} (Attempt {attempt + 1}/{max_attempts})")
-                response = self.session.get(url_media, headers=self.headers, stream=True)
-                response.raise_for_status()
-                file_name = os.path.basename(urlparse(url_media).path)
-                file_path = os.path.join(ruta_carpeta, file_name)
-                
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded_size = 0
+                response = requests.get(url_media, headers=self.headers, stream=True)
+                if response.status_code == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    downloaded_size = 0
 
-                with open(file_path, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size=65536):
-                        if self.cancel_requested:
-                            self.log("Download cancelled during the file download.", url=url_media)
-                            file.close()
-                            os.remove(file_path)
-                            return
-                        file.write(chunk)
-                        downloaded_size += len(chunk)
-                        if self.update_progress_callback:
-                            self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
+                    with open(file_path, 'wb') as file:
+                        for chunk in response.iter_content(chunk_size=65536):
+                            if self.cancel_requested:
+                                self.log("Download cancelled during the file download.", url=url_media)
+                                file.close()
+                                os.remove(file_path)
+                                return
+                            file.write(chunk)
+                            downloaded_size += len(chunk)
+                            if self.update_progress_callback:
+                                self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
 
-                self.log(f"File downloaded: {file_name}", url=url_media)
-                self.completed_files += 1
-                if self.update_global_progress_callback:
-                    self.update_global_progress_callback(self.completed_files, self.total_files)
-                break
-            except requests.RequestException as e:
-                if response.status_code == 429:
-                    self.log(f"Rate limit exceeded. Retrying after {delay} seconds.")
-                    time.sleep(delay)
-                    delay *= 2  # Exponential backoff
+                    self.log(f"File downloaded: {file_name}", url=url_media)
+                    self.completed_files += 1
+                    if self.update_global_progress_callback:
+                        self.update_global_progress_callback(self.completed_files, self.total_files)
+                    break
                 else:
-                    self.log(f"Failed to download from {url_media}: {e}. Attempt {attempt + 1} of {max_attempts}", url=url_media)
-                    if attempt < max_attempts - 1:
-                        time.sleep(3)
+                    self.log(f"Error downloading {url_media}, status code: {response.status_code}")
+                    break
+            except requests.RequestException as e:
+                retries += 1
+                self.log(f"Error downloading {url_media}, attempt {retries}/{max_retries}: {e}")
+                if retries == max_retries:
+                    self.log(f"Max retries reached. Failed to download {url_media}")
 
     def descargar_perfil_bunkr(self, url_perfil):
         try:
@@ -123,14 +133,14 @@ class BunkrDownloader:
                         if image_tag and 'src' in image_tag.attrs:
                             img_url = image_tag['src']
                             self.log(f"Found image URL: {img_url}")
-                            media_urls.append((img_url, ruta_carpeta))
+                            media_urls.append((img_url, ruta_carpeta, 'Image'))
                         if video_tag and 'src' in video_tag.attrs:
                             video_url = video_tag['src']
                             self.log(f"Found video URL: {video_url}")
-                            media_urls.append((video_url, ruta_carpeta))
+                            media_urls.append((video_url, ruta_carpeta, 'Video'))
 
                 self.total_files = len(media_urls)
-                futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
+                futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4()), resource_type) for url, folder, resource_type in media_urls]
                 for future in as_completed(futures):
                     if self.cancel_requested:
                         self.log("Cancelling remaining downloads.")
