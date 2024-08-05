@@ -9,6 +9,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import datetime
 from pathlib import Path
+from requests.exceptions import ChunkedEncodingError
 
 class EromeDownloader:
     def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
@@ -43,7 +44,8 @@ class EromeDownloader:
     def log(self, message):
         if self.log_callback is not None:
             self.log_callback(message)
-        self.log_messages.append(message)  
+        self.log_messages.append(message)
+
     def shutdown_executor(self):
         self.executor.shutdown(wait=False)
         self.log(self.tr("Executor shut down."))
@@ -70,8 +72,12 @@ class EromeDownloader:
                         messagebox.showerror(self.tr("Error"), self.tr("Could not create folder: {folder_name}\nError: {error}", folder_name=folder_name, error=e), parent=self.root)
         return folder_name
 
-    def download_file(self, url, file_path, resource_type, file_id=None):
+    def download_file(self, url, file_path, resource_type, file_id=None, max_retries=5):
         if self.cancel_requested:
+            return
+
+        if os.path.exists(file_path):
+            self.log(self.tr("File already exists, skipping: {file_path}", file_path=file_path))
             return
 
         folder_path = os.path.dirname(file_path)
@@ -79,27 +85,37 @@ class EromeDownloader:
 
         self.log(self.tr("Start downloading {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
 
-        response = requests.get(url, headers=self.headers, stream=True)
-        if response.status_code == 200:
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded_size = 0
+        retries = 0
+        while retries < max_retries:
+            try:
+                response = requests.get(url, headers=self.headers, stream=True)
+                if response.status_code == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    downloaded_size = 0
 
-            with open(file_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=65536):
-                    if self.cancel_requested:
-                        return
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    if self.update_progress_callback:
-                        self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
+                    with open(file_path, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=65536):
+                            if self.cancel_requested:
+                                return
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if self.update_progress_callback:
+                                self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
 
-            self.completed_files += 1
-            if self.update_global_progress_callback:
-                self.update_global_progress_callback(self.completed_files, self.total_files)
+                    self.completed_files += 1
+                    if self.update_global_progress_callback:
+                        self.update_global_progress_callback(self.completed_files, self.total_files)
 
-            self.log(self.tr("Download successful: {resource_type}, {file_path}", resource_type=resource_type, file_path=file_path))
-        else:
-            self.log(self.tr("Error downloading {resource_type}, status code: {status_code}", resource_type=resource_type, status_code=response.status_code))
+                    self.log(self.tr("Download successful: {resource_type}, {file_path}", resource_type=resource_type, file_path=file_path))
+                    break
+                else:
+                    self.log(self.tr("Error downloading {resource_type}, status code: {status_code}", resource_type=resource_type, status_code=response.status_code))
+                    break
+            except (ChunkedEncodingError, requests.exceptions.ConnectionError) as e:
+                retries += 1
+                self.log(self.tr("Error downloading {resource_type}, attempt {retries}/{max_retries}: {error}", resource_type=resource_type, retries=retries, max_retries=max_retries, error=e))
+                if retries == max_retries:
+                    self.log(self.tr("Max retries reached. Failed to download {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
@@ -114,7 +130,7 @@ class EromeDownloader:
                     folder_path = self.create_folder(os.path.join(base_folder, folder_name))
                 else:
                     folder_path = base_folder  # Utiliza la carpeta base directamente
-                
+
                 media_urls = []
 
                 if self.download_videos:
@@ -144,7 +160,7 @@ class EromeDownloader:
                         self.log(self.tr("Cancelling remaining downloads."))
                         break
                     future.result()
-                
+
                 self.log(self.tr("Album download complete: {folder_name}", folder_name=folder_name) if not self.direct_download else self.tr("Album download complete"))
                 if not self.is_profile_download:
                     self.enable_widgets_callback()
@@ -167,13 +183,13 @@ class EromeDownloader:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else self.tr("Unknown Profile")
                 base_folder = self.create_folder(os.path.join(download_folder, self.clean_filename(username)))
-                
+
                 album_links = soup.find_all('a', class_='album-link')
                 for album_link in album_links:
                     album_href = album_link.get('href')
                     album_full_url = urljoin(url, album_href)
                     self.process_album_page(album_full_url, base_folder, download_images, download_videos)
-                    
+
                 self.log(self.tr("Profile download complete: {username}", username=username))
                 self.enable_widgets_callback()
             else:
