@@ -470,7 +470,12 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("Descargando Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
-            download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_perfil_bunkr, url))
+            if "/v/" in url or "/i/" in url:
+                self.add_log_message_safe(self.tr("URL del post"))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_post_bunkr, url))
+            else:
+                self.add_log_message_safe(self.tr("URL del perfil"))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_perfil_bunkr, url))
         elif parsed_url.netloc in ["coomer.su", "kemono.su"]:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
