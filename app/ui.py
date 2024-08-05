@@ -22,6 +22,7 @@ from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
 VERSION = "CoomerV0.6.3"
+MAX_LOG_LINES = 100  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """
@@ -91,9 +92,11 @@ class ImageDownloaderApp(ctk.CTk):
         if self.download_folder:
             self.folder_path.configure(text=self.download_folder)
 
+        self.active_downloader = None  # Initialize active_downloader
+
     # Application close event
     def on_app_close(self):
-        if hasattr(self, 'active_downloader') and self.active_downloader and not self.active_downloader.cancel_requested.is_set():
+        if self.is_download_active() and not self.active_downloader.cancel_requested:
             # Mostrar advertencia si hay una descarga activa
             messagebox.showwarning(
                 self.tr("Descarga Activa"),
@@ -101,6 +104,9 @@ class ImageDownloaderApp(ctk.CTk):
             )
         else:
             self.destroy()
+
+    def is_download_active(self):
+        return self.active_downloader is not None
 
     # Save and load language preferences
     def save_language_preference(self, language_code):
@@ -426,6 +432,14 @@ class ImageDownloaderApp(ctk.CTk):
         self.errors.append(error_message)
         self.add_log_message_safe(f"Error: {error_message}")
 
+    def wrapped_download(self, download_method, *args):
+        try:
+            download_method(*args)
+        finally:
+            self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
+            self.enable_widgets()  # Asegúrate de habilitar los widgets
+            self.export_logs()  # Llama a export_logs al finalizar la descarga
+
     # Download management
     def start_download(self):
         url = self.url_entry.get().strip()
@@ -448,15 +462,15 @@ class ImageDownloaderApp(ctk.CTk):
             self.active_downloader = self.erome_downloader
             if "/a/" in url:
                 self.add_log_message_safe(self.tr("URL del álbum"))
-                download_thread = threading.Thread(target=self.active_downloader.process_album_page, args=(url, self.download_folder, self.download_images_check.get(), self.download_videos_check.get()))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.process_album_page, url, self.download_folder, self.download_images_check.get(), self.download_videos_check.get()))
             else:
                 self.add_log_message_safe(self.tr("URL del perfil"))
-                download_thread = threading.Thread(target=self.active_downloader.process_profile_page, args=(url, self.download_folder, self.download_images_check.get(), self.download_videos_check.get()))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.process_profile_page, url, self.download_folder, self.download_images_check.get(), self.download_videos_check.get()))
         elif re.search(r"https?://([a-z0-9-]+\.)?bunkr\.[a-z]{2,}", url):
             self.add_log_message_safe(self.tr("Descargando Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
-            download_thread = threading.Thread(target=self.bunkr_downloader.descargar_perfil_bunkr, args=(url,))
+            download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_perfil_bunkr, url))
         elif parsed_url.netloc in ["coomer.su", "kemono.su"]:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
@@ -482,18 +496,11 @@ class ImageDownloaderApp(ctk.CTk):
 
             if post is not None:
                 self.add_log_message_safe(self.tr("Descargando post único..."))
-                download_thread = threading.Thread(target=self.start_ck_post_download, args=(site, service, user, post))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_post_download, site, service, user, post))
             else:
                 query, offset = extract_ck_query(parsed_url)
                 self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..." if download_all else "Descargando solo los posts del URL proporcionado..."))
-                download_thread = threading.Thread(target=self.start_ck_profile_download, args=(
-                    site,
-                    service,
-                    user,
-                    query,
-                    download_all,
-                    offset,
-                ))
+                download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_profile_download, site, service, user, query, download_all, offset))
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
@@ -553,7 +560,6 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("No hay una descarga en curso para cancelar."))
         self.enable_widgets()
 
-
     def clear_progress_bars(self):
         for file_id in list(self.progress_bars.keys()):
             self.remove_progress_bar(file_id)
@@ -568,9 +574,17 @@ class ImageDownloaderApp(ctk.CTk):
         def log_in_main_thread():
             self.log_textbox.configure(state='normal')
             self.log_textbox.insert('end', message + '\n')
+            self.limit_log_lines() 
             self.log_textbox.configure(state='disabled')
             self.log_textbox.yview_moveto(1)
         self.after(0, log_in_main_thread)
+
+    def limit_log_lines(self):
+        log_lines = self.log_textbox.get("1.0", "end-1c").split("\n")
+        if len(log_lines) > MAX_LOG_LINES:
+            self.log_textbox.configure(state='normal')
+            self.log_textbox.delete("1.0", f"{len(log_lines) - MAX_LOG_LINES}.0")
+            self.log_textbox.configure(state='disabled')
 
     # Export logs to a file
     def export_logs(self):
