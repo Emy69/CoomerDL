@@ -145,8 +145,12 @@ class BunkrDownloader:
             self.log(f"Response status code: {response.status_code} for {url_perfil}")
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                folder_name = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'}).text.strip()
-                folder_name = self.clean_filename(folder_name)  # Limpia el nombre de la carpeta
+                file_name_tag = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'})
+                if file_name_tag:
+                    folder_name = file_name_tag.text.strip()
+                else:
+                    folder_name = f"bunkr_profile_{uuid.uuid4()}"
+                folder_name = self.clean_filename(folder_name)
                 ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
                 
