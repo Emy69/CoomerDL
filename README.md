@@ -22,23 +22,16 @@ The app supports various file extensions for different types of media:
 - **Document Extensions**: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`
 - **Compressed Extensions**: `.zip`, `.rar`, `.7z`, `.tar`, `.gz`
 
-## Supported Pages
+## Supported Pages and Languages
 
-- [coomer.su](https://coomer.su/)
-- [kemono.su](https://kemono.su/)
-- [erome.com](https://www.erome.com/)
-- [bunkr-albums.io](https://bunkr-albums.io/)
-
-## Language Support
-
-**Coomer Downloader App** supports multiple languages to enhance user experience. Current supported languages include:
-
-- [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)
-- [English (English)]()
-- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)
-- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)
-- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)
-- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
+| Supported Pages                                                                 | Language Support                                                                                      |
+|--------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| - [coomer.su](https://coomer.su/)                                               | - [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)                |
+| - [kemono.su](https://kemono.su/)                                               | - [English (English)]()                                                                               |
+| - [erome.com](https://www.erome.com/)                                           | - [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)                |
+| - [bunkr-albums.io](https://bunkr-albums.io/)                                   | - [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)                    |
+|                                                                                | - [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)                |
+|                                                                                | - [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)                |
 
 ## Community
 
@@ -63,3 +56,6 @@ If you have any issues or want to communicate with me, join my Discord server by
 If you like my project and want to support it, you can make a donation through PayPal, thank you for your support!
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00.svg?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/emy_69)
+
+
