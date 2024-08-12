@@ -3,6 +3,7 @@ import json
 import queue
 import sys
 import re
+import os
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -14,6 +15,7 @@ import webbrowser
 import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image, ImageTk
+import psutil
 
 from app.patch_notes import PatchNotes
 from app.settings_window import SettingsWindow
@@ -107,7 +109,16 @@ class ImageDownloaderApp(ctk.CTk):
 
     def is_download_active(self):
         return self.active_downloader is not None
-
+    
+    def close_program(self):
+        # Cierra todas las ventanas y termina el proceso principal
+        self.destroy()
+        # Matar el proceso actual (eliminar del administrador de tareas)
+        current_process = psutil.Process(os.getpid())
+        for handler in current_process.children(recursive=True):
+            handler.kill()
+        current_process.kill()
+    
     # Save and load language preferences
     def save_language_preference(self, language_code):
         config = {'language': language_code}
@@ -291,6 +302,7 @@ class ImageDownloaderApp(ctk.CTk):
         # Menú Donaciones
         self.donate_menu = tk.Menu(self.menubar, tearoff=0)
         self.donate_menu.add_command(label=self.tr("PayPal"), command=lambda: webbrowser.open("https://www.paypal.com/paypalme/Emy699"))
+        self.donate_menu.add_command(label=self.tr("Buy me a coffee"), command=lambda: webbrowser.open("https://buymeacoffee.com/emy_69"))
         self.menubar.add_cascade(label=self.tr("Donaciones"), menu=self.donate_menu)
 
         # Menú Notas
