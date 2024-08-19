@@ -1,16 +1,17 @@
 # Virtual environment directories
-venv/
 myenv/
+venv/
+.venv/
 
 # Python cache and compiled files
-__pycache__/
 *.py[cod]
 *.pyc
+__pycache__/
 
 # Python distribution artifacts
+*.egg-info/
 build/
 dist/
-*.egg-info/
 Scripts/
 
 # Test caches
@@ -28,13 +29,13 @@ Thumbs.db
 .env
 
 # Other files to ignore
-*.log
 *.csv
-setup.py
-test.py 
-descargas_test/
-test/
-test/parse.py
+*.log
 coomer.py
-resources/config/logs/*
+descargas_test/
 list.txt
+resources/config/logs/*
+setup.py
+test/
+test.py
+test/parse.py
