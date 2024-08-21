@@ -53,6 +53,7 @@ def extract_ck_query(url: ParseResult) -> tuple[Optional[str], int]:
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
         super().__init__()
         self.title(f"Downloader [{VERSION}]")
         
