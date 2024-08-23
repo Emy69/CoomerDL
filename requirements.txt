@@ -5,3 +5,5 @@ requests
 pillow
 tkinter
 psutil
+markdown2
+tkinterweb
