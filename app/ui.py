@@ -294,11 +294,17 @@ class ImageDownloaderApp(ctk.CTk):
         self.file_menu.add_command(label=self.tr("Salir"), command=self.quit)
         self.menubar.add_cascade(label=self.tr("Archivo"), menu=self.file_menu)
 
-        # Menú Reportar un error
-        self.report_menu = tk.Menu(self.menubar, tearoff=0)
-        self.report_menu.add_command(label=self.tr("GitHub"), command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues"))
-        self.report_menu.add_command(label=self.tr("Discord"), command=lambda: webbrowser.open("https://discord.gg/ku8gSPsesh"))
-        self.menubar.add_cascade(label=self.tr("Reportar un error"), menu=self.report_menu)
+        # Menú Ayuda
+        self.help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.help_menu.add_command(label=self.tr("Notas de Parche"), command=self.open_patch_notes)
+        
+        # Submenú para reportar un error
+        self.report_bug_menu = tk.Menu(self.help_menu, tearoff=0)
+        self.report_bug_menu.add_command(label=self.tr("GitHub"), command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues"))
+        self.report_bug_menu.add_command(label=self.tr("Discord"), command=lambda: webbrowser.open("https://discord.gg/ku8gSPsesh"))
+        self.help_menu.add_cascade(label=self.tr("Reportar un Error"), menu=self.report_bug_menu)
+
+        self.menubar.add_cascade(label=self.tr("Ayuda"), menu=self.help_menu)
 
         # Menú Donaciones
         self.donate_menu = tk.Menu(self.menubar, tearoff=0)
@@ -306,10 +312,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.donate_menu.add_command(label=self.tr("Buy me a coffee"), command=lambda: webbrowser.open("https://buymeacoffee.com/emy_69"))
         self.menubar.add_cascade(label=self.tr("Donaciones"), menu=self.donate_menu)
 
-        # Menú Notas
-        self.notes_menu = tk.Menu(self.menubar, tearoff=0)
-        self.notes_menu.add_command(label=self.tr("love u"), command=self.open_patch_notes)
-        self.menubar.add_cascade(label=self.tr("<3"), menu=self.notes_menu)
     
     def open_patch_notes(self):
         self.patch_notes.show_patch_notes()

@@ -118,9 +118,6 @@ class PatchNotes:
         return html_content
 
     def close_patch_notes(self, dont_show_again_var):
-        if dont_show_again_var.get():
-            # Aquí puedes agregar la lógica para no mostrar la ventana de nuevo, como guardar una preferencia en un archivo de configuración.
-            pass
         if self.patch_notes_window is not None:
             self.patch_notes_window.destroy()
             self.patch_notes_window = None

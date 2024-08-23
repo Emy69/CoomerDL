@@ -160,21 +160,22 @@
         "ru": "Профиль",
         "zh": "简介"
     },
-    "thank you for all the support": {
-        "es": "¡Hola a todos!\n\nQuiero agradecerles sinceramente por todo el apoyo y comentarios que me han dado sobre la aplicación. Su entusiasmo y sugerencias han sido increíblemente valiosos para mejorar el proyecto.\n\nSu continuo apoyo es muy apreciado y me motiva a seguir trabajando en nuevas actualizaciones y mejoras para que la aplicación sea aún mejor.\n\n¡Gracias por ser una parte tan importante de esta comunidad!\n",
-        "en": "Hello everyone!\n\nI want to sincerely thank you for all the support and feedback you have given me about the application. Your enthusiasm and suggestions have been incredibly valuable in improving the project.\n\nYour continued support is greatly appreciated, and it motivates me to keep working on new updates and improvements to make the application even better.\n\nThank you for being such an important part of this community!\n",
-        "fr": "Bonjour à tous !\n\nJe tiens à vous remercier sincèrement pour tout le soutien et les commentaires que vous m'avez donnés sur l'application. Votre enthousiasme et vos suggestions ont été extrêmement précieux pour améliorer le projet.\n\nVotre soutien continu est grandement apprécié et me motive à continuer à travailler sur de nouvelles mises à jour et améliorations pour rendre l'application encore meilleure.\n\nMerci de faire partie intégrante de cette communauté !\n",
-        "ja": "こんにちは、みなさん！\n\nアプリケーションについてのサポートとフィードバックを心から感謝します。皆さんの熱意と提案は、プロジェクトの改善に非常に貴重でした。\n\n皆さんの継続的なサポートに心から感謝し、アプリケーションをさらに良くするために、新しい更新や改善に取り組み続けるモチベーションを得ています。\n\nこのコミュニティの重要な一員でいてくれてありがとう！\n",
-        "ru": "Здравствуйте, всем!\n\nХочу искренне поблагодарить вас за всю поддержку и отзывы о приложении. Ваш энтузиазм и предложения были чрезвычайно ценны для улучшения проекта.\n\nВаша постоянная поддержка очень ценится и мотивирует меня продолжать работу над новыми обновлениями и улучшениями, чтобы сделать приложение еще лучше.\n\nСпасибо, что вы такая важная часть этого сообщества!\n",
-        "zh": "大家好！\n\n我想衷心感谢你们对应用程序的所有支持和反馈。你们的热情和建议对改进项目非常有价值。\n\n我们非常感激你们的持续支持，这激励我继续努力进行新的更新和改进，使应用程序变得更好。\n\n感谢您成为这个社区如此重要的一部分！\n"
+        "Ayuda": {
+        "es": "Ayuda",
+        "en": "Help",
+        "fr": "Aide",
+        "ja": "ヘルプ",
+        "ru": "Помощь",
+        "zh": "帮助"
     },
-    "Reportar un error": {
-        "es": "Reportar un error",
-        "en": "Report an Issue",
-        "fr": "Signaler un problème",
-        "ja": "問題を報告する",
+
+    "Reportar un Error": {
+        "es": "Reportar un Error",
+        "en": "Report a Bug",
+        "fr": "Signaler un Bug",
+        "ja": "バグを報告する",
         "ru": "Сообщить об ошибке",
-        "zh": "报告问题"
+        "zh": "报告错误"
     },
     "Donaciones": {
         "es": "Donaciones",
