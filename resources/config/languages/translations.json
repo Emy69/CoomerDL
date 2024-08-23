@@ -1,36 +1,164 @@
 {   
     
-    "Estructura Predeterminada": {
-        "es": "Estructura Predeterminada",
-        "en": "Default Structure",
-        "fr": "Structure par défaut",
-        "ja": "デフォルトの構造",
-        "ru": "Стандартная структура",
-        "zh": "默认结构"
+    "General": {
+        "es": "Opciones Generales",
+        "en": "General Options",
+        "fr": "Options Générales",
+        "ja": "一般オプション",
+        "ru": "Общие настройки",
+        "zh": "常规选项"
     },
-    "Estructura por Publicación": {
-        "es": "Estructura por Publicación",
-        "en": "Post Structure",
-        "fr": "Structure par publication",
-        "ja": "投稿別の構造",
-        "ru": "Структура по публикациям",
-        "zh": "发布结构"
+    "Select Theme": {
+        "es": "Seleccionar Tema",
+        "en": "Select Theme",
+        "fr": "Sélectionner un Thème",
+        "ja": "テーマを選択",
+        "ru": "Выбрать Тему",
+        "zh": "选择主题"
     },
-    "Vista Previa de Estructura de Carpetas": {
-        "es": "Vista Previa de Estructura de Carpetas",
+    "Apply Theme": {
+        "es": "Aplicar Tema",
+        "en": "Apply Theme",
+        "fr": "Appliquer le Thème",
+        "ja": "テーマを適用",
+        "ru": "Применить Тему",
+        "zh": "应用主题"
+    },
+    "Select Language": {
+        "es": "Seleccionar Idioma",
+        "en": "Select Language",
+        "fr": "Sélectionner la Langue",
+        "ja": "言語を選択",
+        "ru": "Выбрать Язык",
+        "zh": "选择语言"
+    },
+    "Apply Language": {
+        "es": "Aplicar Idioma",
+        "en": "Apply Language",
+        "fr": "Appliquer la Langue",
+        "ja": "言語を適用",
+        "ru": "Применить Язык",
+        "zh": "应用语言"
+    },
+    "Download Options": {
+        "es": "Opciones de Descarga",
+        "en": "Download Options",
+        "fr": "Options de Téléchargement",
+        "ja": "ダウンロードオプション",
+        "ru": "Настройки Загрузок",
+        "zh": "下载选项"
+    },
+    "Simultaneous Downloads": {
+        "es": "Descargas Simultáneas",
+        "en": "Simultaneous Downloads",
+        "fr": "Téléchargements Simultanés",
+        "ja": "同時ダウンロード",
+        "ru": "Одновременные Загрузки",
+        "zh": "同时下载"
+    },
+    "Folder Structure": {
+        "es": "Estructura de Carpetas",
+        "en": "Folder Structure",
+        "fr": "Structure des Dossiers",
+        "ja": "フォルダー構造",
+        "ru": "Структура Папок",
+        "zh": "文件夹结构"
+    },
+    "Apply Download Settings": {
+        "es": "Aplicar Configuraciones de Descarga",
+        "en": "Apply Download Settings",
+        "fr": "Appliquer les Paramètres de Téléchargement",
+        "ja": "ダウンロード設定を適用",
+        "ru": "Применить Настройки Загрузки",
+        "zh": "应用下载设置"
+    },
+    "Additional Settings": {
+        "es": "Configuraciones Adicionales",
+        "en": "Additional Settings",
+        "fr": "Paramètres Supplémentaires",
+        "ja": "追加設定",
+        "ru": "Дополнительные Настройки",
+        "zh": "附加设置"
+    },
+    "Enable Notifications": {
+        "es": "Habilitar Notificaciones",
+        "en": "Enable Notifications",
+        "fr": "Activer les Notifications",
+        "ja": "通知を有効にする",
+        "ru": "Включить Уведомления",
+        "zh": "启用通知"
+    },
+    "Show Tooltips": {
+        "es": "Mostrar Descripciones Emergentes",
+        "en": "Show Tooltips",
+        "fr": "Afficher les Infobulles",
+        "ja": "ツールチップを表示",
+        "ru": "Показывать Подсказки",
+        "zh": "显示工具提示"
+    },
+    "Folder Structure Preview": {
+        "es": "Vista Previa de la Estructura de Carpetas",
         "en": "Folder Structure Preview",
-        "fr": "Aperçu de la structure des dossiers",
+        "fr": "Aperçu de la Structure des Dossiers",
         "ja": "フォルダー構造のプレビュー",
         "ru": "Предварительный просмотр структуры папок",
         "zh": "文件夹结构预览"
     },
-    "Estructura de Carpetas": {
-        "es": "Estructura de Carpetas",
-        "en": "Folder Structure",
-        "fr": "Structure des dossiers",
-        "ja": "フォルダー構造",
-        "ru": "Структура папок",
-        "zh": "文件夹结构"
+    "Check for Updates": {
+        "es": "Buscar Actualizaciones",
+        "en": "Check for Updates",
+        "fr": "Vérifier les Mises à Jour",
+        "ja": "アップデートを確認",
+        "ru": "Проверить Обновления",
+        "zh": "检查更新"
+    },
+    "About": {
+        "es": "Acerca de",
+        "en": "About",
+        "fr": "À propos",
+        "ja": "情報",
+        "ru": "О программе",
+        "zh": "关于"
+    },
+    "Developed by:": {
+        "es": "Desarrollado por:",
+        "en": "Developed by:",
+        "fr": "Développé par :",
+        "ja": "開発者：",
+        "ru": "Разработчик:",
+        "zh": "开发者："
+    },
+    "Version": {
+        "es": "Versión",
+        "en": "Version",
+        "fr": "Version",
+        "ja": "バージョン",
+        "ru": "Версия",
+        "zh": "版本"
+    },
+    "Repository": {
+        "es": "Repositorio",
+        "en": "Repository",
+        "fr": "Dépôt",
+        "ja": "リポジトリ",
+        "ru": "Репозиторий",
+        "zh": "仓库"
+    },
+    "Contributors": {
+        "es": "Colaboradores",
+        "en": "Contributors",
+        "fr": "Contributeurs",
+        "ja": "貢献者",
+        "ru": "Участники",
+        "zh": "贡献者"
+    },
+    "Profile": {
+        "es": "Perfil",
+        "en": "Profile",
+        "fr": "Profil",
+        "ja": "プロフィール",
+        "ru": "Профиль",
+        "zh": "简介"
     },
     "thank you for all the support": {
         "es": "¡Hola a todos!\n\nQuiero agradecerles sinceramente por todo el apoyo y comentarios que me han dado sobre la aplicación. Su entusiasmo y sugerencias han sido increíblemente valiosos para mejorar el proyecto.\n\nSu continuo apoyo es muy apreciado y me motiva a seguir trabajando en nuevas actualizaciones y mejoras para que la aplicación sea aún mejor.\n\n¡Gracias por ser una parte tan importante de esta comunidad!\n",
@@ -721,14 +849,6 @@
         "ja": "お気に入りを見る",
         "ru": "Просмотр избранного",
         "zh": "查看收藏夹"
-    },
-    "Acerca de": {
-        "es": "Acerca de",
-        "en": "About",
-        "fr": "À propos",
-        "ja": "約",
-        "ru": "О",
-        "zh": "关于"
     },
     "Notas de Parche": {
         "es": "Notas de Parche",

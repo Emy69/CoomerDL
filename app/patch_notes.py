@@ -1,126 +1,128 @@
 import tkinter as tk
-from PIL import Image as PilImage, ImageTk
+import requests
+from tkinterweb import HtmlFrame
 import customtkinter as ctk
-import os
+import markdown2
 
 class PatchNotes:
-    # Constants for window size and image path
-    WINDOW_WIDTH = 800
-    WINDOW_HEIGHT = 759
-    IMAGE_PATH = "resources/img/image.png"
+    WINDOW_WIDTH = 900
+    WINDOW_HEIGHT = 800
 
     def __init__(self, parent, translations_func):
-        """
-        Initialize the PatchNotes class.
-        
-        :param parent: Parent widget, usually the main application window.
-        :param translations_func: Function used to translate text into the user's language.
-        """
         self.parent = parent
-        self.tr = translations_func  # Translation function for multilingual support
-        self.patch_notes_window = None  # This will hold the reference to the patch notes window
+        self.tr = translations_func
+        self.patch_notes_window = None
 
     def show_patch_notes(self):
-        """
-        Display the patch notes window. If the window is already open, it will bring it to the front.
-        """
-        # Check if the patch notes window already exists and is open
         if self.patch_notes_window is not None and tk.Toplevel.winfo_exists(self.patch_notes_window):
-            self.patch_notes_window.lift()  # Bring the window to the front
+            self.patch_notes_window.lift()
             return
         
-        # Create a new Toplevel window for patch notes
         self.patch_notes_window = ctk.CTkToplevel(self.parent)
-        self.patch_notes_window.title(self.tr("<3"))
-        self.patch_notes_window.transient(self.parent)  # Make it modal relative to the parent window
-        self.patch_notes_window.grab_set()  # Block interactions with the parent window until this one is closed
-
-        # Center the window on the screen
+        self.patch_notes_window.title(self.tr("Patch Notes"))
+        self.patch_notes_window.transient(self.parent)
+        self.patch_notes_window.grab_set()
+        
         self.center_window(self.patch_notes_window, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
 
-        # Main frame to hold the content of the patch notes
         main_frame = ctk.CTkFrame(self.patch_notes_window)
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
 
-        # Retrieve and display the patch notes text
-        patch_notes_text = self.get_patch_notes_text()
-        patch_notes_content = ctk.CTkLabel(
-            main_frame, 
-            text=patch_notes_text, 
-            justify="center",  # Center the text within the label
-            wraplength=self.WINDOW_WIDTH - 40,  # Wrap text within the window's width minus some padding
-            font=("Helvetica", 15)  # Set the font style and size
-        )
-        patch_notes_content.pack(pady=(20, 10))
-
-        # Load and display the image (if available)
-        self.load_image(main_frame)
-
-        # Option for the user to not show the patch notes again (this could be linked to a preference)
-        dont_show_again_var = tk.IntVar(value=0)
+        # Obtener el release más reciente desde GitHub
+        latest_release = self.get_latest_github_release('Emy69', 'CoomerDL')
         
-        # OK button to close the patch notes window
-        ok_button = ctk.CTkButton(self.patch_notes_window, text=self.tr("OK"), command=lambda: self.close_patch_notes(dont_show_again_var))
-        ok_button.pack(pady=10)
+        # Crear un HtmlFrame para mostrar el contenido HTML
+        html_frame = HtmlFrame(main_frame, messages_enabled=False)
+        html_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-    def load_image(self, parent):
-        """
-        Load and display an image in the patch notes window, if the image file exists.
-        
-        :param parent: The parent widget where the image will be displayed.
-        """
-        if os.path.exists(self.IMAGE_PATH):
-            try:
-                # Open and resize the image using PIL
-                pil_image = PilImage.open(self.IMAGE_PATH)
-                pil_image = pil_image.resize((448, 398), PilImage.Resampling.LANCZOS)
-                photo_image = ImageTk.PhotoImage(pil_image)
-                
-                # Display the image in a label widget
-                image_label = tk.Label(parent, image=photo_image)
-                image_label.image = photo_image  # Keep a reference to avoid garbage collection
-                image_label.pack(pady=(10, 10))
-            except Exception as e:
-                # Handle any errors that occur during image loading
-                print(f"Error loading image: {e}")
-                error_label = ctk.CTkLabel(parent, text=self.tr("Failed to load the image."))
-                error_label.pack(pady=(10, 10))
+        # Cargar el contenido HTML
+        if latest_release:
+            patch_notes_html = self.get_patch_notes_html(latest_release)
+            html_frame.load_html(patch_notes_html)
         else:
-            # Handle the case where the image file is not found
-            print(f"Image file not found: {self.IMAGE_PATH}")
-            error_label = ctk.CTkLabel(parent, text=self.tr("Image file not found."))
-            error_label.pack(pady=(10, 10))
+            html_frame.load_html("<p>Failed to load patch notes.</p>")
+
+        # Añadir un frame inferior para el botón y opción de "No mostrar de nuevo"
+        bottom_frame = ctk.CTkFrame(self.patch_notes_window)
+        bottom_frame.pack(fill="x", padx=20, pady=(0, 20))
+
+        dont_show_again_var = tk.IntVar()
+        dont_show_again_check = ctk.CTkCheckBox(bottom_frame, text=self.tr("Don't show again"), variable=dont_show_again_var)
+        dont_show_again_check.pack(side="left", padx=5)
+
+        ok_button = ctk.CTkButton(bottom_frame, text=self.tr("OK"), command=lambda: self.close_patch_notes(dont_show_again_var))
+        ok_button.pack(side="right", padx=5)
+
+    @staticmethod
+    def get_latest_github_release(repo_owner, repo_name):
+        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
 
     def center_window(self, window, width, height):
-        """
-        Center the window on the screen based on its dimensions.
-        
-        :param window: The window to be centered.
-        :param width: The width of the window.
-        :param height: The height of the window.
-        """
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
         x = int((screen_width / 2) - (width / 2))
         y = int((screen_height / 2) - (height / 2))
         window.geometry(f'{width}x{height}+{x}+{y}')
 
-    def get_patch_notes_text(self):
+    def get_patch_notes_html(self, latest_release):
+        # Convertir el cuerpo del release de Markdown a HTML
+        release_body_html = markdown2.markdown(latest_release['body'])
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: 'Arial', sans-serif;
+                    background-color: #1e1e1e;
+                    color: #f5f5f5;
+                    padding: 20px;
+                    margin: 0;
+                }}
+                h1 {{
+                    color: #ffcc00;
+                    text-align: center;
+                    margin-top: 10px;
+                }}
+                h2 {{
+                    color: #ff6600;
+                    margin-bottom: 5px;
+                    text-align: center;
+                }}
+                p {{
+                    margin-bottom: 15px;
+                    line-height: 1.6;
+                    text-align: justify;
+                }}
+                .footer {{
+                    text-align: center;
+                    font-size: 12px;
+                    color: #888;
+                    margin-top: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>{self.tr('Patch Notes')}</h1>
+            <h2>{latest_release['name']}</h2>
+            {release_body_html}
+            <div class="footer">{self.tr('© 2024 Your Company Name. All rights reserved.')}</div>
+        </body>
+        </html>
         """
-        Retrieve the patch notes text. This is where the patch notes content is defined.
-        
-        :return: A string containing the patch notes.
-        """
-        return self.tr("Thank you for all the support")
+
+        return html_content
 
     def close_patch_notes(self, dont_show_again_var):
-        """
-        Close the patch notes window and optionally save the user's preference to not show it again.
-        
-        :param dont_show_again_var: A tkinter IntVar that indicates whether the patch notes should be shown again.
-        """
-        # Example: self.save_patch_notes_preference(not bool(dont_show_again_var.get()))  # Save the user's preference
-
+        if dont_show_again_var.get():
+            # Aquí puedes agregar la lógica para no mostrar la ventana de nuevo, como guardar una preferencia en un archivo de configuración.
+            pass
         if self.patch_notes_window is not None:
-            self.patch_notes_window.destroy()  # Destroy the patch notes window
-            self.patch_notes_window = None  # Clear the reference to the window
+            self.patch_notes_window.destroy()
+            self.patch_notes_window = None
+
