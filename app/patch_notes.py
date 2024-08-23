@@ -111,7 +111,6 @@ class PatchNotes:
             <h1>{self.tr('Patch Notes')}</h1>
             <h2>{latest_release['name']}</h2>
             {release_body_html}
-            <div class="footer">{self.tr('© 2024 Your Company Name. All rights reserved.')}</div>
         </body>
         </html>
         """
