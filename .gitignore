@@ -39,3 +39,4 @@ setup.py
 test/
 test.py
 test/parse.py
+app/user_panel.py
