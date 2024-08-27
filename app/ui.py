@@ -19,6 +19,7 @@ import psutil
 
 from app.patch_notes import PatchNotes
 from app.settings_window import SettingsWindow
+#from app.user_panel import UserPanel
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
@@ -59,6 +60,9 @@ class ImageDownloaderApp(ctk.CTk):
         
         # Setup window
         self.setup_window()
+
+        """# Crear una instancia del UserPanel
+        self.user_panel = UserPanel(self)"""
         
         # Settings window
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION, self.setup_general_downloader)
@@ -203,6 +207,9 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.cancel_button = ctk.CTkButton(self.action_frame, text=self.tr("Cancelar Descarga"), state="disabled", command=self.cancel_download)
         self.cancel_button.pack(side='left', padx=10)
+
+        """open_panel_button = ctk.CTkButton(self, text="Abrir Panel de Usuarios", command=self.user_panel.open_user_panel)
+        open_panel_button.pack(pady=20)"""
 
         self.progress_label = ctk.CTkLabel(self.action_frame, text="")
         self.progress_label.pack(side='left', padx=10)

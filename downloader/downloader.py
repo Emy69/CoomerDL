@@ -23,7 +23,7 @@ import time
 
 class Downloader:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
-                 download_images=True, download_videos=True, download_compressed=True, tr=None, folder_structure='default'):
+                 download_images=True, download_videos=True, download_compressed=True, tr=None, folder_structure='default',rate_limit_interval=2.0):
         """
         Initialize the Downloader class.
 
@@ -55,6 +55,9 @@ class Downloader:
         self.max_workers = max_workers  # Maximum number of concurrent threads
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
         self.rate_limit = Semaphore(self.max_workers)  # Semaphore to limit the number of concurrent requests
+        self.domain_locks = defaultdict(lambda: Semaphore(2))
+        self.domain_last_request = defaultdict(float)  # Rastrea la última solicitud por dominio
+        self.rate_limit_interval = rate_limit_interval
         self.download_mode = "multi"  # Download mode: 'multi' for concurrent, 'queue' for sequential
         self.video_extensions = ('.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v')
         self.image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')
@@ -120,33 +123,42 @@ class Downloader:
 
     def safe_request(self, url, max_retries=5):
         """
-        Perform a GET request with retry logic and rate limiting.
+        Perform a GET request with retry logic and rate limiting by domain.
         
         :param url: The URL to request.
         :param max_retries: Maximum number of retries in case of failure.
         :return: The response object if successful, None otherwise.
         """
         retry_wait = 1
+        domain = urlparse(url).netloc
+
         for attempt in range(max_retries):
             if self.cancel_requested.is_set():
                 return None
-            try:
-                with self.rate_limit:
-                    response = self.session.get(url, stream=True, headers=self.headers)
-                response.raise_for_status()
-                return response
-            except (requests.ConnectionError, requests.HTTPError, requests.TooManyRedirects) as e:
-                self.log(self.tr(f"Retry {attempt + 1}: Error {e}, waiting {retry_wait} seconds before retrying."))
-                time.sleep(retry_wait)
-                retry_wait *= 2
-            except requests.exceptions.RequestException as e:
-                if e.response and e.response.status_code == 429:
-                    self.log(self.tr(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying."))
-                    time.sleep(retry_wait)
-                    retry_wait *= 2
-                else:
-                    self.log(self.tr(f"Non-retryable error: {e}"))
-                    break
+
+            with self.domain_locks[domain]:
+                # Wait if the last request to this domain was too recent
+                last_request_time = self.domain_last_request[domain]
+                elapsed_time = time.time() - last_request_time
+                if elapsed_time < self.rate_limit_interval:
+                    time.sleep(self.rate_limit_interval - elapsed_time)
+
+                try:
+                    with self.rate_limit:
+                        response = self.session.get(url, stream=True, headers=self.headers)
+                    response.raise_for_status()
+                    self.domain_last_request[domain] = time.time()  # Update the last request time for the domain
+                    return response
+
+                except requests.exceptions.RequestException as e:
+                    if e.response and e.response.status_code == 429:
+                        self.log(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying.")
+                        time.sleep(retry_wait)
+                        retry_wait *= 2
+                    else:
+                        self.log(f"Non-retryable error: {e}")
+                        break
+
         return None
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):

@@ -55,10 +55,10 @@ class SettingsWindow:
     def open_settings(self):
         self.settings_window = ctk.CTkToplevel(self.parent)
         self.settings_window.title(self.translate("Settings"))
-        self.settings_window.geometry("800x850")
+        self.settings_window.geometry("850x850")
         self.settings_window.transient(self.parent)
         self.settings_window.grab_set()
-        self.center_window(self.settings_window, 800, 850)
+        self.center_window(self.settings_window, 850, 850)
         self.settings_window.resizable(False, False)
 
         nav_frame = ctk.CTkFrame(self.settings_window, width=200)
@@ -68,8 +68,10 @@ class SettingsWindow:
         self.content_frame.pack(side="right", expand=True, fill="both", padx=(10, 20), pady=10)
 
         self.create_nav_button(nav_frame, "General", self.show_general_settings)
-        self.create_nav_button(nav_frame, "Check for Updates", self.show_update_settings)
         self.create_nav_button(nav_frame, "About", self.show_about)
+
+        # Mostrar la pestaña de General por defecto
+        self.show_general_settings()
 
     def create_nav_button(self, parent, text, command):
         button = ctk.CTkButton(parent, text=self.translate(text), command=command)
@@ -81,25 +83,37 @@ class SettingsWindow:
         general_label = ctk.CTkLabel(self.content_frame, text=self.translate("General Options"), font=("Helvetica", 16, "bold"))
         general_label.grid(row=0, column=0, pady=10, sticky="w")
 
+        # Línea divisoria
+        separator_1 = ttk.Separator(self.content_frame, orient="horizontal")
+        separator_1.grid(row=1, column=0, columnspan=3, sticky="ew", pady=5)
+
         # Configuración del tema
         theme_label = ctk.CTkLabel(self.content_frame, text=self.translate("Select Theme"), font=("Helvetica", 14))
-        theme_label.grid(row=1, column=0, pady=5, sticky="w")
+        theme_label.grid(row=2, column=0, pady=5, sticky="w")
 
         theme_combobox = ctk.CTkComboBox(self.content_frame, values=["Light", "Dark", "System"], state='readonly')
-        theme_combobox.grid(row=1, column=1, pady=5, padx=10, sticky="w")
+        theme_combobox.grid(row=2, column=1, pady=5, padx=10, sticky="w")
 
         apply_theme_button = ctk.CTkButton(self.content_frame, text=self.translate("Apply Theme"), command=lambda: self.change_theme_in_thread(theme_combobox.get()))
-        apply_theme_button.grid(row=1, column=2, pady=5, sticky="w")
+        apply_theme_button.grid(row=2, column=2, pady=5, sticky="w")
+
+        # Línea divisoria
+        separator_2 = ttk.Separator(self.content_frame, orient="horizontal")
+        separator_2.grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)
 
         # Configuración de idioma
         language_label = ctk.CTkLabel(self.content_frame, text=self.translate("Select Language"), font=("Helvetica", 14))
-        language_label.grid(row=2, column=0, pady=5, sticky="w")
+        language_label.grid(row=4, column=0, pady=5, sticky="w")
 
         language_combobox = ctk.CTkComboBox(self.content_frame, values=list(self.languages.keys()), state='readonly')
-        language_combobox.grid(row=2, column=1, pady=5, padx=10, sticky="w")
+        language_combobox.grid(row=4, column=1, pady=5, padx=10, sticky="w")
 
         apply_language_button = ctk.CTkButton(self.content_frame, text=self.translate("Apply Language"), command=lambda: self.apply_language_settings(language_combobox.get()))
-        apply_language_button.grid(row=2, column=2, pady=5, sticky="w")
+        apply_language_button.grid(row=4, column=2, pady=5, sticky="w")
+
+        # Línea divisoria
+        separator_3 = ttk.Separator(self.content_frame, orient="horizontal")
+        separator_3.grid(row=5, column=0, columnspan=3, sticky="ew", pady=5)
 
         # Configuración de las opciones de descarga
         download_label = ctk.CTkLabel(self.content_frame, text=self.translate("Download Options"), font=("Helvetica", 16, "bold"))
@@ -122,13 +136,27 @@ class SettingsWindow:
         apply_download_button = ctk.CTkButton(self.content_frame, text=self.translate("Apply Download Settings"), command=self.apply_download_settings)
         apply_download_button.grid(row=9, column=1, pady=10, sticky="w", padx=(0, 10))
 
+        # Línea divisoria
+        separator_4 = ttk.Separator(self.content_frame, orient="horizontal")
+        separator_4.grid(row=10, column=0, columnspan=3, sticky="ew", pady=5)
+
+        # Chequeo de actualizaciones
+        update_label = ctk.CTkLabel(self.content_frame, text=self.translate("Check for Updates"), font=("Helvetica", 16, "bold"))
+        update_label.grid(row=11, column=0, pady=10, sticky="w")
+
+        update_button = ctk.CTkButton(self.content_frame, text=self.translate("Check"), command=self.check_for_updates)
+        update_button.grid(row=11, column=1, pady=10, padx=(0, 10), sticky="w")
+
+        # Línea divisoria
+        separator_5 = ttk.Separator(self.content_frame, orient="horizontal")
+        separator_5.grid(row=12, column=0, columnspan=3, sticky="ew", pady=5)
 
         # Vista previa de la estructura de carpetas con scrollbar
         treeview_label = ctk.CTkLabel(self.content_frame, text=self.translate("Folder Structure Preview"), font=("Helvetica", 14, "bold"))
-        treeview_label.grid(row=10, column=0, pady=10, sticky="w")
+        treeview_label.grid(row=13, column=0, pady=10, sticky="w")
 
         treeview_frame = ctk.CTkFrame(self.content_frame)
-        treeview_frame.grid(row=11, column=0, columnspan=3, pady=5, sticky="nsew")
+        treeview_frame.grid(row=14, column=0, columnspan=3, pady=5, sticky="nsew")
 
         self.default_treeview = ttk.Treeview(treeview_frame)
         self.default_treeview.pack(side="left", fill="both", expand=True)
@@ -137,6 +165,7 @@ class SettingsWindow:
         self.post_treeview.pack(side="left", fill="both", expand=True)
 
         self.update_treeview()
+
 
     def show_update_settings(self):
         self.clear_frame(self.content_frame)
@@ -151,51 +180,35 @@ class SettingsWindow:
         self.clear_frame(self.content_frame)
 
         # Título de la sección
-        about_label = ctk.CTkLabel(self.content_frame, text=self.translate("About"), font=("Helvetica", 26, "bold"))
-        about_label.pack(pady=30)
+        about_label = ctk.CTkLabel(self.content_frame, text=self.translate("About"), font=("Helvetica", 20, "bold"))
+        about_label.pack(pady=20)
 
-        # Marco para el texto descriptivo
-        description_frame = ctk.CTkFrame(self.content_frame, corner_radius=10)
-        description_frame.pack(pady=10, fill="x", padx=30)
-
-        # Texto descriptivo del desarrollador y versión
+        # Descripción del software
         description_text = f"""
         {self.translate("Developed by: Emy69")}
 
         {self.translate("Version")}: {self.version}
 
-        {self.translate("This application is designed to assist users in downloading and managing media content from various online sources with ease and efficiency.")}
+        {self.translate("This application is designed to help users download and manage media content efficiently from various online sources.")}
         """
-        description_label = ctk.CTkLabel(description_frame, text=description_text, font=("Helvetica", 15), wraplength=600, justify="left")
-        description_label.pack(pady=20, padx=20)
+        description_label = ctk.CTkLabel(self.content_frame, text=description_text, font=("Helvetica", 14), wraplength=600, justify="left")
+        description_label.pack(pady=10, padx=20)
 
-        # Marco para el enlace al repositorio de GitHub
-        repo_frame = ctk.CTkFrame(self.content_frame, corner_radius=10)
-        repo_frame.pack(pady=20, fill="x", padx=30)
-
-        repo_label = ctk.CTkLabel(repo_frame, text=self.translate("Repository:"), font=("Helvetica", 16, "bold"))
-        repo_label.pack(side="left", padx=20, pady=10)
-        
-        repo_link = ctk.CTkButton(repo_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"), text_color="blue", hover_color="lightblue")
-        repo_link.pack(side="left", padx=10, pady=10)
+        # Enlace al repositorio de GitHub
+        repo_link = ctk.CTkButton(self.content_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"), hover_color="lightblue")
+        repo_link.pack(pady=10)
 
         # Sección de contribuyentes
-        contributors_frame = ctk.CTkFrame(self.content_frame, corner_radius=10)
-        contributors_frame.pack(pady=30, fill="x", padx=30)
+        contributors_label = ctk.CTkLabel(self.content_frame, text=self.translate("Contributors"), font=("Helvetica", 16, "bold"))
+        contributors_label.pack(pady=10)
 
-        contributors_label = ctk.CTkLabel(contributors_frame, text=self.translate("Contributors"), font=("Helvetica", 18, "bold"))
-        contributors_label.pack(pady=20)
-
-        contributors_text = self.translate("This project would not have been possible without the contributions of the following people:")
-        contributors_description_label = ctk.CTkLabel(contributors_frame, text=contributors_text, font=("Helvetica", 14), wraplength=600, justify="left")
-        contributors_description_label.pack(pady=5, padx=20)
-
-        # Mostrar la lista de contribuyentes
         self.show_contributors()
 
-        # Espacio final para separaciones estéticas
+        # Espacio final
         final_space = ctk.CTkLabel(self.content_frame, text="", font=("Helvetica", 14))
-        final_space.pack(pady=30)
+        final_space.pack(pady=10)
+
+
 
     def show_contributors(self):
         try:
