@@ -297,6 +297,10 @@ class SettingsWindow:
         for item in self.post_treeview.get_children():
             self.post_treeview.delete(item)
 
+        # Add header labels to distinguish the treeviews
+        self.default_treeview.heading("#0", text="Default Folder Structure")
+        self.post_treeview.heading("#0", text="Post-based Folder Structure")
+
         # Add items to the TreeViews based on the selected folder structure
         self.add_default_treeview_items()
         self.add_post_treeview_items()
