@@ -284,13 +284,12 @@ class SettingsWindow:
         self.settings['max_downloads'] = max_downloads
         self.settings['folder_structure'] = self.folder_structure_combobox.get()
         self.save_settings()
-        
-        # Reinicializar el downloader general
-        self.general_downloader.shutdown_executor()  # Primero, asegúrate de detener el ejecutor anterior.
-        self.setup_general_downloader()  # Ahora configura el descargador con los nuevos ajustes.
+        self.update_treeview()
 
+        # Actualizar la configuración del descargador
+        self.parent.update_max_downloads(max_downloads)
         messagebox.showinfo(self.translate("Settings"), self.translate("Download settings updated"))
-    
+
     def update_treeview(self):
         # Clear existing items in the TreeViews
         for item in self.default_treeview.get_children():
