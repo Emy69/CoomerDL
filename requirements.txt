@@ -3,7 +3,7 @@ beautifulsoup4
 urllib3
 requests
 pillow
-tkinter==8.6
+tkinter
 psutil
 markdown2
 tkinterweb
