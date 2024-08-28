@@ -3,7 +3,6 @@ beautifulsoup4
 urllib3
 requests
 pillow
-tkinter
 psutil
 markdown2
 tkinterweb
