@@ -10,7 +10,6 @@ Key functionalities:
 - Managing download progress and retries.
 - Allowing for customizable folder structures for downloads.
 """
-
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Semaphore
@@ -269,17 +268,10 @@ class Downloader:
         return media_folder
 
     def process_media_element(self, media_url, user_id, post_id=None):
-        """
-        Download a media file from a given URL, saving it to the appropriate folder.
-        
-        :param media_url: The URL of the media file.
-        :param user_id: The ID of the user who posted the media.
-        :param post_id: The ID of the post containing the media (optional).
-        """
+        # Normalize file path
+        extension = os.path.splitext(media_url)[1].lower()
         if self.cancel_requested.is_set():
             return
-
-        extension = os.path.splitext(media_url)[1].lower()
 
         if (extension in self.image_extensions and not self.download_images) or \
         (extension in self.video_extensions and not self.download_videos) or \
@@ -301,20 +293,28 @@ class Downloader:
 
             filename = os.path.basename(media_url).split('?')[0]
             filename = self.sanitize_filename(filename)
-            filepath = os.path.join(media_folder, filename)
+            filepath = os.path.normpath(os.path.join(media_folder, filename))  # Normalize path
 
+            # Improved file existence check
             if os.path.exists(filepath):
-                self.log(self.tr("File already exists, skipping: {filepath}", filepath=filepath))
-                self.skipped_files.append(filepath)
-                return
+                remote_file_size = int(response.headers.get('content-length', 0))
+                local_file_size = os.path.getsize(filepath)
 
+                if remote_file_size == local_file_size:
+                    self.log(self.tr("File already exists and is complete, skipping: {filepath}", filepath=filepath))
+                    self.skipped_files.append(filepath)
+                    return
+                else:
+                    self.log(self.tr("File is incomplete or corrupted, deleting and re-downloading: {filepath}", filepath=filepath))
+                    os.remove(filepath)
+
+            # Continue with the downloading process if the file doesn't exist or is incomplete
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
             self.start_time = time.time()
 
-            # Download the file in chunks
             with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=1048576):  # 1MB chunks
+                for chunk in response.iter_content(chunk_size=1048576):
                     if self.cancel_requested.is_set():
                         f.close()
                         os.remove(filepath)

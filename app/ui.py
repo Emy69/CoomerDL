@@ -24,7 +24,7 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
-VERSION = "CoomerV0.6.3"
+VERSION = "CoomerV0.6.4"
 MAX_LOG_LINES = 100  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -100,6 +100,14 @@ class ImageDownloaderApp(ctk.CTk):
             self.folder_path.configure(text=self.download_folder)
 
         self.active_downloader = None  # Initialize active_downloader
+
+        # Cargar iconos redimensionados
+        self.icons = {
+            'image': self.load_and_resize_image('resources/img/image_icon.png', (40, 40)),
+            'video': self.load_and_resize_image('resources/img/video_icon.png', (40, 40)),
+            'zip': self.load_and_resize_image('resources/img/zip_icon.png', (40, 40)),
+            'default': self.load_and_resize_image('resources/img/default_icon.png', (40, 40))
+        }
 
     # Application close event
     def on_app_close(self):
@@ -390,6 +398,11 @@ class ImageDownloaderApp(ctk.CTk):
             self.folder_path.configure(text=folder_selected)
             self.save_download_folder(folder_selected)
     
+    # Función para cargar y redimensionar imágenes
+    def load_and_resize_image(self, path, size):
+        img = Image.open(path)
+        return ctk.CTkImage(img, size=size)
+    
     # Progress management
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
         if total > 0:
@@ -399,14 +412,58 @@ class ImageDownloaderApp(ctk.CTk):
                 self.progress_percentage.configure(text=f"{percentage:.2f}%")
             else:
                 if file_id not in self.progress_bars:
+                    file_name = os.path.basename(file_path)
+                    file_extension = os.path.splitext(file_path)[1].lower()
+
+                    # Determinar el icono
+                    if file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+                        icon = self.icons['image']
+                    elif file_extension in ['.mp4', '.avi', '.mkv']:
+                        icon = self.icons['video']
+                    elif file_extension in ['.zip', '.rar']:
+                        icon = self.icons['zip']
+                    else:
+                        icon = self.icons['default']
+
                     progress_bar_frame = ctk.CTkFrame(self.progress_details_frame)
-                    progress_label = ctk.CTkLabel(progress_bar_frame, text=file_path)
+                    progress_bar_frame.grid(row=len(self.progress_bars), column=0, sticky='ew', padx=5, pady=5)
+
+                    # Crear un contenedor para el icono y el texto
+                    icon_and_text_frame = ctk.CTkFrame(progress_bar_frame)
+                    icon_and_text_frame.grid(row=0, column=0, sticky='w')
+
+                    # Crear el icono con ctk.CTkLabel
+                    icon_label = ctk.CTkLabel(icon_and_text_frame, image=icon, text="")
+                    icon_label.grid(row=0, column=0, padx=5, pady=5)
+
+                    # Limitar el texto y mostrar puntos suspensivos si excede el límite
+                    max_text_length = 30
+                    if len(file_name) > max_text_length:
+                        displayed_file_name = file_name[:max_text_length] + '...'
+                    else:
+                        displayed_file_name = file_name
+
+                    progress_label = ctk.CTkLabel(icon_and_text_frame, text=displayed_file_name, anchor='w')
+                    progress_label.grid(row=0, column=1, padx=5, pady=5)
+
+                    # Crear barra de progreso y etiquetas de porcentaje y ETA
                     progress_bar = ctk.CTkProgressBar(progress_bar_frame)
-                    self.progress_bars[file_id] = (progress_bar, progress_bar_frame)
-                    progress_label.pack(fill='x')
-                    progress_bar.pack(fill='x')
-                    progress_bar_frame.pack(fill='x', padx=10, pady=5)
+                    progress_bar.grid(row=1, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
+
+                    percentage_label = ctk.CTkLabel(progress_bar_frame, text=f"{percentage:.2f}%")
+                    percentage_label.grid(row=2, column=0, padx=5, pady=5, sticky='w')
+
+                    eta_label = ctk.CTkLabel(progress_bar_frame, text=f"ETA: N/A")
+                    eta_label.grid(row=2, column=1, padx=5, pady=5, sticky='e')
+
+                    self.progress_bars[file_id] = (progress_bar, percentage_label, eta_label, progress_bar_frame)
+
                 self.progress_bars[file_id][0].set(downloaded / total)
+                self.progress_bars[file_id][1].configure(text=f"{percentage:.2f}%")
+                if eta is not None:
+                    eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
+                    self.progress_bars[file_id][2].configure(text=eta_text)
+
                 if downloaded >= total:
                     self.after(2000, lambda: self.remove_progress_bar(file_id))
         else:
@@ -416,16 +473,18 @@ class ImageDownloaderApp(ctk.CTk):
             else:
                 if file_id in self.progress_bars:
                     self.progress_bars[file_id][0].set(0)
+                    self.progress_bars[file_id][1].configure(text="0%")
+                    self.progress_bars[file_id][2].configure(text="ETA: N/A")
 
-        if speed is not None and eta is not None:
+        # Actualizar velocidad en el footer (si corresponde)
+        if speed is not None:
             speed_text = f"Speed: {speed / 1024:.2f} KB/s" if speed < 1048576 else f"Speed: {speed / 1048576:.2f} MB/s"
-            eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
             self.footer_speed_label.configure(text=speed_text)
-            self.footer_eta_label.configure(text=eta_text)
+            self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
 
     def remove_progress_bar(self, file_id):
         if file_id in self.progress_bars:
-            self.progress_bars[file_id][1].pack_forget()
+            self.progress_bars[file_id][3].grid_forget()
             del self.progress_bars[file_id]
 
     def update_global_progress(self, completed_files, total_files):
@@ -438,7 +497,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.progress_details_frame.winfo_ismapped():
             self.progress_details_frame.place_forget()
         else:
-            self.progress_details_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+            self.progress_details_frame.place(relx=0.5, rely=0.5, anchor='center')
             self.progress_details_frame.lift()
 
     def center_progress_details_frame(self):
