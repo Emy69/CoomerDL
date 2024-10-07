@@ -5,6 +5,13 @@
 
 **Coomer Downloader App** is a desktop application developed in Python that allows users to easily download images and videos from URLs. The application provides an intuitive graphical user interface (GUI) to simplify the process.
 
+# Support my work!
+
+If you like my project and want to support it, you can make a donation through PayPal, thank you for your support!
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00.svg?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/emy_69)
+
 ## Features
 
 ### Downloading Images and Videos
@@ -50,12 +57,3 @@ If you have any issues or want to communicate with me, join my Discord server by
 3. Click the download button and wait for the process to complete.
 
 ![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
-
-# Support my work!
-
-If you like my project and want to support it, you can make a donation through PayPal, thank you for your support!
-
-[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00.svg?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/emy_69)
-
-
