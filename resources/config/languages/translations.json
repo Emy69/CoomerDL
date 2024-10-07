@@ -489,7 +489,7 @@
         "fr": "Traitement des vidéos...",
         "ja": "ビデオを処理中...",
         "ru": "Обработка видео...",
-        "zh": "处理视频中...",
+        "zh": "处理视频中..."
     },
     "Starting download from {media_url}": {
         "es": "Iniciando descarga desde {media_url}",
