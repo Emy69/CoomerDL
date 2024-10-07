@@ -25,7 +25,7 @@ from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
 VERSION = "CoomerV0.7"
-MAX_LOG_LINES = 100  # Límite máximo de líneas de log
+MAX_LOG_LINES = 50  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """
