@@ -14,17 +14,21 @@ class PatchNotes:
         self.patch_notes_window = None
 
     def show_patch_notes(self):
+        # Cerrar la ventana si ya existe
         if self.patch_notes_window is not None and tk.Toplevel.winfo_exists(self.patch_notes_window):
-            self.patch_notes_window.lift()
-            return
-        
+            self.patch_notes_window.destroy()
+
         self.patch_notes_window = ctk.CTkToplevel(self.parent)
         self.patch_notes_window.title(self.tr("Patch Notes"))
         self.patch_notes_window.transient(self.parent)
-        self.patch_notes_window.grab_set()
         
+        # Centrar la ventana
         self.center_window(self.patch_notes_window, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
-
+        
+        # Forzar visibilidad y foco
+        self.patch_notes_window.deiconify()
+        self.patch_notes_window.focus_force()
+        
         main_frame = ctk.CTkFrame(self.patch_notes_window)
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
 

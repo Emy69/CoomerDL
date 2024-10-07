@@ -53,20 +53,26 @@ class SettingsWindow:
         return icons
 
     def open_settings(self):
+        # Crear la ventana de configuración antes de llamar a deiconify y grab_set
         self.settings_window = ctk.CTkToplevel(self.parent)
         self.settings_window.title(self.translate("Settings"))
         self.settings_window.geometry("850x850")
         self.settings_window.transient(self.parent)
-        self.settings_window.grab_set()
-        self.center_window(self.settings_window, 850, 850)
         self.settings_window.resizable(False, False)
 
+        # Mostrar la ventana y asegurarse de que se haga visible antes de aplicar el grab
+        self.settings_window.deiconify()
+        self.settings_window.after(10, self.settings_window.grab_set)  # Cambio: ahora usamos self.settings_window.after
+        self.center_window(self.settings_window, 850, 850)
+
+        # Crear el marco de navegación y contenido
         nav_frame = ctk.CTkFrame(self.settings_window, width=200)
         nav_frame.pack(side="left", fill="y", padx=10, pady=10)
 
         self.content_frame = ctk.CTkFrame(self.settings_window)
         self.content_frame.pack(side="right", expand=True, fill="both", padx=(10, 20), pady=10)
 
+        # Crear botones de navegación
         self.create_nav_button(nav_frame, "General", self.show_general_settings)
         self.create_nav_button(nav_frame, "About", self.show_about)
 
