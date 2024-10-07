@@ -24,7 +24,7 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 
-VERSION = "CoomerV0.6.4"
+VERSION = "CoomerV0.7"
 MAX_LOG_LINES = 100  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -60,9 +60,6 @@ class ImageDownloaderApp(ctk.CTk):
         
         # Setup window
         self.setup_window()
-
-        # Crear una instancia del UserPanel
-        #self.user_panel = UserPanel(self)
         
         # Settings window
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION, self)
@@ -78,7 +75,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.patch_notes = PatchNotes(self, self.tr)
 
         self.progress_bars = {}
-        #self.after(100, lambda: self.patch_notes.show_patch_notes(auto_show=True))
         
         # Initialize UI
         self.initialize_ui()
@@ -167,6 +163,10 @@ class ImageDownloaderApp(ctk.CTk):
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        
+        # Establecer el tamaño mínimo de la ventana
+        self.minsize(window_width, window_height)
+        
         if sys.platform == "win32":
             self.iconbitmap("resources/img/window.ico")
 
@@ -223,9 +223,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button = ctk.CTkButton(self.action_frame, text=self.tr("Cancelar Descarga"), state="disabled", command=self.cancel_download)
         self.cancel_button.pack(side='left', padx=10)
 
-        #open_panel_button = ctk.CTkButton(self, text="Abrir Panel de Usuarios", command=self.user_panel.open_user_panel)
-        #open_panel_button.pack(pady=20)
-
         self.progress_label = ctk.CTkLabel(self.action_frame, text="")
         self.progress_label.pack(side='left', padx=10)
 
@@ -268,8 +265,6 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.url_entry.bind("<Button-3>", self.show_context_menu)
         self.bind("<Button-1>", self.on_click)
-        # Menubar
-        #self.create_menubar()
 
         footer = ctk.CTkFrame(self, height=30, corner_radius=0)
         footer.pack(side="bottom", fill="x")
@@ -342,8 +337,6 @@ class ImageDownloaderApp(ctk.CTk):
         for child in children:
             all_children.extend(self.get_all_children(child))
         return all_children
-
-
 
     def create_custom_menubar(self):
         # Botón Archivo
