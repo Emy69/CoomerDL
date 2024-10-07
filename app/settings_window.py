@@ -179,45 +179,57 @@ class SettingsWindow:
     def show_about(self):
         self.clear_frame(self.content_frame)
 
-        # Título de la sección
-        about_label = ctk.CTkLabel(self.content_frame, text=self.translate("About"), font=("Helvetica", 20, "bold"))
-        about_label.pack(pady=20)
+        # Crear un marco para el contenido
+        about_frame = ctk.CTkFrame(self.content_frame)
+        about_frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-        # Descripción del software
+        # Título de la sección con estilo
+        about_label = ctk.CTkLabel(about_frame, text=self.translate("About"), font=("Helvetica", 24, "bold"))
+        about_label.pack(pady=(10, 5))
+
+        # Separador personalizado
+        separator = ctk.CTkFrame(about_frame, height=2, fg_color="gray")
+        separator.pack(fill='x', padx=20, pady=10)
+
+        # Descripción del software con estilo
         description_text = f"""
-        {self.translate("Developed by: Emy69")}
+    {self.translate("Developed by")}: Emy69
 
-        {self.translate("Version")}: {self.version}
+    {self.translate("Version")}: {self.version}
 
-        {self.translate("This application is designed to help users download and manage media content efficiently from various online sources.")}
+    {self.translate("This application is designed to help users download and manage media content efficiently from various online sources.")}
         """
-        description_label = ctk.CTkLabel(self.content_frame, text=description_text, font=("Helvetica", 14), wraplength=600, justify="left")
+        description_label = ctk.CTkLabel(about_frame, text=description_text, font=("Helvetica", 14), wraplength=600, justify="left")
         description_label.pack(pady=10, padx=20)
 
-        # Enlace al repositorio de GitHub
-        repo_link = ctk.CTkButton(self.content_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"), hover_color="lightblue")
+        # Enlace al repositorio de GitHub con estilo
+        repo_link = ctk.CTkButton(about_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"), hover_color="lightblue")
         repo_link.pack(pady=10)
 
-        # Sección de contribuyentes
-        contributors_label = ctk.CTkLabel(self.content_frame, text=self.translate("Contributors"), font=("Helvetica", 16, "bold"))
-        contributors_label.pack(pady=10)
+        # Separador personalizado antes de los contribuyentes
+        separator2 = ctk.CTkFrame(about_frame, height=2, fg_color="gray")
+        separator2.pack(fill='x', padx=20, pady=10)
 
-        self.show_contributors()
+        # Sección de contribuyentes con estilo
+        contributors_label = ctk.CTkLabel(about_frame, text=self.translate("Contributors"), font=("Helvetica", 18, "bold"))
+        contributors_label.pack(pady=(10, 5))
+
+        self.show_contributors(about_frame)
 
         # Espacio final
-        final_space = ctk.CTkLabel(self.content_frame, text="", font=("Helvetica", 14))
+        final_space = ctk.CTkLabel(about_frame, text="", font=("Helvetica", 14))
         final_space.pack(pady=10)
 
 
 
-    def show_contributors(self):
+    def show_contributors(self, parent_frame):
         try:
             response = requests.get("https://api.github.com/repos/Emy69/CoomerDL/contributors")
             response.raise_for_status()
             contributors = response.json()
 
             for contributor in contributors:
-                frame = ctk.CTkFrame(self.content_frame)
+                frame = ctk.CTkFrame(parent_frame)
                 frame.pack(fill='x', padx=20, pady=10)
 
                 avatar_url = contributor["avatar_url"]
@@ -226,17 +238,25 @@ class SettingsWindow:
                 avatar_photo = ImageTk.PhotoImage(avatar_image)
 
                 avatar_label = tk.Label(frame, image=avatar_photo)
-                avatar_label.image = avatar_photo
+                avatar_label.image = avatar_photo  # Guardar referencia para evitar recolección de basura
                 avatar_label.pack(side="left", padx=10)
 
                 name_label = ctk.CTkLabel(frame, text=contributor["login"], font=("Helvetica", 14))
                 name_label.pack(side="left", padx=10)
 
-                link_button = ctk.CTkButton(frame, text=self.translate("Profile"), command=lambda url=contributor["html_url"]: webbrowser.open(url))
+                link_button = ctk.CTkButton(
+                    frame,
+                    text=self.translate("Profile"),
+                    command=lambda url=contributor["html_url"]: webbrowser.open(url)
+                )
                 link_button.pack(side="left", padx=10)
 
         except requests.RequestException as e:
-            messagebox.showerror(self.translate("Error"), self.translate(f"Failed to load contributors.\nError: {e}"))
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Failed to load contributors.\nError: {e}")
+            )
+
 
     def check_for_updates(self):
         api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"

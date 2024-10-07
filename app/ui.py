@@ -172,6 +172,13 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Initialize UI components
     def initialize_ui(self):
+
+        # Crear la barra de menú personalizada
+        self.menu_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
+        self.menu_bar.pack(side="top", fill="x")
+
+        # Añadir botones al menú
+        self.create_custom_menubar()
         # Input frame
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.pack(fill='x', padx=20, pady=20)
@@ -260,9 +267,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.context_menu.add_command(label=self.tr("Cortar"), command=self.cut_to_clipboard)
 
         self.url_entry.bind("<Button-3>", self.show_context_menu)
-
+        self.bind("<Button-1>", self.on_click)
         # Menubar
-        self.create_menubar()
+        #self.create_menubar()
 
         footer = ctk.CTkFrame(self, height=30, corner_radius=0)
         footer.pack(side="bottom", fill="x")
@@ -284,6 +291,25 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Update UI texts
     def update_ui_texts(self):
+
+        # Actualizar textos de los botones del menú
+        for widget in self.menu_bar.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                text = widget.cget("text")
+                if text.strip() in ["Archivo", "Ayuda", "Donaciones"]:
+                    widget.configure(text=self.tr(text.strip()))
+
+        # Si los menús están abiertos, recrearlos para actualizar los textos
+        if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
+            self.archivo_menu_frame.destroy()
+            self.toggle_archivo_menu()
+        if self.ayuda_menu_frame and self.ayuda_menu_frame.winfo_exists():
+            self.ayuda_menu_frame.destroy()
+            self.toggle_ayuda_menu()
+        if self.donaciones_menu_frame and self.donaciones_menu_frame.winfo_exists():
+            self.donaciones_menu_frame.destroy()
+            self.toggle_donaciones_menu()
+
         self.url_label.configure(text=self.tr("URL de la página web:"))
         self.browse_button.configure(text=self.tr("Seleccionar Carpeta"))
         self.download_images_check.configure(text=self.tr("Descargar Imágenes"))
@@ -294,40 +320,145 @@ class ImageDownloaderApp(ctk.CTk):
         self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
 
-        self.file_menu.entryconfigure(0, label=self.tr("Configuraciones"))
-        self.file_menu.entryconfigure(2, label=self.tr("Salir"))
         self.update_info_text()
 
-    def create_menubar(self):
-        self.menubar = tk.Menu(self)
-        self.config(menu=self.menubar)
+    def on_click(self, event):
+        # Obtener la lista de widgets que no deben cerrar el menú al hacer clic
+        widgets_to_ignore = [self.menu_bar]
 
-        # Menú Archivo
-        self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.file_menu.add_command(label=self.tr("Configuraciones"), command=self.settings_window.open_settings)
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label=self.tr("Salir"), command=self.quit)
-        self.menubar.add_cascade(label=self.tr("Archivo"), menu=self.file_menu)
+        # Añadir los frames de los menús desplegables si existen
+        for frame in [self.archivo_menu_frame, self.ayuda_menu_frame, self.donaciones_menu_frame]:
+            if frame and frame.winfo_exists():
+                widgets_to_ignore.append(frame)
+                widgets_to_ignore.extend(self.get_all_children(frame))
 
-        # Menú Ayuda
-        self.help_menu = tk.Menu(self.menubar, tearoff=0)
-        self.help_menu.add_command(label=self.tr("Notas de Parche"), command=self.open_patch_notes)
-        
-        # Submenú para reportar un error
-        self.report_bug_menu = tk.Menu(self.help_menu, tearoff=0)
-        self.report_bug_menu.add_command(label=self.tr("GitHub"), command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues"))
-        self.report_bug_menu.add_command(label=self.tr("Discord"), command=lambda: webbrowser.open("https://discord.gg/ku8gSPsesh"))
-        self.help_menu.add_cascade(label=self.tr("Reportar un Error"), menu=self.report_bug_menu)
+        # Si el widget en el que se hizo clic no es ninguno de los que debemos ignorar, cerramos los menús
+        if event.widget not in widgets_to_ignore:
+            self.close_all_menus()
 
-        self.menubar.add_cascade(label=self.tr("Ayuda"), menu=self.help_menu)
+    def get_all_children(self, widget):
+        children = widget.winfo_children()
+        all_children = list(children)
+        for child in children:
+            all_children.extend(self.get_all_children(child))
+        return all_children
 
-        # Menú Donaciones
-        self.donate_menu = tk.Menu(self.menubar, tearoff=0)
-        self.donate_menu.add_command(label=self.tr("PayPal"), command=lambda: webbrowser.open("https://www.paypal.com/paypalme/Emy699"))
-        self.donate_menu.add_command(label=self.tr("Buy me a coffee"), command=lambda: webbrowser.open("https://buymeacoffee.com/emy_69"))
-        self.menubar.add_cascade(label=self.tr("Donaciones"), menu=self.donate_menu)
 
-    
+
+    def create_custom_menubar(self):
+        # Botón Archivo
+        archivo_button = ctk.CTkButton(
+            self.menu_bar,
+            text=self.tr("Archivo"),
+            width=80,
+            fg_color="transparent",
+            hover_color="gray25",
+            command=self.toggle_archivo_menu
+        )
+        archivo_button.pack(side="left")
+        archivo_button.bind("<Button-1>", lambda e: "break")
+
+        # Botón Ayuda
+        ayuda_button = ctk.CTkButton(
+            self.menu_bar,
+            text=self.tr("Ayuda"),
+            width=80,
+            fg_color="transparent",
+            hover_color="gray25",
+            command=self.toggle_ayuda_menu
+        )
+        ayuda_button.pack(side="left")
+        ayuda_button.bind("<Button-1>", lambda e: "break")
+
+        # Botón Donaciones
+        donaciones_button = ctk.CTkButton(
+            self.menu_bar,
+            text=self.tr("Donaciones"),
+            width=80,
+            fg_color="transparent",
+            hover_color="gray25",
+            command=self.toggle_donaciones_menu
+        )
+        donaciones_button.pack(side="left")
+        donaciones_button.bind("<Button-1>", lambda e: "break")
+
+        # Inicializar variables para los menús desplegables
+        self.archivo_menu_frame = None
+        self.ayuda_menu_frame = None
+        self.donaciones_menu_frame = None
+
+
+    def toggle_archivo_menu(self):
+        if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
+            self.archivo_menu_frame.destroy()
+        else:
+            self.close_all_menus()
+            self.archivo_menu_frame = self.create_menu_frame([
+                (self.tr("Configuraciones"), self.settings_window.open_settings),
+                ("separator", None),
+                (self.tr("Salir"), self.quit),
+            ], x=0)
+
+    def toggle_ayuda_menu(self):
+        if self.ayuda_menu_frame and self.ayuda_menu_frame.winfo_exists():
+            self.ayuda_menu_frame.destroy()
+        else:
+            self.close_all_menus()
+            self.ayuda_menu_frame = self.create_menu_frame([
+                (self.tr("Notas de Parche"), self.open_patch_notes),
+                ("separator", None),
+                (self.tr("Reportar un Error"), None),
+                (f"   {self.tr('GitHub')}", lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues")),
+                (f"   {self.tr('Discord')}", lambda: webbrowser.open("https://discord.gg/ku8gSPsesh")),
+            ], x=80)
+
+    def toggle_donaciones_menu(self):
+        if self.donaciones_menu_frame and self.donaciones_menu_frame.winfo_exists():
+            self.donaciones_menu_frame.destroy()
+        else:
+            self.close_all_menus()
+            self.donaciones_menu_frame = self.create_menu_frame([
+                (self.tr("PayPal"), lambda: webbrowser.open("https://www.paypal.com/paypalme/Emy699")),
+                (self.tr("Buy me a coffee"), lambda: webbrowser.open("https://buymeacoffee.com/emy_69")),
+            ], x=160)
+
+    def create_menu_frame(self, options, x):
+        menu_frame = ctk.CTkFrame(self, corner_radius=0)
+        menu_frame.place(x=x, y=30)
+
+        # Evitar propagación del clic en el menú
+        menu_frame.bind("<Button-1>", lambda e: "break")
+
+        for option in options:
+            if option[0] == "separator":
+                separator = ctk.CTkFrame(menu_frame, height=1, fg_color="gray50")
+                separator.pack(fill="x", padx=5, pady=5)
+                separator.bind("<Button-1>", lambda e: "break")
+            elif option[1] is None:
+                # Texto sin comando (por ejemplo, título de submenú)
+                label = ctk.CTkLabel(menu_frame, text=option[0], anchor="w")
+                label.pack(fill="x", padx=5, pady=2)
+                label.bind("<Button-1>", lambda e: "break")
+            else:
+                btn = ctk.CTkButton(
+                    menu_frame,
+                    text=option[0],
+                    fg_color="transparent",
+                    hover_color="gray25",
+                    anchor="w",
+                    command=lambda cmd=option[1]: cmd()
+                )
+                btn.pack(fill="x", padx=5, pady=2)
+                btn.bind("<Button-1>", lambda e: "break")
+
+        return menu_frame
+
+    def close_all_menus(self):
+        for menu_frame in [self.archivo_menu_frame, self.ayuda_menu_frame, self.donaciones_menu_frame]:
+            if menu_frame and menu_frame.winfo_exists():
+                menu_frame.destroy()
+
+
     def open_patch_notes(self):
         self.patch_notes.show_patch_notes()
 
