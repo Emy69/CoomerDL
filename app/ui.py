@@ -23,6 +23,7 @@ from app.settings_window import SettingsWindow
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
+from downloader.simpcity import SimpCity
 
 VERSION = "CoomerV0.7"
 MAX_LOG_LINES = 50  # Límite máximo de líneas de log
@@ -70,6 +71,7 @@ class ImageDownloaderApp(ctk.CTk):
         # Language preferences
         lang = self.load_language_preference()
         self.load_translations(lang)
+        self.image_downloader = None
 
         # Patch notes
         self.patch_notes = PatchNotes(self, self.tr)
@@ -660,6 +662,7 @@ class ImageDownloaderApp(ctk.CTk):
         download_all = self.download_all_check.get()
 
         parsed_url = urlparse(url)
+        
         if "erome.com" in url:
             self.add_log_message_safe(self.tr("Descargando Erome"))
             is_profile_download = "/a/" not in url
@@ -671,6 +674,7 @@ class ImageDownloaderApp(ctk.CTk):
             else:
                 self.add_log_message_safe(self.tr("URL del perfil"))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.process_profile_page, url, self.download_folder, self.download_images_check.get(), self.download_videos_check.get()))
+        
         elif re.search(r"https?://([a-z0-9-]+\.)?bunkr\.[a-z]{2,}", url):
             self.add_log_message_safe(self.tr("Descargando Bunkr"))
             self.setup_bunkr_downloader()
@@ -681,6 +685,7 @@ class ImageDownloaderApp(ctk.CTk):
             else:
                 self.add_log_message_safe(self.tr("URL del perfil"))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_perfil_bunkr, url))
+        
         elif parsed_url.netloc in ["coomer.su", "kemono.su"]:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
@@ -711,6 +716,17 @@ class ImageDownloaderApp(ctk.CTk):
                 query, offset = extract_ck_query(parsed_url)
                 self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..." if download_all else "Descargando solo los posts del URL proporcionado..."))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_profile_download, site, service, user, query, download_all, offset))
+        
+        elif "simpcity.su" in url:
+            simpcity_downloader = SimpCity(
+                download_folder=self.download_folder,
+                log_callback=self.add_log_message_safe,
+                enable_widgets_callback=self.enable_widgets,
+                update_progress_callback=self.update_progress,
+                update_global_progress_callback=self.update_global_progress
+            )
+            download_thread = threading.Thread(target=simpcity_downloader.download_images_from_simpcity, args=(url,))
+        
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
