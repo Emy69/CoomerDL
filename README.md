@@ -35,6 +35,7 @@ The app supports various file extensions for different types of media:
 - [kemono.su](https://kemono.su/)
 - [erome.com](https://www.erome.com/)
 - [bunkr-albums.io](https://bunkr-albums.io/)
+- [simpcity.su](https://simpcity.su/)
 
 ## Language Support
 
