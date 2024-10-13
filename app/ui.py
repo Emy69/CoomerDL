@@ -418,12 +418,17 @@ class ImageDownloaderApp(ctk.CTk):
             ], x=160)
 
     def create_menu_frame(self, options, x):
-        menu_frame = ctk.CTkFrame(self, corner_radius=0)
+        # Crear el marco del menú con fondo oscuro y borde de sombra para resaltar
+        menu_frame = ctk.CTkFrame(self, corner_radius=5, fg_color="gray25", border_color="black", border_width=1)
         menu_frame.place(x=x, y=30)
+        
+        # Agregar sombra alrededor del menú
+        menu_frame.configure(border_width=1, border_color="black")
 
-        # Evitar propagación del clic en el menú
+        # Evitar la propagación del clic en el menú
         menu_frame.bind("<Button-1>", lambda e: "break")
 
+        # Añadir opciones al menú con separación entre elementos
         for option in options:
             if option[0] == "separator":
                 separator = ctk.CTkFrame(menu_frame, height=1, fg_color="gray50")
@@ -431,7 +436,7 @@ class ImageDownloaderApp(ctk.CTk):
                 separator.bind("<Button-1>", lambda e: "break")
             elif option[1] is None:
                 # Texto sin comando (por ejemplo, título de submenú)
-                label = ctk.CTkLabel(menu_frame, text=option[0], anchor="w")
+                label = ctk.CTkLabel(menu_frame, text=option[0], anchor="w", fg_color="gray30")
                 label.pack(fill="x", padx=5, pady=2)
                 label.bind("<Button-1>", lambda e: "break")
             else:
@@ -439,8 +444,9 @@ class ImageDownloaderApp(ctk.CTk):
                     menu_frame,
                     text=option[0],
                     fg_color="transparent",
-                    hover_color="gray25",
+                    hover_color="gray35",
                     anchor="w",
+                    text_color="white",
                     command=lambda cmd=option[1]: cmd()
                 )
                 btn.pack(fill="x", padx=5, pady=2)
