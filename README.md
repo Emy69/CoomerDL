@@ -29,16 +29,22 @@ The app supports various file extensions for different types of media:
 - **Document Extensions**: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`
 - **Compressed Extensions**: `.zip`, `.rar`, `.7z`, `.tar`, `.gz`
 
-## Supported Pages and Languages
+## Supported Pages
 
-| Supported Pages                                                                 | Language Support                                                                                      |
-|--------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| - [coomer.su](https://coomer.su/)                                               | - [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)                |
-| - [kemono.su](https://kemono.su/)                                               | - [English (English)]()                                                                               |
-| - [erome.com](https://www.erome.com/)                                           | - [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)                |
-| - [bunkr-albums.io](https://bunkr-albums.io/)                                   | - [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)                    |
-|                                                                                | - [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)                |
-|                                                                                | - [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)                |
+- [coomer.su](https://coomer.su/)
+- [kemono.su](https://kemono.su/)
+- [erome.com](https://www.erome.com/)
+- [bunkr-albums.io](https://bunkr-albums.io/)
+- [simpcity.su](https://simpcity.su/)
+
+## Language Support
+
+- [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)
+- [English (English)]()
+- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)
+- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)
+- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)
+- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
 
 ## Community
 
