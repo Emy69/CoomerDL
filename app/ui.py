@@ -196,8 +196,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.browse_button = ctk.CTkButton(self.input_frame, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
         self.browse_button.grid(row=1, column=1, sticky='e')
 
-        self.folder_path = ctk.CTkLabel(self.input_frame, text="")
+        self.folder_path = ctk.CTkLabel(self.input_frame, text="", cursor="hand2")  # Cambiar el cursor al de "mano"
         self.folder_path.grid(row=2, column=0, columnspan=2, sticky='w')
+        self.folder_path.bind("<Button-1>", self.open_download_folder)  
 
         # Options frame
         self.options_frame = ctk.CTkFrame(self)
@@ -318,6 +319,18 @@ class ImageDownloaderApp(ctk.CTk):
         self.title(self.tr(f"Downloader [{VERSION}]"))
 
         self.update_info_text()
+    
+    def open_download_folder(self, event=None):
+        if self.download_folder and os.path.exists(self.download_folder):
+            if sys.platform == "win32":
+                os.startfile(self.download_folder)  # Para Windows
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", self.download_folder])  # Para macOS
+            else:
+                subprocess.Popen(["xdg-open", self.download_folder])  # Para Linux
+        else:
+            messagebox.showerror(self.tr("Error"), self.tr("La carpeta no existe o no es válida."))
+
 
     def on_click(self, event):
         # Obtener la lista de widgets que no deben cerrar el menú al hacer clic
@@ -531,7 +544,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.save_download_folder(folder_selected)
     
     # Función para cargar y redimensionar imágenes
-    def load_and_resize_image(self, path, size):
+    def load_and_resize_image(self, path, size=(20, 20)):
         img = Image.open(path)
         return ctk.CTkImage(img, size=size)
     
