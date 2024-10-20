@@ -1,14 +1,3 @@
-"""
-This script defines a BunkrDownloader class, designed to handle the downloading of media files from Bunkr posts and profiles.
-It supports downloading images and videos concurrently using threading, provides logging and progress updates, and handles cancellations and retries.
-
-Key functionalities:
-- Downloading media files from Bunkr posts and profiles.
-- Concurrent downloading using a thread pool.
-- Logging and progress updates throughout the download process.
-- Handling download cancellations and retry logic.
-"""
-
 import os
 import requests
 import time
@@ -20,17 +9,6 @@ import re
 
 class BunkrDownloader:
     def __init__(self, download_folder, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None, max_workers=5):
-        """
-        Initialize the BunkrDownloader class.
-
-        :param download_folder: Directory where the downloaded files will be saved.
-        :param log_callback: Function for logging messages during the download process.
-        :param enable_widgets_callback: Function to re-enable UI widgets after downloads complete.
-        :param update_progress_callback: Function to update download progress for each file.
-        :param update_global_progress_callback: Function to update overall download progress.
-        :param headers: HTTP headers to use during requests.
-        :param max_workers: Maximum number of concurrent download threads.
-        """
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -48,49 +26,24 @@ class BunkrDownloader:
         self.completed_files = 0
 
     def log(self, message, url=None):
-        """
-        Log a message using the provided log callback function. If a URL is provided, the domain is included in the log.
-
-        :param message: The message to be logged.
-        :param url: Optional URL associated with the log message.
-        """
         domain = urlparse(url).netloc if url else "General"
         full_message = f"{domain}: {message}"
         if self.log_callback:
             self.log_callback(full_message)
 
     def request_cancel(self):
-        """
-        Request the cancellation of ongoing downloads. Sets the cancellation flag and shuts down the executor.
-        """
         self.cancel_requested = True
         self.log("Download has been cancelled.")
         self.shutdown_executor()
 
     def shutdown_executor(self):
-        """
-        Shutdown the thread pool executor immediately, stopping any ongoing tasks.
-        """
         self.executor.shutdown(wait=False)
         self.log("Executor shut down.")
 
     def clean_filename(self, filename):
-        """
-        Sanitize a filename by replacing illegal characters with underscores.
-
-        :param filename: The original filename.
-        :return: A sanitized filename safe for use in file systems.
-        """
         return re.sub(r'[<>:"/\\|?*\u200b]', '_', filename)
 
     def download_file(self, url_media, ruta_carpeta, file_id):
-        """
-        Download a file from the specified URL and save it to the given folder.
-
-        :param url_media: The URL of the media file to download.
-        :param ruta_carpeta: The path to the folder where the file will be saved.
-        :param file_id: An identifier for the file being downloaded (used for progress updates).
-        """
         if self.cancel_requested:
             self.log("Download cancelled by the user.", url=url_media)
             return
@@ -139,22 +92,18 @@ class BunkrDownloader:
                     self.log(f"Failed to download from {url_media}: {e}. Attempt {attempt + 1} of {max_attempts}", url=url_media)
                     if attempt < max_attempts - 1:
                         time.sleep(3)
-
+    
     def descargar_post_bunkr(self, url_post):
-        """
-        Download media from a specific Bunkr post.
-
-        :param url_post: The URL of the Bunkr post to download from.
-        """
         try:
             self.log(f"Starting download for post: {url_post}")
             response = self.session.get(url_post, headers=self.headers)
             self.log(f"Response status code: {response.status_code} for {url_post}")
+            
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Extract and sanitize the file name for the post
-                file_name_tag = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'})
+
+                # Extract and sanitize the folder name for the post
+                file_name_tag = soup.find('h1', {'class': 'truncate'})
                 if file_name_tag:
                     file_name = file_name_tag.text.strip()
                 else:
@@ -163,26 +112,54 @@ class BunkrDownloader:
                 ruta_carpeta = os.path.join(self.download_folder, file_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
 
-                # Find media URLs in the post
                 media_urls = []
-                image_tag = soup.select_one("div.lightgallery img")
-                video_tag = soup.select_one("video source")
-                if image_tag and 'src' in image_tag.attrs:
-                    img_url = image_tag['src']
-                    self.log(f"Found image URL: {img_url}")
-                    media_urls.append((img_url, ruta_carpeta))
-                if video_tag and 'src' in video_tag.attrs:
-                    video_url = video_tag['src']
-                    self.log(f"Found video URL: {video_url}")
-                    media_urls.append((video_url, ruta_carpeta))
+                self.log(f"Processing media page URL: {url_post}")
+
+                # Buscar imágenes
+                media_divs = soup.find_all('figure', {'class': 'relative rounded-lg overflow-hidden flex justify-center items-center aspect-video bg-soft'})
+                print(f"Searching for images in {len(media_divs)} <figure> tags.")
+                for div in media_divs:
+                    img_tags = div.find_all('img')
+                    for img_tag in img_tags:
+                        if 'src' in img_tag.attrs:
+                            img_url = img_tag['src']
+                            self.log(f"Found image URL: {img_url}")
+                            media_urls.append((img_url, ruta_carpeta))
+
+                # Buscar el video en la estructura del post
+                video_divs = soup.find_all('div', {'class': 'plyr__video-wrapper'})
+                print(f"Searching for videos in {len(video_divs)} <div> tags.")
+                for video_div in video_divs:
+                    print(f"Checking video div: {video_div}")  # Detalle de cada div encontrado
+                    video_tag = video_div.find('video', {'id': 'player'})
+                    if video_tag:
+                        print(f"Video tag found: {video_tag}")
+
+                        # Verificar si hay un src en el video
+                        if 'src' in video_tag.attrs:
+                            video_url = video_tag['src']
+                            self.log(f"Found video URL: {video_url}")
+                            media_urls.append((video_url, ruta_carpeta))
+                        else:
+                            source_tag = video_tag.find('source')
+                            if source_tag and 'src' in source_tag.attrs:
+                                video_url = source_tag['src']
+                                self.log(f"Found video URL from source: {video_url}")
+                                media_urls.append((video_url, ruta_carpeta))
+                            else:
+                                print("No video URL found in video tag or source tag.")
+
+                # Debug print the media URLs collected
+                print(f"Media URLs collected: {media_urls}")
 
                 self.total_files = len(media_urls)
-                futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
-                for future in as_completed(futures):
-                    if self.cancel_requested:
-                        self.log("Cancelling remaining downloads.")
-                        break
-                    future.result()
+                if media_urls:  # Solo proceder si hay URLs para descargar
+                    futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
+                    for future in as_completed(futures):
+                        if self.cancel_requested:
+                            self.log("Cancelling remaining downloads.")
+                            break
+                        future.result()
 
                 self.log("Download initiated for all media.")
                 if self.enable_widgets_callback:
@@ -195,18 +172,13 @@ class BunkrDownloader:
                 self.enable_widgets_callback()
 
     def descargar_perfil_bunkr(self, url_perfil):
-        """
-        Download media from a specific Bunkr profile.
-
-        :param url_perfil: The URL of the Bunkr profile to download from.
-        """
         try:
             self.log(f"Starting download for profile: {url_perfil}")
             response = self.session.get(url_perfil, headers=self.headers)
             self.log(f"Response status code: {response.status_code} for {url_perfil}")
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
+
                 # Extract and sanitize the folder name for the profile
                 file_name_tag = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'})
                 if file_name_tag:
@@ -216,36 +188,48 @@ class BunkrDownloader:
                 folder_name = self.clean_filename(folder_name)
                 ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
-                
+
                 # Find media URLs in the profile
                 media_urls = []
-                links = soup.select("div.grid-images_box a.grid-images_box-link")
-                total_links = len(links)
+                grid_div = soup.find('div', {'class': 'grid gap-4 grid-cols-repeat [--size:11rem] lg:[--size:14rem] grid-images'})
+                if grid_div:
+                    links = grid_div.find_all('a', {'class': 'after:absolute after:z-10 after:inset-0'})
+                    total_links = len(links)
+                    for idx, link in enumerate(links):
+                        if self.cancel_requested:
+                            self.log("Cancelling remaining downloads.")
+                            break
 
-                for idx, link in enumerate(links):
-                    if self.cancel_requested:
-                        self.log("Cancelling remaining downloads.")
-                        break
+                        # Update progress for processing the profile
+                        self.update_progress_callback(idx, total_links, file_id=None, file_path=None)
 
-                    # Update progress for processing the profile
-                    self.update_progress_callback(idx, total_links, file_id=None, file_path=None)
+                        image_page_url = link['href']
+                        self.log(f"Processing media page URL: {image_page_url}")
+                        
+                        # Visit the page to get the media URL
+                        image_response = self.session.get(image_page_url, headers=self.headers)
+                        if image_response.status_code == 200:
+                            image_soup = BeautifulSoup(image_response.text, 'html.parser')
 
-                    image_page_url = link['href']
-                    self.log(f"Processing image page URL: {image_page_url}")
-                    image_response = self.session.get(image_page_url, headers=self.headers)
-                    self.log(f"Image page response status code: {image_response.status_code} for {image_page_url}")
-                    if image_response.status_code == 200:
-                        image_soup = BeautifulSoup(image_response.text, 'html.parser')
-                        image_tag = image_soup.select_one("div.lightgallery img")
-                        video_tag = image_soup.select_one("video source")
-                        if image_tag and 'src' in image_tag.attrs:
-                            img_url = image_tag['src']
-                            self.log(f"Found image URL: {img_url}")
-                            media_urls.append((img_url, ruta_carpeta))
-                        if video_tag and 'src' in video_tag.attrs:
-                            video_url = video_tag['src']
-                            self.log(f"Found video URL: {video_url}")
-                            media_urls.append((video_url, ruta_carpeta))
+                            # Search for image URL
+                            media_tag = image_soup.select_one("figure.relative img[class='w-full h-full absolute opacity-20 object-cover blur-sm z-10']")
+                            if media_tag and 'src' in media_tag.attrs:
+                                media_url = media_tag['src']
+                                self.log(f"Found image URL: {media_url}")
+                                media_urls.append((media_url, ruta_carpeta))
+
+                            # Search for video URL
+                            video_tag = image_soup.select_one("video#player")
+                            if video_tag and 'src' in video_tag.attrs:
+                                video_url = video_tag['src']
+                                self.log(f"Found video URL: {video_url}")
+                                media_urls.append((video_url, ruta_carpeta))
+                            else:
+                                source_tag = video_tag.find('source') if video_tag else None
+                                if source_tag and 'src' in source_tag.attrs:
+                                    video_url = source_tag['src']
+                                    self.log(f"Found video URL from source: {video_url}")
+                                    media_urls.append((video_url, ruta_carpeta))
 
                 self.total_files = len(media_urls)
                 futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
