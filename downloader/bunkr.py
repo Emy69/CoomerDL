@@ -1,3 +1,4 @@
+import hashlib
 import os
 import requests
 import time
@@ -42,34 +43,44 @@ class BunkrDownloader:
 
     def clean_filename(self, filename):
         return re.sub(r'[<>:"/\\|?*\u200b]', '_', filename)
+    
+    def get_consistent_folder_name(self, url, default_name):
+        # Genera un hash de la URL para crear un nombre único y consistente
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        folder_name = f"{default_name}_{url_hash}"
+        return self.clean_filename(folder_name)
 
     def download_file(self, url_media, ruta_carpeta, file_id):
         if self.cancel_requested:
-            self.log("Download cancelled by the user.", url=url_media)
+            self.log("Descarga cancelada por el usuario.", url=url_media)
+            return
+
+        file_name = os.path.basename(urlparse(url_media).path)
+        file_path = os.path.join(ruta_carpeta, file_name)
+        
+        if os.path.exists(file_path):
+            self.log(f"El archivo ya existe, omitiendo: {file_path}")
+            self.completed_files += 1
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
             return
 
         max_attempts = 3
         delay = 1
         for attempt in range(max_attempts):
             try:
-                self.log(f"Attempting to download {url_media} (Attempt {attempt + 1}/{max_attempts})")
+                self.log(f"Intentando descargar {url_media} (Intento {attempt + 1}/{max_attempts})")
                 response = self.session.get(url_media, headers=self.headers, stream=True)
                 response.raise_for_status()
-                file_name = os.path.basename(urlparse(url_media).path)
-                file_path = os.path.join(ruta_carpeta, file_name)
-                
-                if os.path.exists(file_path):
-                    self.log(f"File already exists, skipping: {file_path}")
-                    return
                 
                 total_size = int(response.headers.get('content-length', 0))
                 downloaded_size = 0
 
-                # Download the file in chunks
+                # Descargar el archivo en fragmentos
                 with open(file_path, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size=65536):  # 64KB chunks
+                    for chunk in response.iter_content(chunk_size=65536):  # Fragmentos de 64KB
                         if self.cancel_requested:
-                            self.log("Download cancelled during the file download.", url=url_media)
+                            self.log("Descarga cancelada durante la descarga del archivo.", url=url_media)
                             file.close()
                             os.remove(file_path)
                             return
@@ -78,38 +89,40 @@ class BunkrDownloader:
                         if self.update_progress_callback:
                             self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
 
-                self.log(f"File downloaded: {file_name}", url=url_media)
+                self.log(f"Archivo descargado: {file_name}", url=url_media)
                 self.completed_files += 1
                 if self.update_global_progress_callback:
                     self.update_global_progress_callback(self.completed_files, self.total_files)
                 break
             except requests.RequestException as e:
                 if response.status_code == 429:
-                    self.log(f"Rate limit exceeded. Retrying after {delay} seconds.")
+                    self.log(f"Límite de tasa excedido. Reintentando después de {delay} segundos.")
                     time.sleep(delay)
-                    delay *= 2  # Exponential backoff for rate limiting
+                    delay *= 2  # Retroceso exponencial para limitación de tasa
                 else:
-                    self.log(f"Failed to download from {url_media}: {e}. Attempt {attempt + 1} of {max_attempts}", url=url_media)
+                    self.log(f"Error al descargar de {url_media}: {e}. Intento {attempt + 1} de {max_attempts}", url=url_media)
                     if attempt < max_attempts - 1:
                         time.sleep(3)
     
     def descargar_post_bunkr(self, url_post):
         try:
-            self.log(f"Starting download for post: {url_post}")
+            self.log(f"Iniciando descarga para el post: {url_post}")
             response = self.session.get(url_post, headers=self.headers)
-            self.log(f"Response status code: {response.status_code} for {url_post}")
+            self.log(f"Código de estado de la respuesta: {response.status_code} para {url_post}")
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
 
-                # Extract and sanitize the folder name for the post
+                # Extraer y sanitizar el nombre de la carpeta para el post
                 file_name_tag = soup.find('h1', {'class': 'truncate'})
                 if file_name_tag:
                     file_name = file_name_tag.text.strip()
                 else:
-                    file_name = f"bunkr_post_{uuid.uuid4()}"
-                file_name = self.clean_filename(file_name)
-                ruta_carpeta = os.path.join(self.download_folder, file_name)
+                    file_name = "bunkr_post"
+                
+                # Usar el nuevo método para obtener un nombre de carpeta consistente
+                folder_name = self.get_consistent_folder_name(url_post, file_name)
+                ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
 
                 media_urls = []
@@ -173,19 +186,21 @@ class BunkrDownloader:
 
     def descargar_perfil_bunkr(self, url_perfil):
         try:
-            self.log(f"Starting download for profile: {url_perfil}")
+            self.log(f"Iniciando descarga para el perfil: {url_perfil}")
             response = self.session.get(url_perfil, headers=self.headers)
-            self.log(f"Response status code: {response.status_code} for {url_perfil}")
+            self.log(f"Código de estado de la respuesta: {response.status_code} para {url_perfil}")
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
 
-                # Extract and sanitize the folder name for the profile
+                # Extraer y sanitizar el nombre de la carpeta para el perfil
                 file_name_tag = soup.find('h1', {'class': 'text-[24px] font-bold text-dark dark:text-white'})
                 if file_name_tag:
                     folder_name = file_name_tag.text.strip()
                 else:
-                    folder_name = f"bunkr_profile_{uuid.uuid4()}"
-                folder_name = self.clean_filename(folder_name)
+                    folder_name = "bunkr_profile"
+                
+                # Usar el nuevo método para obtener un nombre de carpeta consistente
+                folder_name = self.get_consistent_folder_name(url_perfil, folder_name)
                 ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
 
@@ -205,7 +220,7 @@ class BunkrDownloader:
 
                         image_page_url = link['href']
                         self.log(f"Processing media page URL: {image_page_url}")
-                        
+
                         # Visit the page to get the media URL
                         image_response = self.session.get(image_page_url, headers=self.headers)
                         if image_response.status_code == 200:
@@ -233,15 +248,17 @@ class BunkrDownloader:
 
                 self.total_files = len(media_urls)
                 futures = [self.executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
+                
+                # Only after all futures are done, enable widgets again
                 for future in as_completed(futures):
                     if self.cancel_requested:
                         self.log("Cancelling remaining downloads.")
                         break
                     future.result()
 
-                self.log("Download initiated for all media.")
+                self.log("Download completed for all media.")
                 if self.enable_widgets_callback:
-                    self.enable_widgets_callback()
+                    self.enable_widgets_callback()  # Only enable after all downloads are done
             else:
                 self.log(f"Failed to access the profile {url_perfil}: Status {response.status_code}")
         except Exception as e:
