@@ -46,6 +46,21 @@ class SimpCity:
         response = requests.get(url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Obtener el título de la página
+            title_element = soup.find('h1')
+            if title_element:
+                # Eliminar cualquier elemento <a> dentro del h1
+                for a in title_element.find_all('a'):
+                    a.extract()
+                folder_name = title_element.get_text(strip=True)
+            else:
+                folder_name = 'SimpCity_Download'
+            
+            # Crear la carpeta con el nombre del título
+            download_folder = os.path.join(self.download_folder, folder_name)
+            os.makedirs(download_folder, exist_ok=True)
+            
             message_inners = soup.find_all('div', class_='message-inner')
             media_urls = []
             
@@ -64,7 +79,7 @@ class SimpCity:
             
             self.total_files = len(media_urls)
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = [executor.submit(self.download_image_from_link, url, idx) for idx, url in enumerate(media_urls)]
+                futures = [executor.submit(self.download_image_from_link, url, idx, download_folder) for idx, url in enumerate(media_urls)]
                 for future in as_completed(futures):
                     if self.cancel_requested:
                         self.log("Descarga cancelada durante el proceso.")
@@ -80,7 +95,7 @@ class SimpCity:
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
 
-    def download_image_from_link(self, imagen_url, index):
+    def download_image_from_link(self, imagen_url, index, download_folder):
         """ Descarga una imagen desde el enlace especificado. """
         if self.cancel_requested:
             self.log("Descarga cancelada.")
@@ -96,7 +111,7 @@ class SimpCity:
                 if download_link and 'href' in download_link.attrs:
                     image_url = download_link['href']
                     image_name = os.path.basename(urlparse(image_url).path)
-                    destination_path = os.path.join(self.download_folder, 'download', image_name)
+                    destination_path = os.path.join(download_folder, image_name)
                     
                     self.save_image(image_url, destination_path, file_id=image_url)
         else:
@@ -104,6 +119,13 @@ class SimpCity:
 
     def save_image(self, image_url, path, file_id=None):
         """ Guarda la imagen desde la URL al destino especificado. """
+        if os.path.exists(path):
+            self.log(f"Archivo ya existe, saltando: {path}")
+            self.completed_files += 1
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
+            return
+
         os.makedirs(os.path.dirname(path), exist_ok=True)
         response = requests.get(image_url, stream=True)
         if response.status_code == 200:

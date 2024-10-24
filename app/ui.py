@@ -502,6 +502,15 @@ class ImageDownloaderApp(ctk.CTk):
             tr=self.tr
         )
 
+    def setup_simpcity_downloader(self):
+        self.simpcity_downloader = SimpCity(
+            download_folder=self.download_folder,
+            log_callback=self.add_log_message_safe,
+            enable_widgets_callback=self.enable_widgets,
+            update_progress_callback=self.update_progress,
+            update_global_progress_callback=self.update_global_progress
+        )
+
     def setup_bunkr_downloader(self):
         self.bunkr_downloader = BunkrDownloader(
             download_folder=self.download_folder,
@@ -737,14 +746,10 @@ class ImageDownloaderApp(ctk.CTk):
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_profile_download, site, service, user, query, download_all, offset))
         
         elif "simpcity.su" in url:
-            simpcity_downloader = SimpCity(
-                download_folder=self.download_folder,
-                log_callback=self.add_log_message_safe,
-                enable_widgets_callback=self.enable_widgets,
-                update_progress_callback=self.update_progress,
-                update_global_progress_callback=self.update_global_progress
-            )
-            download_thread = threading.Thread(target=simpcity_downloader.download_images_from_simpcity, args=(url,))
+            self.add_log_message_safe(self.tr("Descargando SimpCity"))
+            self.setup_simpcity_downloader()
+            self.active_downloader = self.simpcity_downloader
+            download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.download_images_from_simpcity, url))
         
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
