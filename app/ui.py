@@ -25,7 +25,7 @@ from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 from downloader.simpcity import SimpCity
 
-VERSION = "CoomerV0.7.1.1"
+VERSION = "CoomerV0.7.1.2"
 MAX_LOG_LINES = 50  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -520,7 +520,7 @@ class ImageDownloaderApp(ctk.CTk):
             update_global_progress_callback=self.update_global_progress,
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-                'Referer': 'https://bunkr.si/',
+                'Referer': 'https://bunkr.site/',
             },
             max_workers=self.max_downloads
         )
