@@ -1,15 +1,3 @@
-"""
-This script defines a Downloader class responsible for handling media downloads from various sources.
-The class supports downloading images, videos, and compressed files, and manages the download process using threading and a thread pool.
-It includes features for logging, progress tracking, retry mechanisms, and handling cancellations.
-
-Key functionalities:
-- Fetching posts from a user profile.
-- Processing and downloading media elements.
-- Handling multiple download types (images, videos, compressed files).
-- Managing download progress and retries.
-- Allowing for customizable folder structures for downloads.
-"""
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Semaphore
@@ -23,22 +11,7 @@ import time
 class Downloader:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, headers=None,
                  download_images=True, download_videos=True, download_compressed=True, tr=None, folder_structure='default',rate_limit_interval=2.0):
-        """
-        Initialize the Downloader class.
 
-        :param download_folder: Directory where the downloaded files will be saved.
-        :param max_workers: Maximum number of concurrent download threads.
-        :param log_callback: Function for logging messages during the download process.
-        :param enable_widgets_callback: Function to re-enable UI widgets after downloads complete.
-        :param update_progress_callback: Function to update download progress for each file.
-        :param update_global_progress_callback: Function to update overall download progress.
-        :param headers: HTTP headers to use during requests.
-        :param download_images: Flag to enable/disable downloading images.
-        :param download_videos: Flag to enable/disable downloading videos.
-        :param download_compressed: Flag to enable/disable downloading compressed files.
-        :param tr: Function for translating text messages (for localization).
-        :param folder_structure: The folder structure used to organize downloaded files.
-        """
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -76,42 +49,22 @@ class Downloader:
         self.folder_structure = folder_structure
 
     def log(self, message):
-        """
-        Log a message using the provided log callback function.
-        If a translation function is provided, the message is translated before logging.
-        
-        :param message: The message to be logged.
-        """
         if self.log_callback:
             self.log_callback(self.tr(message) if self.tr else message)
 
     def set_download_mode(self, mode, max_workers):
-        """
-        Set the download mode and adjust the number of concurrent workers.
-        
-        :param mode: The download mode ('multi' for concurrent, 'queue' for sequential).
-        :param max_workers: The maximum number of concurrent workers.
-        """
         self.download_mode = mode
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.rate_limit = Semaphore(max_workers)
 
     def request_cancel(self):
-        """
-        Request the cancellation of ongoing downloads.
-        Sets the cancellation event and attempts to cancel all running futures.
-        """
         self.cancel_requested.set()
         self.log(self.tr("Download cancellation requested."))
         for future in self.futures:
             future.cancel()
 
     def shutdown_executor(self):
-        """
-        Shutdown the thread pool executor after all tasks are complete or cancelled.
-        This method is called once to ensure resources are properly released.
-        """
         if not self.shutdown_called:
             self.shutdown_called = True  # Prevent multiple shutdowns
             if self.executor:
@@ -121,13 +74,6 @@ class Downloader:
             self.log(self.tr("All downloads completed or cancelled."))
 
     def safe_request(self, url, max_retries=5):
-        """
-        Perform a GET request with retry logic and rate limiting by domain.
-        
-        :param url: The URL to request.
-        :param max_retries: Maximum number of retries in case of failure.
-        :return: The response object if successful, None otherwise.
-        """
         retry_wait = 1
         domain = urlparse(url).netloc
 
@@ -161,18 +107,6 @@ class Downloader:
         return None
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
-        """
-        Fetch posts from a user's profile using the specified API.
-        
-        :param site: The base URL of the site.
-        :param user_id: The ID of the user whose posts are to be fetched.
-        :param service: The service being used (e.g., 'user', 'posts').
-        :param query: Optional query to filter posts.
-        :param specific_post_id: Fetch only a specific post by its ID.
-        :param initial_offset: The starting offset for pagination.
-        :param log_fetching: Whether to log the fetching process.
-        :return: A list of posts retrieved from the user's profile.
-        """
         all_posts = []
         offset = initial_offset
         user_id_encoded = quote_plus(user_id)
@@ -212,12 +146,6 @@ class Downloader:
         return all_posts
 
     def process_post(self, post):
-        """
-        Extract media URLs from a post's data.
-        
-        :param post: The post data containing media files.
-        :return: A list of media URLs extracted from the post.
-        """
         media_urls = []
 
         if 'file' in post and post['file']:
@@ -232,23 +160,9 @@ class Downloader:
         return media_urls
 
     def sanitize_filename(self, filename):
-        """
-        Sanitize a filename by replacing illegal characters with underscores.
-        
-        :param filename: The original filename.
-        :return: A sanitized filename safe for use in file systems.
-        """
         return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
     def get_media_folder(self, extension, user_id, post_id=None):
-        """
-        Determine the folder path for storing a media file based on its extension and user ID.
-        
-        :param extension: The file extension of the media.
-        :param user_id: The ID of the user who posted the media.
-        :param post_id: The ID of the post containing the media (optional).
-        :return: The path to the folder where the media should be stored.
-        """
         if extension in self.video_extensions:
             folder_name = "videos"
         elif extension in self.image_extensions:
@@ -341,16 +255,6 @@ class Downloader:
             self.failed_files.append(media_url)
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
-        """
-        Download media from a user's posts on the specified site.
-        
-        :param site: The base URL of the site.
-        :param user_id: The ID of the user whose media is to be downloaded.
-        :param service: The service being used (e.g., 'user', 'posts').
-        :param query: Optional query to filter posts.
-        :param download_all: Whether to download all posts or just the first 50.
-        :param initial_offset: The starting offset for pagination.
-        """
         try:
             posts = self.fetch_user_posts(site, user_id, service, query=query, initial_offset=initial_offset, log_fetching=download_all)
             if not posts:
@@ -398,14 +302,6 @@ class Downloader:
             self.shutdown_executor()
 
     def download_single_post(self, site, post_id, service, user_id):
-        """
-        Download media from a specific post by its ID.
-        
-        :param site: The base URL of the site.
-        :param post_id: The ID of the post to download.
-        :param service: The service being used (e.g., 'user', 'posts').
-        :param user_id: The ID of the user who posted the media.
-        """
         try:
             post = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
             if not post:
@@ -449,14 +345,6 @@ class Downloader:
             self.shutdown_executor()
     
     def fetch_single_post(self, site, post_id, service):
-        """
-        Fetch the details of a single post by its ID.
-        
-        :param site: The base URL of the site.
-        :param post_id: The ID of the post to fetch.
-        :param service: The service being used (e.g., 'user', 'posts').
-        :return: The post data as a dictionary, or None if an error occurs.
-        """
         api_url = f"https://{site}.su/api/v1/{service}/post/{post_id}"
         self.log(self.tr(f"Fetching post from {api_url}"))
         try:

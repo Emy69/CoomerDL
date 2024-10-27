@@ -31,7 +31,7 @@ class BunkrDownloader:
         self.log_messages = []  # Cola para almacenar mensajes de log
         self.notification_interval = 10  # Intervalo de notificación en segundos
         self.start_notification_thread()
-        self.translations = translations  # Diccionario de traducciones cargado desde el JSON
+        self.translations = translations or {}  
 
     def start_notification_thread(self):
         def notify_user():
