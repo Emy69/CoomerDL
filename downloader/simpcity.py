@@ -3,19 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+import queue
 
 class SimpCity:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None):
-        """
-        Inicializa la clase SimpCity con capacidad de descargas concurrentes.
-        
-        :param download_folder: Directorio donde se guardarán los archivos descargados.
-        :param max_workers: Número máximo de descargas simultáneas.
-        :param log_callback: Función para enviar mensajes de log a la interfaz.
-        :param enable_widgets_callback: Función para habilitar la interfaz después de la descarga.
-        :param update_progress_callback: Función para actualizar el progreso de cada archivo.
-        :param update_global_progress_callback: Función para actualizar el progreso global de la descarga.
-        """
         self.download_folder = download_folder
         self.max_workers = max_workers
         self.descargadas = set()
@@ -26,9 +18,9 @@ class SimpCity:
         self.cancel_requested = False
         self.total_files = 0
         self.completed_files = 0
+        self.download_queue = queue.Queue()
 
     def log(self, message):
-        """ Envia mensajes de log a través del callback. """
         if self.log_callback:
             self.log_callback(message)
 
@@ -37,12 +29,47 @@ class SimpCity:
         self.cancel_requested = True
         self.log("Descarga cancelada por el usuario.")
 
-    def download_images_from_simpcity(self, url):
-        """ Descarga las imágenes desde una URL de SimpCity. """
-        if self.cancel_requested:
-            self.log("Descarga cancelada antes de comenzar.")
-            return
+    def start_download_thread(self, url):
+        """ Inicia un hilo para manejar las descargas. """
+        download_thread = threading.Thread(target=self.download_images_from_simpcity, args=(url,))
+        download_thread.start()
 
+    def download_images_from_simpcity(self, url):
+        """ Descarga las imágenes desde todas las páginas de una URL de SimpCity. """
+        # Descargar la página inicial
+        self.process_page(url)
+
+        # Comenzar la paginación
+        page_number = 1
+        while not self.cancel_requested:
+            paginated_url = f"{url.rstrip('/')}/page-{page_number}"
+            self.log(f"Accediendo a {paginated_url}")
+            
+            # Mover la solicitud de red a un hilo separado
+            response = self.fetch_page(paginated_url)
+            if response is None or response.status_code != 200:
+                self.log(f"No se encontró la página {paginated_url}. Deteniendo la búsqueda.")
+                break
+            
+            self.process_page(paginated_url)
+            page_number += 1
+
+        if not self.cancel_requested:
+            self.log("Todas las descargas han terminado.")
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()
+
+    def fetch_page(self, url):
+        """ Realiza una solicitud GET en un hilo separado. """
+        try:
+            response = requests.get(url)
+            return response
+        except requests.RequestException as e:
+            self.log(f"Error al acceder a {url}: {e}")
+            return None
+
+    def process_page(self, url):
+        """ Procesa una página específica para descargar imágenes. """
         response = requests.get(url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -50,52 +77,72 @@ class SimpCity:
             # Obtener el título de la página
             title_element = soup.find('h1')
             if title_element:
-                # Eliminar cualquier elemento <a> dentro del h1
                 for a in title_element.find_all('a'):
                     a.extract()
                 folder_name = title_element.get_text(strip=True)
             else:
                 folder_name = 'SimpCity_Download'
             
-            # Crear la carpeta con el nombre del título
             download_folder = os.path.join(self.download_folder, folder_name)
             os.makedirs(download_folder, exist_ok=True)
             
             message_inners = soup.find_all('div', class_='message-inner')
-            media_urls = []
             
             for div in message_inners:
                 bbwrapper = div.find('div', class_='bbWrapper')
                 if bbwrapper:
                     links = bbwrapper.find_all('a', class_='link--external')
-                    for link in links:
-                        if 'href' in link.attrs:
-                            imagen_url = link['href']
-                            if imagen_url not in self.descargadas:
-                                media_urls.append(imagen_url)
-                                self.descargadas.add(imagen_url)
-                            else:
-                                self.log(f"Imagen ya descargada, saltando: {imagen_url}")
-            
-            self.total_files = len(media_urls)
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = [executor.submit(self.download_image_from_link, url, idx, download_folder) for idx, url in enumerate(media_urls)]
-                for future in as_completed(futures):
-                    if self.cancel_requested:
-                        self.log("Descarga cancelada durante el proceso.")
-                        break
-                    future.result()  # Procesa cualquier excepción en los hilos
-            
-            if not self.cancel_requested:
-                self.log("Todas las descargas han terminado.")
-                if self.enable_widgets_callback:
-                    self.enable_widgets_callback()
+                    with ThreadPoolExecutor(max_workers=5) as executor:
+                        futures = []
+                        for link in links:
+                            if 'href' in link.attrs:
+                                imagen_url = link['href']
+                                if imagen_url not in self.descargadas:
+                                    futures.append(executor.submit(self.download_image_from_link, imagen_url, download_folder))
+                                    self.descargadas.add(imagen_url)
+                                else:
+                                    self.log(f"Imagen ya descargada, saltando: {imagen_url}")
+                        
+                        # Esperar a que todas las descargas del bbWrapper terminen
+                        for future in as_completed(futures):
+                            try:
+                                future.result()  # Manejar excepciones aquí si es necesario
+                            except Exception as e:
+                                self.log(f"Error al descargar: {e}")
         else:
             self.log(f"Error al acceder a {url}: Código de estado {response.status_code}")
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
 
-    def download_image_from_link(self, imagen_url, index, download_folder):
+    def start_download_workers(self):
+        """ Inicia los trabajadores para descargar imágenes. """
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = []
+            while not self.download_queue.empty():
+                imagen_url, download_folder = self.download_queue.get()
+                futures.append(executor.submit(self.download_image_from_link, imagen_url, download_folder))
+                
+                # Limitar el número de tareas en progreso
+                if len(futures) >= self.max_workers:
+                    for future in as_completed(futures):
+                        if self.cancel_requested:
+                            self.log("Descarga cancelada durante el proceso.")
+                            break
+                        try:
+                            future.result()  # Manejar excepciones aquí si es necesario
+                        except Exception as e:
+                            self.log(f"Error al descargar: {e}")
+                    futures = []  # Resetear la lista de futuros para el siguiente lote
+
+            # Asegurarse de que todas las tareas restantes se completen
+            for future in as_completed(futures):
+                if self.cancel_requested:
+                    self.log("Descarga cancelada durante el proceso.")
+                    break
+                try:
+                    future.result()  # Manejar excepciones aquí si es necesario
+                except Exception as e:
+                    self.log(f"Error al descargar: {e}")
+
+    def download_image_from_link(self, imagen_url, download_folder):
         """ Descarga una imagen desde el enlace especificado. """
         if self.cancel_requested:
             self.log("Descarga cancelada.")

@@ -1,14 +1,3 @@
-"""
-This script defines an EromeDownloader class designed for downloading media content from Erome profiles and albums.
-It supports downloading images and videos, provides progress updates, handles cancellations, and logs the download process.
-
-Key functionalities:
-- Downloading media files from Erome profiles and albums.
-- Concurrent downloading using a thread pool.
-- Logging and exporting logs of the download process.
-- Handling download cancellations and retry logic.
-"""
-
 import re
 from tkinter import messagebox, simpledialog
 import uuid
@@ -24,23 +13,6 @@ from requests.exceptions import ChunkedEncodingError
 
 class EromeDownloader:
     def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
-        """
-        Initialize the EromeDownloader class.
-
-        :param root: The root window or parent widget for the downloader.
-        :param log_callback: Function to log messages during the download process.
-        :param enable_widgets_callback: Function to re-enable UI widgets after downloads complete.
-        :param update_progress_callback: Function to update download progress for each file.
-        :param update_global_progress_callback: Function to update overall download progress.
-        :param download_images: Flag to enable/disable downloading images.
-        :param download_videos: Flag to enable/disable downloading videos.
-        :param headers: HTTP headers to use during requests.
-        :param language: Language setting for the downloader.
-        :param is_profile_download: Flag indicating if the download is for a full profile.
-        :param direct_download: Flag indicating if downloads should be saved directly without creating subfolders.
-        :param tr: Translation function for localization.
-        :param max_workers: Maximum number of concurrent download threads.
-        """
         self.root = root
         self.session = requests.Session()
         self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
@@ -64,28 +36,17 @@ class EromeDownloader:
         self.tr = tr if tr else lambda x, **kwargs: x.format(**kwargs)  # Translation function
 
     def request_cancel(self):
-        """
-        Request the cancellation of ongoing downloads and logs the cancellation.
-        """
         self.cancel_requested = True
         self.log(self.tr("Download cancelled"))
         if self.is_profile_download:
             self.enable_widgets_callback()
 
     def log(self, message):
-        """
-        Log a message using the provided log callback function and store it.
-
-        :param message: The message to be logged.
-        """
         if self.log_callback is not None:
             self.log_callback(message)
         self.log_messages.append(message)
 
     def shutdown_executor(self):
-        """
-        Shutdown the thread pool executor immediately, stopping any ongoing tasks.
-        """
         self.executor.shutdown(wait=False)
         self.log(self.tr("Executor shut down."))
         if self.is_profile_download:
@@ -93,21 +54,9 @@ class EromeDownloader:
 
     @staticmethod
     def clean_filename(filename):
-        """
-        Sanitize a filename by replacing illegal characters with underscores.
-
-        :param filename: The original filename.
-        :return: A sanitized filename safe for use in file systems.
-        """
         return re.sub(r'[<>:"/\\|?*]', '_', filename.split('?')[0])
 
     def create_folder(self, folder_name):
-        """
-        Create a folder for storing downloaded files. If creation fails, prompt the user to choose a new name.
-
-        :param folder_name: The initial folder name.
-        :return: The final folder name that was created.
-        """
         try:
             os.makedirs(folder_name, exist_ok=True)
         except OSError as e:
@@ -124,15 +73,6 @@ class EromeDownloader:
         return folder_name
 
     def download_file(self, url, file_path, resource_type, file_id=None, max_retries=5):
-        """
-        Download a file from the specified URL and save it to the given path.
-
-        :param url: The URL of the file to download.
-        :param file_path: The path where the file will be saved.
-        :param resource_type: The type of resource being downloaded (e.g., 'Image', 'Video').
-        :param file_id: An identifier for the file being downloaded (used for progress updates).
-        :param max_retries: Maximum number of retries in case of download failures.
-        """
         if self.cancel_requested:
             return
 
@@ -179,14 +119,6 @@ class EromeDownloader:
                     self.log(self.tr("Max retries reached. Failed to download {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
-        """
-        Process an album page on Erome and download all media files (images and/or videos) from it.
-
-        :param page_url: The URL of the album page to process.
-        :param base_folder: The base folder where the album's media will be saved.
-        :param download_images: Flag to enable/disable downloading images from the album.
-        :param download_videos: Flag to enable/disable downloading videos from the album.
-        """
         try:
             if self.cancel_requested:
                 return
@@ -243,14 +175,6 @@ class EromeDownloader:
             self.export_logs()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
-        """
-        Process a profile page on Erome and download all albums linked from the profile.
-
-        :param url: The URL of the profile page to process.
-        :param download_folder: The folder where the profile's media will be saved.
-        :param download_images: Flag to enable/disable downloading images from the profile.
-        :param download_videos: Flag to enable/disable downloading videos from the profile.
-        """
         try:
             if self.cancel_requested:
                 return
@@ -278,11 +202,6 @@ class EromeDownloader:
             self.export_logs()
 
     def export_logs(self):
-        """
-        Export the log messages to a file for future reference.
-
-        :return: The path to the log file.
-        """
         log_folder = "resources/config/logs/"
         Path(log_folder).mkdir(parents=True, exist_ok=True)
         log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"

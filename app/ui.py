@@ -749,6 +749,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("Descargando SimpCity"))
             self.setup_simpcity_downloader()
             self.active_downloader = self.simpcity_downloader
+            # Iniciar la descarga en un hilo separado
             download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.download_images_from_simpcity, url))
         
         else:
