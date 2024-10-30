@@ -196,9 +196,13 @@ class ImageDownloaderApp(ctk.CTk):
         self.browse_button = ctk.CTkButton(self.input_frame, text=self.tr("Seleccionar Carpeta"), command=self.select_folder)
         self.browse_button.grid(row=1, column=1, sticky='e')
 
-        self.folder_path = ctk.CTkLabel(self.input_frame, text="", cursor="hand2")  # Cambiar el cursor al de "mano"
+        self.folder_path = ctk.CTkLabel(self.input_frame, text="", cursor="hand2", font=("Arial", 13))
         self.folder_path.grid(row=2, column=0, columnspan=2, sticky='w')
-        self.folder_path.bind("<Button-1>", self.open_download_folder)  
+        self.folder_path.bind("<Button-1>", self.open_download_folder)
+
+        # Añadir eventos para el efecto hover
+        self.folder_path.bind("<Enter>", self.on_hover_enter)
+        self.folder_path.bind("<Leave>", self.on_hover_leave)
 
         # Options frame
         self.options_frame = ctk.CTkFrame(self)
@@ -968,3 +972,9 @@ class ImageDownloaderApp(ctk.CTk):
             self.erome_downloader.max_workers = max_downloads
         if hasattr(self, 'bunkr_downloader'):
             self.bunkr_downloader.max_workers = max_downloads
+
+    def on_hover_enter(self, event):
+        self.folder_path.configure(font=("Arial", 13, "underline"))  # Subrayar el texto al pasar el ratón
+
+    def on_hover_leave(self, event):
+        self.folder_path.configure(font=("Arial", 13))  # Quitar el subrayado al salir el ratón
