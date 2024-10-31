@@ -253,24 +253,85 @@ class Downloader:
         except Exception as e:
             self.log(self.tr("Error downloading: {e}", e=e))
             self.failed_files.append(media_url)
+        
+    def get_remote_file_size(self, media_url, filename):
+        try:
+            # Realizar una solicitud HEAD para obtener información del archivo
+            response = requests.head(media_url, allow_redirects=True)
+
+            # Comprobar si la solicitud fue exitosa
+            if response.status_code == 200:
+                # Obtener el tamaño del archivo desde el encabezado 'Content-Length'
+                size = int(response.headers.get('Content-Length', 0))
+                return media_url, filename, size
+            else:
+                self.log(self.tr(f"Failed to get size for {filename}: HTTP {response.status_code}"))
+                return media_url, filename, None
+        except Exception as e:
+            self.log(self.tr(f"Error getting size for {filename}: {e}"))
+            return media_url, filename, None
+
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
         try:
+            self.log(self.tr("Starting download process..."))  # Log al iniciar el proceso de descarga
+
             posts = self.fetch_user_posts(site, user_id, service, query=query, initial_offset=initial_offset, log_fetching=download_all)
             if not posts:
                 self.log(self.tr("No posts found for this user."))
                 return
 
             if not download_all:
-                posts = posts[:50]  # Limit to the first 50 posts
+                posts = posts[:50]  # Limitar a los primeros 50 posts
 
             futures = []
             grouped_media_urls = defaultdict(list)
 
+            # Listar archivos existentes al inicio
+            self.log(self.tr("Verifying existing files for duplicates..."))  # Log para indicar verificación de duplicados
+            existing_files = {}
+            for root, _, files in os.walk(self.download_folder):
+                for file in files:
+                    filepath = os.path.join(root, file)
+                    existing_files[file] = os.path.getsize(filepath)
+
+            # Recolectar todas las URLs de medios y nombres de archivos
+            all_media_urls = []
             for post in posts:
                 media_urls = self.process_post(post)
                 for media_url in media_urls:
-                    grouped_media_urls[post['id']].append(media_url)
+                    extension = os.path.splitext(media_url)[1].lower()
+                    # Filtrar según los tipos de archivo seleccionados
+                    if (extension in self.image_extensions and not self.download_images) or \
+                    (extension in self.video_extensions and not self.download_videos) or \
+                    (extension in self.compressed_extensions and not self.download_compressed):
+                        continue  # Saltar archivos no seleccionados
+
+                    filename = os.path.basename(media_url).split('?')[0]
+                    all_media_urls.append((media_url, filename))
+
+            # Obtener tamaños de archivos remotos en paralelo
+            remote_sizes = {filename: None for _, filename in all_media_urls}
+            size_futures = []
+            for media_url, filename in all_media_urls:
+                size_futures.append(self.executor.submit(self.get_remote_file_size, media_url, filename))
+
+            for future in as_completed(size_futures):
+                media_url, filename, size = future.result()
+                remote_sizes[filename] = size
+
+            # Filtrar archivos existentes y tamaños
+            for media_url, filename in all_media_urls:
+                if filename in existing_files:
+                    local_size = existing_files[filename]
+                    remote_size = remote_sizes[filename]
+
+                    if remote_size is not None and local_size >= remote_size:
+                        self.log(self.tr("File already exists with the same or larger size, skipping: {filename}", filename=filename))
+                        self.skipped_files.append(filename)
+                        continue
+
+                grouped_media_urls[post['id']].append(media_url)
 
             self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
             self.completed_files = 0
@@ -288,6 +349,7 @@ class Downloader:
                     if self.cancel_requested.is_set():
                         break
 
+            # Manejo de archivos fallidos
             if self.failed_files:
                 self.log(self.tr("Retrying failed downloads..."))
                 for media_url in self.failed_files:
