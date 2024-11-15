@@ -1,5 +1,4 @@
 ![Windows Compatibility](https://img.shields.io/badge/Windows-10%2C%2011-blue)
-![Linux Compatibility](https://img.shields.io/badge/Linux-Compatible-green)
 
 # Coomer Downloader App
 
