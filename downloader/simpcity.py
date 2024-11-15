@@ -1,10 +1,16 @@
-import os
-import requests
+import cloudscraper
+import time
 from bs4 import BeautifulSoup
+import os
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import queue
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import requests
+import re
+import json
 
 class SimpCity:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None):
@@ -19,6 +25,7 @@ class SimpCity:
         self.total_files = 0
         self.completed_files = 0
         self.download_queue = queue.Queue()
+        self.scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
 
     def log(self, message):
         if self.log_callback:
@@ -34,44 +41,66 @@ class SimpCity:
         download_thread = threading.Thread(target=self.download_images_from_simpcity, args=(url,))
         download_thread.start()
 
-    def download_images_from_simpcity(self, url):
-        """ Descarga las imágenes desde todas las páginas de una URL de SimpCity. """
-        # Descargar la página inicial
-        self.process_page(url)
+    def get_cookies_with_selenium(self, url):
+        # Cargar la configuración desde el archivo JSON
+        with open('resources/config/settings.json', 'r') as f:
+            settings = json.load(f)
 
-        # Comenzar la paginación
-        page_number = 1
-        while not self.cancel_requested:
-            paginated_url = f"{url.rstrip('/')}/page-{page_number}"
-            self.log(f"Accediendo a {paginated_url}")
-            
-            # Mover la solicitud de red a un hilo separado
-            response = self.fetch_page(paginated_url)
-            if response is None or response.status_code != 200:
-                self.log(f"No se encontró la página {paginated_url}. Deteniendo la búsqueda.")
-                break
-            
-            self.process_page(paginated_url)
-            page_number += 1
+        chrome_profile_folder = settings.get('chrome_profile_folder', '')
 
-        if not self.cancel_requested:
-            self.log("Todas las descargas han terminado.")
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
+        options = Options()
+        if chrome_profile_folder:
+            options.add_argument(f'--user-data-dir={chrome_profile_folder}')
+        options.add_argument('--profile-directory=Default')
+
+        driver = webdriver.Chrome(options=options)
+        driver.get(url)
+
+        cookies = driver.get_cookies()
+        driver.quit()
+        return cookies
+
+    def set_cookies_in_scraper(self, cookies):
+        for cookie in cookies:
+            self.scraper.cookies.set(cookie['name'], cookie['value'])
 
     def fetch_page(self, url):
-        """ Realiza una solicitud GET en un hilo separado. """
+        """ Realiza una solicitud GET usando cloudscraper. """
         try:
-            response = requests.get(url)
+            # Obtener cookies con Selenium
+            cookies = self.get_cookies_with_selenium(url)
+            self.set_cookies_in_scraper(cookies)
+
+            response = self.scraper.get(url)
+            if response.status_code == 403:
+                self.log("Acceso prohibido. Intentando de nuevo...")
+                time.sleep(5)  # Esperar antes de reintentar
+                response = self.scraper.get(url)
             return response
-        except requests.RequestException as e:
+        except requests.exceptions.RequestException as e:
             self.log(f"Error al acceder a {url}: {e}")
             return None
 
+    def download_images_from_simpcity(self, url):
+        """ Descarga las imágenes desde una URL específica de SimpCity. """
+        self.log(f"Accediendo a {url}")
+        
+        # Procesar solo la página proporcionada
+        self.process_page(url)
+
+        if not self.cancel_requested:
+            self.log("Descarga de la página completada.")
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()
+
+    def sanitize_folder_name(self, name):
+        # Reemplaza caracteres no válidos con un guion bajo
+        return re.sub(r'[<>:"/\\|?*]', '_', name)
+
     def process_page(self, url):
         """ Procesa una página específica para descargar imágenes. """
-        response = requests.get(url)
-        if response.status_code == 200:
+        response = self.fetch_page(url)
+        if response and response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # Obtener el título de la página
@@ -80,6 +109,7 @@ class SimpCity:
                 for a in title_element.find_all('a'):
                     a.extract()
                 folder_name = title_element.get_text(strip=True)
+                folder_name = self.sanitize_folder_name(folder_name)  # Sanitizar el nombre de la carpeta
             else:
                 folder_name = 'SimpCity_Download'
             
@@ -148,7 +178,7 @@ class SimpCity:
             self.log("Descarga cancelada.")
             return
         
-        response = requests.get(imagen_url)
+        response = self.scraper.get(imagen_url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
             header_content_right = soup.find('div', class_='header-content-right')
@@ -159,6 +189,9 @@ class SimpCity:
                     image_url = download_link['href']
                     image_name = os.path.basename(urlparse(image_url).path)
                     destination_path = os.path.join(download_folder, image_name)
+                    
+                    # Asegúrate de que el directorio existe antes de guardar
+                    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
                     
                     self.save_image(image_url, destination_path, file_id=image_url)
         else:
@@ -174,7 +207,7 @@ class SimpCity:
             return
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        response = requests.get(image_url, stream=True)
+        response = self.scraper.get(image_url, stream=True)
         if response.status_code == 200:
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0

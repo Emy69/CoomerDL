@@ -1,13 +1,16 @@
 import json
 import os
+import shutil
+import sys
 import threading
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk
 from PIL import Image as PilImage
 import webbrowser
 import requests
+import patoolib
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json'  # Path to the configuration JSON file.
@@ -102,6 +105,10 @@ class SettingsWindow:
 
         apply_theme_button = ctk.CTkButton(self.content_frame, text=self.translate("Apply Theme"), command=lambda: self.change_theme_in_thread(theme_combobox.get()))
         apply_theme_button.grid(row=2, column=2, pady=5, sticky="w")
+
+        # Botón para seleccionar la carpeta del perfil de Chrome
+        chrome_profile_button = ctk.CTkButton(self.content_frame, text=self.translate("Select Chrome Profile Folder"), command=self.select_chrome_profile_folder)
+        chrome_profile_button.grid(row=15, column=0, pady=10, sticky="w", padx=(0, 10))
 
         # Línea divisoria
         separator_2 = ttk.Separator(self.content_frame, orient="horizontal")
@@ -263,9 +270,8 @@ class SettingsWindow:
                 self.translate(f"Failed to load contributors.\nError: {e}")
             )
 
-
     def check_for_updates(self):
-        api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"
+        api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"  
 
         try:
             response = requests.get(api_url)
@@ -274,16 +280,100 @@ class SettingsWindow:
             latest_version = latest_release["tag_name"].lstrip('v')
 
             if latest_version != self.version.lstrip('v'):
-                if messagebox.askyesno(self.translate("Update Available"),
-                                       self.translate(f"A new version is available: {latest_version}\n"
-                                                      "Would you like to go to the download page?")):
-                    webbrowser.open("https://github.com/Emy69/CoomerDL/releases")
+                # Buscar el URL de descarga
+                download_url = None
+                for asset in latest_release['assets']:
+                    if asset['name'].endswith(('.zip', '.rar')): 
+                        download_url = asset['browser_download_url']
+                        break
+
+                if download_url:
+                    if messagebox.askyesno("Update Available", f"A new version {latest_version} is available.\nWould you like to download and install it?"):
+                        if self.download_and_replace(download_url):
+                            messagebox.showinfo("Update", "The application has been updated. Please restart the application.")
+                            sys.exit(0)  
+                else:
+                    messagebox.showerror("Update Error", "No downloadable asset found.")
             else:
-                messagebox.showinfo(self.translate("Update"),
-                                    self.translate("Your software is up to date."))
+                messagebox.showinfo("Update", "Your software is up to date.")
         except requests.RequestException as e:
-            messagebox.showerror(self.translate("Error"),
-                                 self.translate(f"Unable to check for updates.\nError: {e}"))
+            messagebox.showerror("Error", f"Unable to check for updates.\nError: {e}")
+
+    def download_and_replace(self, url):
+        # Crear una nueva ventana para mostrar el progreso
+        progress_window = tk.Toplevel(self.parent)
+        progress_window.title(self.translate("Progress"))
+        progress_window.geometry("300x100")
+        progress_window.transient(self.parent)  
+        progress_window.grab_set()  
+
+        # Centrar la ventana de progreso
+        self.center_window(progress_window, 300, 100)
+        
+        # Barra de progreso para la descarga
+        download_progress = ttk.Progressbar(progress_window, orient='horizontal', length=280, mode='determinate')
+        download_progress.pack(pady=10)
+        
+        # Etiqueta para mostrar el estado actual
+        status_label = tk.Label(progress_window, text=self.translate("Downloading..."))
+        status_label.pack(pady=5)
+        
+        # Extraer el nombre del archivo de la URL
+        file_name = url.split('/')[-1]
+        
+        # Preguntar al usuario dónde guardar el archivo descargado
+        filetypes = [('ZIP files', '*.zip'), ('RAR files', '*.rar')]
+        save_path = filedialog.asksaveasfilename(title="Save As", initialfile=file_name, defaultextension=".zip", filetypes=filetypes)
+        if not save_path:
+            messagebox.showinfo("Cancelled", "Download cancelled by user.")
+            progress_window.destroy()
+            return False
+        
+        # Descargar el archivo 
+        response = requests.get(url, stream=True)
+        total_length = int(response.headers.get('content-length', 0))
+        with open(save_path, "wb") as file:
+            for data in response.iter_content(chunk_size=4096):
+                file.write(data)
+                download_progress['value'] += len(data) / total_length * 100
+                progress_window.update_idletasks()
+        
+        # Actualizar el estado para la descompresión
+        status_label.config(text=self.translate("Extracting..."))
+        progress_window.update_idletasks()
+        
+        # Preguntar al usuario dónde descomprimir el archivo
+        target_directory = filedialog.askdirectory(title="Select Directory to Extract Files")
+        if not target_directory:
+            messagebox.showinfo("Cancelled", "Extraction cancelled by user.")
+            progress_window.destroy()
+            return False
+        
+        # Usar patoolib para descomprimir el archivo
+        try:
+            patoolib.extract_archive(save_path, outdir=target_directory)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to extract files.\nError: {e}")
+            progress_window.destroy()
+            return False
+        
+        # Limpiar archivo de actualización
+        os.remove(save_path)
+        messagebox.showinfo("Success", "Files extracted successfully.")
+        progress_window.destroy()
+        return True
+
+    def select_chrome_profile_folder(self):
+        folder_path = filedialog.askdirectory(title=self.translate("Select Chrome Profile Folder"))
+        if folder_path:
+            self.settings['chrome_profile_folder'] = folder_path
+            self.save_settings()
+            messagebox.showinfo(self.translate("Success"), self.translate("Chrome profile folder saved successfully."))
+
+    def save_settings(self):
+        with open('resources/config/settings.json', 'w') as f:
+            json.dump(self.settings, f)
+
 
     def change_theme_in_thread(self, selected_theme):
         threading.Thread(target=self.apply_theme, args=(selected_theme,)).start()
