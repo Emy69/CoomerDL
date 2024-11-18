@@ -106,10 +106,6 @@ class SettingsWindow:
         apply_theme_button = ctk.CTkButton(self.content_frame, text=self.translate("Apply Theme"), command=lambda: self.change_theme_in_thread(theme_combobox.get()))
         apply_theme_button.grid(row=2, column=2, pady=5, sticky="w")
 
-        # Botón para seleccionar la carpeta del perfil de Chrome
-        chrome_profile_button = ctk.CTkButton(self.content_frame, text=self.translate("Select Chrome Profile Folder"), command=self.select_chrome_profile_folder)
-        chrome_profile_button.grid(row=15, column=0, pady=10, sticky="w", padx=(0, 10))
-
         # Línea divisoria
         separator_2 = ttk.Separator(self.content_frame, orient="horizontal")
         separator_2.grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)

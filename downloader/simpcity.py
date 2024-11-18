@@ -11,6 +11,9 @@ from selenium.webdriver.chrome.options import Options
 import requests
 import re
 import json
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class SimpCity:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None):
@@ -41,23 +44,54 @@ class SimpCity:
         download_thread = threading.Thread(target=self.download_images_from_simpcity, args=(url,))
         download_thread.start()
 
-    def get_cookies_with_selenium(self, url):
-        # Cargar la configuración desde el archivo JSON
-        with open('resources/config/settings.json', 'r') as f:
-            settings = json.load(f)
+    def save_cookies_to_file(self, cookies, file_path):
+        """ Guarda las cookies en un archivo JSON. """
+        with open(file_path, 'w') as file:
+            json.dump(cookies, file)
+        self.log(f"Cookies guardadas en {file_path}")
 
-        chrome_profile_folder = settings.get('chrome_profile_folder', '')
+    def load_cookies_from_file(self, file_path):
+        """ Carga las cookies desde un archivo JSON. """
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as file:
+                cookies = json.load(file)
+            self.log(f"Cookies cargadas desde {file_path}")
+            return cookies
+        else:
+            self.log(f"No se encontró el archivo de cookies: {file_path}")
+            return None
 
+    def get_cookies_with_selenium(self, url, cookies_file='resources/config/cookies.json'):
+        # Cargar cookies desde el archivo si existe
+        cookies = self.load_cookies_from_file(cookies_file)
+        if cookies:
+            return cookies
+
+        # Abrir el navegador para que el usuario inicie sesión
         options = Options()
-        if chrome_profile_folder:
-            options.add_argument(f'--user-data-dir={chrome_profile_folder}')
-        options.add_argument('--profile-directory=Default')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
 
         driver = webdriver.Chrome(options=options)
         driver.get(url)
 
-        cookies = driver.get_cookies()
-        driver.quit()
+        self.log("Por favor, inicia sesión en el navegador abierto.")
+
+        try:
+            # Esperar hasta que un elemento con el selector CSS '.message-content.js-messageContent' esté presente
+            WebDriverWait(driver, 300).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.message-content.js-messageContent'))
+            )
+            cookies = driver.get_cookies()
+        except Exception as e:
+            self.log(f"Error al esperar el inicio de sesión: {e}")
+            cookies = None
+        finally:
+            driver.quit()
+
+        if cookies:
+            # Guardar cookies en un archivo
+            self.save_cookies_to_file(cookies, cookies_file)
         return cookies
 
     def set_cookies_in_scraper(self, cookies):
@@ -67,7 +101,7 @@ class SimpCity:
     def fetch_page(self, url):
         """ Realiza una solicitud GET usando cloudscraper. """
         try:
-            # Obtener cookies con Selenium
+            # Obtener cookies con Selenium solo si no están guardadas
             cookies = self.get_cookies_with_selenium(url)
             self.set_cookies_in_scraper(cookies)
 
@@ -216,7 +250,7 @@ class SimpCity:
                 self.update_progress_callback(0, total_size, file_id=file_id, file_path=path)
 
             with open(path, 'wb') as file:
-                for chunk in response.iter_content(1024):
+                for chunk in response.iter_content(1024 * 10):  # Leer en chunks de 10KB
                     if self.cancel_requested:
                         self.log("Descarga cancelada durante la escritura del archivo.")
                         file.close()
@@ -224,7 +258,8 @@ class SimpCity:
                         return
                     file.write(chunk)
                     downloaded_size += len(chunk)
-                    if self.update_progress_callback:
+                    # Actualizar el progreso cada 100KB descargados
+                    if downloaded_size % (1024 * 100) == 0 and self.update_progress_callback:
                         self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=path)
 
             self.log(f"Imagen descargada: {path}")
