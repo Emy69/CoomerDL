@@ -16,7 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 class SimpCity:
-    def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None):
+    def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, tr=None):
         self.download_folder = download_folder
         self.max_workers = max_workers
         self.descargadas = set()
@@ -29,6 +29,7 @@ class SimpCity:
         self.completed_files = 0
         self.download_queue = queue.Queue()
         self.scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+        self.tr = tr
 
     def log(self, message):
         if self.log_callback:
@@ -37,7 +38,7 @@ class SimpCity:
     def request_cancel(self):
         """ Solicita cancelar las descargas en curso. """
         self.cancel_requested = True
-        self.log("Descarga cancelada por el usuario.")
+        self.log(self.tr("Descarga cancelada por el usuario."))
 
     def start_download_thread(self, url):
         """ Inicia un hilo para manejar las descargas. """
@@ -48,17 +49,17 @@ class SimpCity:
         """ Guarda las cookies en un archivo JSON. """
         with open(file_path, 'w') as file:
             json.dump(cookies, file)
-        self.log(f"Cookies guardadas en {file_path}")
+        self.log(self.tr("Cookies guardadas en {file_path}").format(file_path=file_path))
 
     def load_cookies_from_file(self, file_path):
         """ Carga las cookies desde un archivo JSON. """
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 cookies = json.load(file)
-            self.log(f"Cookies cargadas desde {file_path}")
+            self.log(self.tr("Cookies cargadas desde {file_path}").format(file_path=file_path))
             return cookies
         else:
-            self.log(f"No se encontró el archivo de cookies: {file_path}")
+            self.log(self.tr("No se encontró el archivo de cookies: {file_path}").format(file_path=file_path))
             return None
 
     def get_cookies_with_selenium(self, url, cookies_file='resources/config/cookies.json'):
@@ -75,7 +76,7 @@ class SimpCity:
         driver = webdriver.Chrome(options=options)
         driver.get(url)
 
-        self.log("Por favor, inicia sesión en el navegador abierto.")
+        self.log(self.tr("Por favor, inicia sesión en el navegador abierto."))
 
         try:
             # Esperar hasta que un elemento con el selector CSS '.message-content.js-messageContent' esté presente
@@ -84,7 +85,7 @@ class SimpCity:
             )
             cookies = driver.get_cookies()
         except Exception as e:
-            self.log(f"Error al esperar el inicio de sesión: {e}")
+            self.log(self.tr("Error al esperar el inicio de sesión: {e}").format(e=e))
             cookies = None
         finally:
             driver.quit()
@@ -101,29 +102,37 @@ class SimpCity:
     def fetch_page(self, url):
         """ Realiza una solicitud GET usando cloudscraper. """
         try:
-            # Obtener cookies con Selenium solo si no están guardadas
-            cookies = self.get_cookies_with_selenium(url)
-            self.set_cookies_in_scraper(cookies)
+            # Cargar cookies desde el archivo si existe
+            cookies = self.load_cookies_from_file('resources/config/cookies.json')
+            if cookies:
+                self.set_cookies_in_scraper(cookies)
 
             response = self.scraper.get(url)
             if response.status_code == 403:
-                self.log("Acceso prohibido. Intentando de nuevo...")
-                time.sleep(5)  # Esperar antes de reintentar
-                response = self.scraper.get(url)
+                self.log(self.tr("Acceso prohibido. Intentando de nuevo..."))
+
+                # Abrir el navegador para que el usuario inicie sesión y resuelva el captcha
+                cookies = self.get_cookies_with_selenium(url)
+                if cookies:
+                    self.set_cookies_in_scraper(cookies)
+                    response = self.scraper.get(url)
+                else:
+                    self.log(self.tr("No se pudieron obtener nuevas cookies elimina el archivo de cookies y vuelve a intentarlo."))
+
             return response
         except requests.exceptions.RequestException as e:
-            self.log(f"Error al acceder a {url}: {e}")
+            self.log(self.tr("Error al acceder a {url}: {e}").format(url=url, e=e))
             return None
 
     def download_images_from_simpcity(self, url):
         """ Descarga las imágenes desde una URL específica de SimpCity. """
-        self.log(f"Accediendo a {url}")
+        self.log(self.tr("Accediendo a {url}").format(url=url))
         
         # Procesar solo la página proporcionada
         self.process_page(url)
 
         if not self.cancel_requested:
-            self.log("Descarga de la página completada.")
+            self.log(self.tr("Descarga de la página completada."))
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
 
@@ -165,16 +174,16 @@ class SimpCity:
                                     futures.append(executor.submit(self.download_image_from_link, imagen_url, download_folder))
                                     self.descargadas.add(imagen_url)
                                 else:
-                                    self.log(f"Imagen ya descargada, saltando: {imagen_url}")
+                                    self.log(self.tr("Imagen ya descargada, saltando: {imagen_url}").format(imagen_url=imagen_url))
                         
                         # Esperar a que todas las descargas del bbWrapper terminen
                         for future in as_completed(futures):
                             try:
                                 future.result()  # Manejar excepciones aquí si es necesario
                             except Exception as e:
-                                self.log(f"Error al descargar: {e}")
+                                self.log(self.tr("Error al descargar: {e}").format(e=str(e)))
         else:
-            self.log(f"Error al acceder a {url}: Código de estado {response.status_code}")
+            self.log(self.tr("Error al acceder a {url}: Código de estado {status_code}").format(url=url, status_code=response.status_code))
 
     def start_download_workers(self):
         """ Inicia los trabajadores para descargar imágenes. """
@@ -188,28 +197,28 @@ class SimpCity:
                 if len(futures) >= self.max_workers:
                     for future in as_completed(futures):
                         if self.cancel_requested:
-                            self.log("Descarga cancelada durante el proceso.")
+                            self.log(self.tr("Descarga cancelada durante el proceso."))
                             break
                         try:
                             future.result()  # Manejar excepciones aquí si es necesario
                         except Exception as e:
-                            self.log(f"Error al descargar: {e}")
+                            self.log(self.tr("Error al descargar: {e}").format(e=e))
                     futures = []  # Resetear la lista de futuros para el siguiente lote
 
             # Asegurarse de que todas las tareas restantes se completen
             for future in as_completed(futures):
                 if self.cancel_requested:
-                    self.log("Descarga cancelada durante el proceso.")
+                    self.log(self.tr("Descarga cancelada durante el proceso."))
                     break
                 try:
                     future.result()  # Manejar excepciones aquí si es necesario
                 except Exception as e:
-                    self.log(f"Error al descargar: {e}")
+                    self.log(self.tr("Error al descargar: {e}").format(e=e))
 
     def download_image_from_link(self, imagen_url, download_folder):
         """ Descarga una imagen desde el enlace especificado. """
         if self.cancel_requested:
-            self.log("Descarga cancelada.")
+            self.log(self.tr("Descarga cancelada."))
             return
         
         response = self.scraper.get(imagen_url)
@@ -229,12 +238,12 @@ class SimpCity:
                     
                     self.save_image(image_url, destination_path, file_id=image_url)
         else:
-            self.log(f"Error al acceder a {imagen_url}: Código de estado {response.status_code}")
+            self.log(self.tr("Error al acceder a {imagen_url}: Código de estado {response.status_code}").format(imagen_url=imagen_url, status_code=response.status_code))
 
     def save_image(self, image_url, path, file_id=None):
         """ Guarda la imagen desde la URL al destino especificado. """
         if os.path.exists(path):
-            self.log(f"Archivo ya existe, saltando: {path}")
+            self.log(self.tr("File already exists, skipping: {path}").format(path=path))
             self.completed_files += 1
             if self.update_global_progress_callback:
                 self.update_global_progress_callback(self.completed_files, self.total_files)
@@ -252,7 +261,7 @@ class SimpCity:
             with open(path, 'wb') as file:
                 for chunk in response.iter_content(1024 * 10):  # Leer en chunks de 10KB
                     if self.cancel_requested:
-                        self.log("Descarga cancelada durante la escritura del archivo.")
+                        self.log(self.tr("Descarga cancelada durante la escritura del archivo."))
                         file.close()
                         os.remove(path)
                         return
@@ -262,9 +271,9 @@ class SimpCity:
                     if downloaded_size % (1024 * 100) == 0 and self.update_progress_callback:
                         self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=path)
 
-            self.log(f"Imagen descargada: {path}")
+            self.log(self.tr("Imagen descargada: {path}").format(path=path))
             self.completed_files += 1
             if self.update_global_progress_callback:
                 self.update_global_progress_callback(self.completed_files, self.total_files)
         else:
-            self.log(f"Error al descargar la imagen: {image_url}")
+            self.log(self.tr("Error al descargar la imagen: {image_url}").format(image_url=image_url))

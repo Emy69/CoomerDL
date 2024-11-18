@@ -11,15 +11,16 @@ from tkinter import filedialog, messagebox, scrolledtext
 from typing import Optional
 from urllib.parse import ParseResult, parse_qs, urlparse
 import webbrowser
-
+import requests
+from PIL import Image
 import customtkinter as ctk
-from customtkinter import CTkImage
 from PIL import Image, ImageTk
 import psutil
 
-from app.patch_notes import PatchNotes
+#from app.patch_notes import PatchNotes
 from app.settings_window import SettingsWindow
 #from app.user_panel import UserPanel
+from app.about_window import AboutWindow
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
@@ -65,6 +66,9 @@ class ImageDownloaderApp(ctk.CTk):
         # Settings window
         self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION, self)
 
+        # About window
+        self.about_window = AboutWindow(self, self.tr, VERSION)  # Inicializa AboutWindow
+
         # Load settings
         self.settings = self.settings_window.load_settings()
         
@@ -74,10 +78,16 @@ class ImageDownloaderApp(ctk.CTk):
         self.image_downloader = None
 
         # Patch notes
-        self.patch_notes = PatchNotes(self, self.tr)
+        #self.patch_notes = PatchNotes(self, self.tr)
 
         self.progress_bars = {}
         
+        # Obtener el número de estrellas de GitHub
+        self.github_stars = self.get_github_stars("emy69", "CoomerDL")
+
+        # Cargar el icono de GitHub
+        self.github_icon = self.load_github_icon()
+
         # Initialize UI
         self.initialize_ui()
         
@@ -305,12 +315,6 @@ class ImageDownloaderApp(ctk.CTk):
         if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
             self.archivo_menu_frame.destroy()
             self.toggle_archivo_menu()
-        if self.ayuda_menu_frame and self.ayuda_menu_frame.winfo_exists():
-            self.ayuda_menu_frame.destroy()
-            self.toggle_ayuda_menu()
-        if self.donaciones_menu_frame and self.donaciones_menu_frame.winfo_exists():
-            self.donaciones_menu_frame.destroy()
-            self.toggle_donaciones_menu()
 
         self.url_label.configure(text=self.tr("URL de la página web:"))
         self.browse_button.configure(text=self.tr("Seleccionar Carpeta"))
@@ -370,35 +374,89 @@ class ImageDownloaderApp(ctk.CTk):
         archivo_button.pack(side="left")
         archivo_button.bind("<Button-1>", lambda e: "break")
 
-        # Botón Ayuda
-        ayuda_button = ctk.CTkButton(
+        # Botón About
+        about_button = ctk.CTkButton(
             self.menu_bar,
-            text=self.tr("Ayuda"),
+            text=self.tr("About"),
             width=80,
             fg_color="transparent",
             hover_color="gray25",
-            command=self.toggle_ayuda_menu
+            command=self.about_window.show_about 
         )
-        ayuda_button.pack(side="left")
-        ayuda_button.bind("<Button-1>", lambda e: "break")
-
-        # Botón Donaciones
-        donaciones_button = ctk.CTkButton(
-            self.menu_bar,
-            text=self.tr("Donaciones"),
-            width=80,
-            fg_color="transparent",
-            hover_color="gray25",
-            command=self.toggle_donaciones_menu
-        )
-        donaciones_button.pack(side="left")
-        donaciones_button.bind("<Button-1>", lambda e: "break")
+        about_button.pack(side="left")
+        about_button.bind("<Button-1>", lambda e: "break")
 
         # Inicializar variables para los menús desplegables
         self.archivo_menu_frame = None
         self.ayuda_menu_frame = None
         self.donaciones_menu_frame = None
 
+        # Función para cambiar el fondo al pasar el ratón
+        def on_enter(event, frame):
+            frame.configure(fg_color="gray25")
+
+        def on_leave(event, frame):
+            frame.configure(fg_color="transparent")
+
+        # Añadir el icono de GitHub y el contador de estrellas
+        if self.github_icon:
+            resized_github_icon = self.github_icon.resize((16, 16), Image.Resampling.LANCZOS)
+            resized_github_icon = ctk.CTkImage(resized_github_icon)
+            github_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            github_frame.pack(side="right", padx=5)
+            github_label = ctk.CTkLabel(
+                github_frame,
+                image=resized_github_icon,
+                text=f" Star {self.github_stars}",
+                compound="left",
+                font=("Arial", 12)
+            )
+            github_label.pack(padx=5, pady=5)
+            github_frame.bind("<Enter>", lambda e: on_enter(e, github_frame))
+            github_frame.bind("<Leave>", lambda e: on_leave(e, github_frame))
+            github_label.bind("<Enter>", lambda e: on_enter(e, github_frame))
+            github_label.bind("<Leave>", lambda e: on_leave(e, github_frame))
+            github_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/emy69/CoomerDL"))
+
+        # Añadir el icono de Discord
+        self.discord_icon = self.load_discord_icon()
+        if self.discord_icon:
+            resized_discord_icon = self.discord_icon.resize((16, 16), Image.Resampling.LANCZOS)
+            resized_discord_icon = ctk.CTkImage(resized_discord_icon)
+            discord_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            discord_frame.pack(side="right", padx=5)
+            discord_label = ctk.CTkLabel(
+                discord_frame,
+                image=resized_discord_icon,
+                text="Discord",
+                compound="left"
+            )
+            discord_label.pack(padx=5, pady=5)
+            discord_frame.bind("<Enter>", lambda e: on_enter(e, discord_frame))
+            discord_frame.bind("<Leave>", lambda e: on_leave(e, discord_frame))
+            discord_label.bind("<Enter>", lambda e: on_enter(e, discord_frame))
+            discord_label.bind("<Leave>", lambda e: on_leave(e, discord_frame))
+            discord_label.bind("<Button-1>", lambda e: webbrowser.open("https://discord.gg/ku8gSPsesh"))
+
+        # Añadir un nuevo icono PNG
+        self.new_icon = self.load_new_icon()
+        if self.new_icon:
+            resized_new_icon = self.new_icon.resize((16, 16), Image.Resampling.LANCZOS)
+            resized_new_icon = ctk.CTkImage(resized_new_icon)
+            new_icon_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            new_icon_frame.pack(side="right", padx=5)
+            new_icon_label = ctk.CTkLabel(
+                new_icon_frame,
+                image=resized_new_icon,
+                text="Support",
+                compound="left"
+            )
+            new_icon_label.pack(padx=5, pady=5)
+            new_icon_frame.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
+            new_icon_frame.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
+            new_icon_label.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
+            new_icon_label.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
+            new_icon_label.bind("<Button-1>", lambda e: webbrowser.open("https://buymeacoffee.com/emy_69"))
 
     def toggle_archivo_menu(self):
         if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
@@ -411,28 +469,6 @@ class ImageDownloaderApp(ctk.CTk):
                 (self.tr("Salir"), self.quit),
             ], x=0)
 
-    def toggle_ayuda_menu(self):
-        if self.ayuda_menu_frame and self.ayuda_menu_frame.winfo_exists():
-            self.ayuda_menu_frame.destroy()
-        else:
-            self.close_all_menus()
-            self.ayuda_menu_frame = self.create_menu_frame([
-                (self.tr("Notas de Parche"), self.open_patch_notes),
-                ("separator", None),
-                (self.tr("Reportar un Error"), None),
-                (f"   {self.tr('GitHub')}", lambda: webbrowser.open("https://github.com/Emy69/CoomerDL/issues")),
-                (f"   {self.tr('Discord')}", lambda: webbrowser.open("https://discord.gg/ku8gSPsesh")),
-            ], x=80)
-
-    def toggle_donaciones_menu(self):
-        if self.donaciones_menu_frame and self.donaciones_menu_frame.winfo_exists():
-            self.donaciones_menu_frame.destroy()
-        else:
-            self.close_all_menus()
-            self.donaciones_menu_frame = self.create_menu_frame([
-                (self.tr("PayPal"), lambda: webbrowser.open("https://www.paypal.com/paypalme/Emy699")),
-                (self.tr("Buy me a coffee"), lambda: webbrowser.open("https://buymeacoffee.com/emy_69")),
-            ], x=160)
 
     def create_menu_frame(self, options, x):
         # Crear el marco del menú con fondo oscuro y borde de sombra para resaltar
@@ -476,10 +512,6 @@ class ImageDownloaderApp(ctk.CTk):
             if menu_frame and menu_frame.winfo_exists():
                 menu_frame.destroy()
 
-
-    def open_patch_notes(self):
-        self.patch_notes.show_patch_notes()
-
     # Image processing
     def create_photoimage(self, path, size=(32, 32)):
         img = Image.open(path)
@@ -512,7 +544,8 @@ class ImageDownloaderApp(ctk.CTk):
             log_callback=self.add_log_message_safe,
             enable_widgets_callback=self.enable_widgets,
             update_progress_callback=self.update_progress,
-            update_global_progress_callback=self.update_global_progress
+            update_global_progress_callback=self.update_global_progress,
+            tr=self.tr
         )
 
     def setup_bunkr_downloader(self):
@@ -878,12 +911,12 @@ class ImageDownloaderApp(ctk.CTk):
                 f"{self.tr('Archivos fallidos')}:\n{failed_files_summary}\n\n"
             )
 
-            with open(log_file_path, 'w') as file:
+            with open(log_file_path, 'w', encoding='utf-8') as file:
                 file.write(summary)
                 file.write(self.log_textbox.get("1.0", tk.END))
             self.add_log_message_safe(self.tr("Logs exportados exitosamente a {path}", path=log_file_path))
         except Exception as e:
-            self.add_log_message_safe(self.tr(f"No se pudo exportar los logs: {e}"))
+            self.add_log_message_safe(self.tr("No se pudo exportar los logs: {e}", e=e))
 
     # Clipboard operations
     def copy_to_clipboard(self):
@@ -978,3 +1011,31 @@ class ImageDownloaderApp(ctk.CTk):
 
     def on_hover_leave(self, event):
         self.folder_path.configure(font=("Arial", 13))  # Quitar el subrayado al salir el ratón
+
+    def get_github_stars(self, user, repo):
+        try:
+            response = requests.get(f"https://api.github.com/repos/{user}/{repo}")
+            response.raise_for_status()
+            data = response.json()
+            return data.get("stargazers_count", 0)
+        except requests.RequestException as e:
+            self.add_log_message_safe(f"Error al obtener las estrellas de GitHub: {e}")
+            return 0
+
+    def load_icon(self, icon_path, icon_name):
+        try:
+            img = Image.open(icon_path)
+            return img  # Devuelve la imagen de PIL
+        except Exception as e:
+            self.add_log_message_safe(f"Error al cargar el icono {icon_name}: {e}")
+            return None
+
+    # Uso de la función genérica para cargar íconos específicos
+    def load_github_icon(self):
+        return self.load_icon("resources/img/github-logo-24.png", "GitHub")
+
+    def load_discord_icon(self):
+        return self.load_icon("resources/img/discord-alt-logo-24.png", "Discord")
+
+    def load_new_icon(self):
+        return self.load_icon("resources/img/dollar-circle-solid-24.png", "New Icon")
