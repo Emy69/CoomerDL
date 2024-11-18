@@ -1,13 +1,16 @@
 import json
 import os
+import shutil
+import sys
 import threading
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk
 from PIL import Image as PilImage
 import webbrowser
 import requests
+import patoolib
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json'  # Path to the configuration JSON file.
@@ -74,7 +77,7 @@ class SettingsWindow:
 
         # Crear botones de navegación
         self.create_nav_button(nav_frame, "General", self.show_general_settings)
-        self.create_nav_button(nav_frame, "About", self.show_about)
+        #self.create_nav_button(nav_frame, "About", self.show_about)
 
         # Mostrar la pestaña de General por defecto
         self.show_general_settings()
@@ -182,90 +185,9 @@ class SettingsWindow:
         update_button = ctk.CTkButton(self.content_frame, text=self.translate("Check"), command=self.check_for_updates)
         update_button.pack(pady=10)
 
-    def show_about(self):
-        self.clear_frame(self.content_frame)
-
-        # Crear un marco para el contenido
-        about_frame = ctk.CTkFrame(self.content_frame)
-        about_frame.pack(pady=20, padx=20, fill="both", expand=True)
-
-        # Título de la sección con estilo
-        about_label = ctk.CTkLabel(about_frame, text=self.translate("About"), font=("Helvetica", 24, "bold"))
-        about_label.pack(pady=(10, 5))
-
-        # Separador personalizado
-        separator = ctk.CTkFrame(about_frame, height=2, fg_color="gray")
-        separator.pack(fill='x', padx=20, pady=10)
-
-        # Descripción del software con estilo
-        description_text = f"""
-    {self.translate("Developed by")}: Emy69
-
-    {self.translate("Version")}: {self.version}
-
-    {self.translate("This application is designed to help users download and manage media content efficiently from various online sources.")}
-        """
-        description_label = ctk.CTkLabel(about_frame, text=description_text, font=("Helvetica", 14), wraplength=600, justify="left")
-        description_label.pack(pady=10, padx=20)
-
-        # Enlace al repositorio de GitHub con estilo
-        repo_link = ctk.CTkButton(about_frame, text="GitHub: Emy69/CoomerDL", command=lambda: webbrowser.open("https://github.com/Emy69/CoomerDL"), hover_color="lightblue")
-        repo_link.pack(pady=10)
-
-        # Separador personalizado antes de los contribuyentes
-        separator2 = ctk.CTkFrame(about_frame, height=2, fg_color="gray")
-        separator2.pack(fill='x', padx=20, pady=10)
-
-        # Sección de contribuyentes con estilo
-        contributors_label = ctk.CTkLabel(about_frame, text=self.translate("Contributors"), font=("Helvetica", 18, "bold"))
-        contributors_label.pack(pady=(10, 5))
-
-        self.show_contributors(about_frame)
-
-        # Espacio final
-        final_space = ctk.CTkLabel(about_frame, text="", font=("Helvetica", 14))
-        final_space.pack(pady=10)
-
-
-
-    def show_contributors(self, parent_frame):
-        try:
-            response = requests.get("https://api.github.com/repos/Emy69/CoomerDL/contributors")
-            response.raise_for_status()
-            contributors = response.json()
-
-            for contributor in contributors:
-                frame = ctk.CTkFrame(parent_frame)
-                frame.pack(fill='x', padx=20, pady=10)
-
-                avatar_url = contributor["avatar_url"]
-                avatar_image = Image.open(requests.get(avatar_url, stream=True).raw)
-                avatar_image = avatar_image.resize((50, 50), PilImage.Resampling.LANCZOS)
-                avatar_photo = ImageTk.PhotoImage(avatar_image)
-
-                avatar_label = tk.Label(frame, image=avatar_photo)
-                avatar_label.image = avatar_photo  # Guardar referencia para evitar recolección de basura
-                avatar_label.pack(side="left", padx=10)
-
-                name_label = ctk.CTkLabel(frame, text=contributor["login"], font=("Helvetica", 14))
-                name_label.pack(side="left", padx=10)
-
-                link_button = ctk.CTkButton(
-                    frame,
-                    text=self.translate("Profile"),
-                    command=lambda url=contributor["html_url"]: webbrowser.open(url)
-                )
-                link_button.pack(side="left", padx=10)
-
-        except requests.RequestException as e:
-            messagebox.showerror(
-                self.translate("Error"),
-                self.translate(f"Failed to load contributors.\nError: {e}")
-            )
-
 
     def check_for_updates(self):
-        api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"
+        api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"  
 
         try:
             response = requests.get(api_url)
@@ -274,16 +196,100 @@ class SettingsWindow:
             latest_version = latest_release["tag_name"].lstrip('v')
 
             if latest_version != self.version.lstrip('v'):
-                if messagebox.askyesno(self.translate("Update Available"),
-                                       self.translate(f"A new version is available: {latest_version}\n"
-                                                      "Would you like to go to the download page?")):
-                    webbrowser.open("https://github.com/Emy69/CoomerDL/releases")
+                # Buscar el URL de descarga
+                download_url = None
+                for asset in latest_release['assets']:
+                    if asset['name'].endswith(('.zip', '.rar')): 
+                        download_url = asset['browser_download_url']
+                        break
+
+                if download_url:
+                    if messagebox.askyesno("Update Available", f"A new version {latest_version} is available.\nWould you like to download and install it?"):
+                        if self.download_and_replace(download_url):
+                            messagebox.showinfo("Update", "The application has been updated. Please restart the application.")
+                            sys.exit(0)  
+                else:
+                    messagebox.showerror("Update Error", "No downloadable asset found.")
             else:
-                messagebox.showinfo(self.translate("Update"),
-                                    self.translate("Your software is up to date."))
+                messagebox.showinfo("Update", "Your software is up to date.")
         except requests.RequestException as e:
-            messagebox.showerror(self.translate("Error"),
-                                 self.translate(f"Unable to check for updates.\nError: {e}"))
+            messagebox.showerror("Error", f"Unable to check for updates.\nError: {e}")
+
+    def download_and_replace(self, url):
+        # Crear una nueva ventana para mostrar el progreso
+        progress_window = tk.Toplevel(self.parent)
+        progress_window.title(self.translate("Progress"))
+        progress_window.geometry("300x100")
+        progress_window.transient(self.parent)  
+        progress_window.grab_set()  
+
+        # Centrar la ventana de progreso
+        self.center_window(progress_window, 300, 100)
+        
+        # Barra de progreso para la descarga
+        download_progress = ttk.Progressbar(progress_window, orient='horizontal', length=280, mode='determinate')
+        download_progress.pack(pady=10)
+        
+        # Etiqueta para mostrar el estado actual
+        status_label = tk.Label(progress_window, text=self.translate("Downloading..."))
+        status_label.pack(pady=5)
+        
+        # Extraer el nombre del archivo de la URL
+        file_name = url.split('/')[-1]
+        
+        # Preguntar al usuario dónde guardar el archivo descargado
+        filetypes = [('ZIP files', '*.zip'), ('RAR files', '*.rar')]
+        save_path = filedialog.asksaveasfilename(title="Save As", initialfile=file_name, defaultextension=".zip", filetypes=filetypes)
+        if not save_path:
+            messagebox.showinfo("Cancelled", "Download cancelled by user.")
+            progress_window.destroy()
+            return False
+        
+        # Descargar el archivo 
+        response = requests.get(url, stream=True)
+        total_length = int(response.headers.get('content-length', 0))
+        with open(save_path, "wb") as file:
+            for data in response.iter_content(chunk_size=4096):
+                file.write(data)
+                download_progress['value'] += len(data) / total_length * 100
+                progress_window.update_idletasks()
+        
+        # Actualizar el estado para la descompresión
+        status_label.config(text=self.translate("Extracting..."))
+        progress_window.update_idletasks()
+        
+        # Preguntar al usuario dónde descomprimir el archivo
+        target_directory = filedialog.askdirectory(title="Select Directory to Extract Files")
+        if not target_directory:
+            messagebox.showinfo("Cancelled", "Extraction cancelled by user.")
+            progress_window.destroy()
+            return False
+        
+        # Usar patoolib para descomprimir el archivo
+        try:
+            patoolib.extract_archive(save_path, outdir=target_directory)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to extract files.\nError: {e}")
+            progress_window.destroy()
+            return False
+        
+        # Limpiar archivo de actualización
+        os.remove(save_path)
+        messagebox.showinfo("Success", "Files extracted successfully.")
+        progress_window.destroy()
+        return True
+
+    def select_chrome_profile_folder(self):
+        folder_path = filedialog.askdirectory(title=self.translate("Select Chrome Profile Folder"))
+        if folder_path:
+            self.settings['chrome_profile_folder'] = folder_path
+            self.save_settings()
+            messagebox.showinfo(self.translate("Success"), self.translate("Chrome profile folder saved successfully."))
+
+    def save_settings(self):
+        with open('resources/config/settings.json', 'w') as f:
+            json.dump(self.settings, f)
+
 
     def change_theme_in_thread(self, selected_theme):
         threading.Thread(target=self.apply_theme, args=(selected_theme,)).start()

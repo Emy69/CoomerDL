@@ -1,5 +1,132 @@
 {   
-    
+    "Descarga cancelada por el usuario.": {
+        "es": "Descarga cancelada por el usuario.",
+        "en": "Download canceled by the user.",
+        "fr": "Téléchargement annulé par l'utilisateur.",
+        "ja": "ユーザーによってダウンロードがキャンセルされました。",
+        "ru": "Загрузка отменена пользователем.",
+        "zh": "用户取消下载。"
+    },
+    "Acceso prohibido. Intentando de nuevo...": {
+        "es": "Acceso prohibido. Intentando de nuevo...",
+        "en": "Access forbidden. Trying again...",
+        "fr": "Accès interdit. Nouvelle tentative...",
+        "ja": "アクセスが禁止されています。再試行中...",
+        "ru": "Доступ запрещен. Повторная попытка...",
+        "zh": "访问被禁止。再试一次..."
+    },
+    "Por favor, inicia sesión en el navegador abierto.": {
+        "es": "Por favor, inicia sesión en el navegador abierto.",
+        "en": "Please log in to the open browser.",
+        "fr": "Veuillez vous connecter au navigateur ouvert.",
+        "ja": "開いているブラウザにログインしてください。",
+        "ru": "Пожалуйста, войдите в открытый браузер.",
+        "zh": "请登录到打开的浏览器。"
+    },
+    "Error al esperar el inicio de sesión: {e}": {
+        "es": "Error al esperar el inicio de sesión: {e}",
+        "en": "Error waiting for login: {e}",
+        "fr": "Erreur lors de l'attente de la connexion : {e}",
+        "ja": "ログインを待っている間にエラーが発生しました：{e}",
+        "ru": "Ошибка ожидания входа: {e}",
+        "zh": "等待登录时出错：{e}"
+    },
+    "Cookies guardadas en {file_path}": {
+        "es": "Cookies guardadas en {file_path}",
+        "en": "Cookies saved to {file_path}",
+        "fr": "Cookies enregistrés dans {file_path}",
+        "ja": "クッキーが {file_path} に保存されました",
+        "ru": "Cookies сохранены в {file_path}",
+        "zh": "Cookies 保存到 {file_path}"
+    },
+    "Cookies cargadas desde {file_path}": {
+        "es": "Cookies cargadas desde {file_path}",
+        "en": "Cookies loaded from {file_path}",
+        "fr": "Cookies chargés depuis {file_path}",
+        "ja": "クッキーが {file_path} から読み込まれました",
+        "ru": "Cookies загружены из {file_path}",
+        "zh": "Cookies 从 {file_path} 加载"
+    },
+    "No se encontró el archivo de cookies: {file_path}": {
+        "es": "No se encontró el archivo de cookies: {file_path}",
+        "en": "Cookie file not found: {file_path}",
+        "fr": "Fichier de cookies introuvable : {file_path}",
+        "ja": "クッキーファイルが見つかりません：{file_path}",
+        "ru": "Файл cookies не найден: {file_path}",
+        "zh": "未找到 cookie 文件：{file_path}"
+    },
+    "Error al acceder a {url}: {e}": {
+        "es": "Error al acceder a {url}: {e}",
+        "en": "Error accessing {url}: {e}",
+        "fr": "Erreur d'accès à {url} : {e}",
+        "ja": "{url} にアクセス中のエラー：{e}",
+        "ru": "Ошибка доступа к {url}: {e}",
+        "zh": "访问 {url} 时出错：{e}"
+    },
+    "Imagen ya descargada, saltando: {imagen_url}": {
+        "es": "Imagen ya descargada, saltando: {imagen_url}",
+        "en": "Image already downloaded, skipping: {imagen_url}",
+        "fr": "Image déjà téléchargée, passage : {imagen_url}",
+        "ja": "画像はすでにダウンロードされています。スキップします：{imagen_url}",
+        "ru": "Изображение уже загружено, пропуск: {imagen_url}",
+        "zh": "图像已下载，跳过：{imagen_url}"
+    },
+    "Error al descargar: {e}": {
+        "es": "Error al descargar: {e}",
+        "en": "Error downloading: {e}",
+        "fr": "Erreur de téléchargement : {e}",
+        "ja": "ダウンロード中のエラー：{e}",
+        "ru": "Ошибка при загрузке: {e}",
+        "zh": "下载错误：{e}"
+    },
+    "Descarga cancelada durante el proceso.": {
+        "es": "Descarga cancelada durante el proceso.",
+        "en": "Download canceled during the process.",
+        "fr": "Téléchargement annulé pendant le processus.",
+        "ja": "プロセス中にダウンロードがキャンセルされました。",
+        "ru": "Загрузка отменена во время процесса.",
+        "zh": "下载过程中取消。"
+    },
+    "Error al acceder a {imagen_url}: Código de estado {response.status_code}": {
+        "es": "Error al acceder a {imagen_url}: Código de estado {response.status_code}",
+        "en": "Error accessing {imagen_url}: Status code {response.status_code}",
+        "fr": "Erreur d'accès à {imagen_url} : Code d'état {response.status_code}",
+        "ja": "{imagen_url} にアクセス中のエラー：ステータスコード {response.status_code}",
+        "ru": "Ошибка доступа к {imagen_url}: Код состояния {response.status_code}",
+        "zh": "访问 {imagen_url} 时出错：状态代码 {response.status_code}"
+    },
+    "Imagen descargada: {path}": {
+        "es": "Imagen descargada: {path}",
+        "en": "Image downloaded: {path}",
+        "fr": "Image téléchargée : {path}",
+        "ja": "画像がダウンロードされました：{path}",
+        "ru": "Изображение загружено: {path}",
+        "zh": "图像已下载：{path}"
+    },
+    "Error al descargar la imagen: {image_url}": {
+        "es": "Error al descargar la imagen: {image_url}",
+        "en": "Error downloading image: {image_url}",
+        "fr": "Erreur de téléchargement de l'image : {image_url}",
+        "ja": "画像のダウンロード中にエラーが発生しました：{image_url}",
+        "ru": "Ошибка при загрузке изображения: {image_url}",
+        "zh": "下载图像时出错：{image_url}"
+    },
+    "Accediendo a {url}": {
+        "es": "Accediendo a {url}",
+        "en": "Accessing {url}",
+        "fr": "Accès à {url}",
+        "ja": "{url} にアクセスしています",
+        "ru": "Доступ к {url}",
+        "zh": "正在访问 {url}"
+    },
+    "Descarga de la página completada.": {
+        "es": "Descarga de la página completada.",
+        "en": "Page download completed.",
+        "fr": "Téléchargement de la page terminé.",
+        "ja": "ページのダウンロードが完了しました。",
+        "ru": "Загрузка страницы завершена.",
+        "zh": "页面下载完成。"
+    },
     "General": {
         "es": "Opciones Generales",
         "en": "General Options",
