@@ -25,8 +25,9 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 from downloader.simpcity import SimpCity
+from downloader.jpg5 import Jpg5Downloader
 
-VERSION = "CoomerV0.7.2.1"
+VERSION = "CoomerV0.8"
 MAX_LOG_LINES = 50  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -580,6 +581,17 @@ class ImageDownloaderApp(ctk.CTk):
             max_workers=self.max_downloads,
             folder_structure=self.settings_window.settings.get('folder_structure', 'default')
         )
+    
+    def setup_jpg5_downloader(self):
+        self.active_downloader = Jpg5Downloader(
+            url=self.url_entry.get().strip(),
+            carpeta_destino=self.download_folder,
+            log_callback=self.add_log_message_safe,
+            tr=self.tr,
+            update_progress_callback=self.update_progress,
+            update_global_progress_callback=self.update_global_progress,
+            max_workers=self.max_downloads
+        )
 
     # Folder selection
     def select_folder(self):
@@ -788,6 +800,13 @@ class ImageDownloaderApp(ctk.CTk):
             self.active_downloader = self.simpcity_downloader
             # Iniciar la descarga en un hilo separado
             download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.download_images_from_simpcity, url))
+        
+        elif "jpg5.su" in url:
+            self.add_log_message_safe(self.tr("Descargando desde Jpg5"))
+            self.setup_jpg5_downloader()
+            
+            # Usar wrapped_download para manejar la descarga
+            download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.descargar_imagenes,))
         
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
