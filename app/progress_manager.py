@@ -46,8 +46,8 @@ class ProgressManager:
                     self.progress_percentage.configure(text=f"{percentage:.2f}%")
             else:
                 if file_id not in self.progress_bars:
-                    # Ocultar el mensaje de "No hay descargas"
-                    if self.no_downloads_label.winfo_exists():
+                    # Asegúrate de que no_downloads_label esté inicializado
+                    if self.no_downloads_label and self.no_downloads_label.winfo_exists():
                         self.no_downloads_label.pack_forget()
 
                     file_name = os.path.basename(file_path)
