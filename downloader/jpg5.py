@@ -3,9 +3,10 @@ from bs4 import BeautifulSoup
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from app import progress_manager
 
 class Jpg5Downloader:
-    def __init__(self, url, carpeta_destino, log_callback=None, tr=None, update_progress_callback=None, update_global_progress_callback=None, max_workers=3):
+    def __init__(self, url, carpeta_destino, progress_manager, log_callback=None, tr=None, update_progress_callback=None, update_global_progress_callback=None, max_workers=3):
         self.url = url
         self.carpeta_destino = carpeta_destino
         self.log_callback = log_callback
@@ -14,6 +15,7 @@ class Jpg5Downloader:
         self.update_progress_callback = update_progress_callback
         self.update_global_progress_callback = update_global_progress_callback
         self.max_workers = max_workers
+        self.progress_manager = progress_manager
 
     def log(self, message):
         if self.log_callback:

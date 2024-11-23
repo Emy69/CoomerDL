@@ -121,12 +121,12 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Progress manager
         self.progress_manager = ProgressManager(
-            self, 
-            self.icons, 
-            self.footer_speed_label, 
-            self.footer_eta_label,
-            self.progress_bar,
-            self.progress_percentage
+            root=self,
+            icons=self.icons,
+            footer_speed_label=self.footer_speed_label,
+            footer_eta_label=self.footer_eta_label,
+            progress_bar=self.progress_bar,
+            progress_percentage=self.progress_percentage
         )
 
     # Application close event
@@ -608,8 +608,7 @@ class ImageDownloaderApp(ctk.CTk):
             carpeta_destino=self.download_folder,
             log_callback=self.add_log_message_safe,
             tr=self.tr,
-            update_progress_callback=self.update_progress,
-            update_global_progress_callback=self.update_global_progress,
+            progress_manager=self.progress_manager,
             max_workers=self.max_downloads
         )
 

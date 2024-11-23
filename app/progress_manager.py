@@ -11,6 +11,7 @@ class ProgressManager:
         self.progress_percentage = progress_percentage
         self.progress_bars = {}
         self.progress_window = None
+        self.no_downloads_label = None
 
     def create_progress_window(self):
         if self.progress_window is None or not self.progress_window.winfo_exists():
@@ -18,13 +19,25 @@ class ProgressManager:
             self.progress_window.title("Detalles de Descarga")
             self.progress_window.geometry("600x500")
             self.progress_window.resizable(True, True)
-            self.progress_window.withdraw()
+            self.progress_window.protocol("WM_DELETE_WINDOW", self.close_progress_window)
 
             self.progress_details_frame = ctk.CTkFrame(self.progress_window)
             self.progress_details_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
+            # Crear el mensaje de "No hay descargas"
+            self.no_downloads_label = ctk.CTkLabel(self.progress_details_frame, text="No hay descargas en cola", font=("Arial", 14))
+            self.no_downloads_label.pack(pady=20)
+
+            # Hacer que la ventana aparezca al frente
+            self.progress_window.transient(self.root)
+            self.progress_window.grab_set()
+
+    def close_progress_window(self):
+        if self.progress_window is not None and self.progress_window.winfo_exists():
+            self.progress_window.grab_release()
+            self.progress_window.withdraw()
+
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
-        self.create_progress_window()
         if total > 0:
             percentage = (downloaded / total) * 100
             if file_id is None:
@@ -33,6 +46,10 @@ class ProgressManager:
                     self.progress_percentage.configure(text=f"{percentage:.2f}%")
             else:
                 if file_id not in self.progress_bars:
+                    # Ocultar el mensaje de "No hay descargas"
+                    if self.no_downloads_label.winfo_exists():
+                        self.no_downloads_label.pack_forget()
+
                     file_name = os.path.basename(file_path)
                     file_extension = os.path.splitext(file_path)[1].lower()
 
@@ -86,8 +103,9 @@ class ProgressManager:
                         eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
                         self.progress_bars[file_id][2].configure(text=eta_text)
 
-                if downloaded >= total:
-                    self.progress_window.after(2000, lambda: self.remove_progress_bar(file_id))
+                # Reordenar las barras de progreso para que las activas estén arriba
+                self.reorder_progress_bars()
+
         else:
             if file_id is None:
                 if self.progress_bar.winfo_exists():
@@ -105,10 +123,21 @@ class ProgressManager:
             self.footer_speed_label.configure(text=speed_text)
             self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
 
+    def reorder_progress_bars(self):
+        # Mover las descargas activas a la parte superior
+        for file_id, (progress_bar, percentage_label, eta_label, progress_bar_frame) in self.progress_bars.items():
+            if progress_bar.winfo_exists() and progress_bar.get() < 1.0:
+                progress_bar_frame.pack_forget()
+                progress_bar_frame.pack(fill='x', padx=5, pady=5)
+
     def remove_progress_bar(self, file_id):
         if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
             self.progress_bars[file_id][3].pack_forget()
             del self.progress_bars[file_id]
+
+        # Mostrar el mensaje de "No hay descargas" si no hay más descargas
+        if not self.progress_bars:
+            self.no_downloads_label.pack(pady=20)
 
     def update_global_progress(self, completed_files, total_files):
         if total_files > 0:
@@ -120,10 +149,11 @@ class ProgressManager:
     def toggle_progress_details(self):
         self.create_progress_window()
         if self.progress_window.winfo_viewable():
-            self.progress_window.withdraw()
+            self.close_progress_window()
         else:
             self.center_progress_details_frame()
             self.progress_window.deiconify()
+            self.progress_window.lift()
 
     def center_progress_details_frame(self):
         if self.progress_window is not None and self.progress_window.winfo_exists():
@@ -133,3 +163,4 @@ class ProgressManager:
             x = (self.root.winfo_screenwidth() // 2) - (width // 2)
             y = (self.root.winfo_screenheight() // 2) - (height // 2)
             self.progress_window.geometry(f"{width}x{height}+{x}+{y}")
+        self.progress_window.minsize(width, height)
