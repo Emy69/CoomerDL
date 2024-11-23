@@ -121,13 +121,12 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Progress manager
         self.progress_manager = ProgressManager(
-            self.progress_frame, 
+            self, 
             self.icons, 
             self.footer_speed_label, 
-            self.footer_eta_label, 
-            self.progress_details_frame,
-            self.progress_bar,  # Asegúrate de que esto esté definido en tu clase
-            self.progress_percentage  # Asegúrate de que esto esté definido en tu clase
+            self.footer_eta_label,
+            self.progress_bar,
+            self.progress_percentage
         )
 
     # Application close event
