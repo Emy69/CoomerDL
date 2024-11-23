@@ -262,15 +262,24 @@ class ImageDownloaderApp(ctk.CTk):
         self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
         self.progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
 
-        self.processing_label = ctk.CTkLabel(self.progress_frame, text=self.tr("Procesando videos..."), font=("Arial", 12))
-        self.processing_label.pack(side='top', pady=(0, 10))
-        self.processing_label.pack_forget()
+        # self.processing_label = ctk.CTkLabel(self.progress_frame, text=self.tr("Procesando videos..."), font=("Arial", 12))
+        # self.processing_label.pack(side='top', pady=(0, 10))
+        # self.processing_label.pack_forget()
 
         self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="0%")
         self.progress_percentage.pack(side='left')
 
-        self.toggle_details_button = ctk.CTkButton(self.progress_frame, text="...", width=5, command=self.toggle_progress_details)
+        # Cargar el icono de descarga con un tamaño mayor
+        self.download_icon = self.load_and_resize_image('resources/img/download_icon.png', (24, 24))  # Cambiado a (24, 24)
+
+        # Reemplazar el botón con una etiqueta que simule un botón
+        self.toggle_details_button = ctk.CTkLabel(self.progress_frame, image=self.download_icon, text="", cursor="hand2")
         self.toggle_details_button.pack(side='left', padx=(5, 0))
+        self.toggle_details_button.bind("<Button-1>", lambda e: self.toggle_progress_details())
+
+        # Agregar efecto hover
+        self.toggle_details_button.bind("<Enter>", lambda e: self.toggle_details_button.configure(fg_color="gray25"))
+        self.toggle_details_button.bind("<Leave>", lambda e: self.toggle_details_button.configure(fg_color="transparent"))
 
         self.progress_details_frame = ctk.CTkFrame(self)
         self.progress_details_frame.place_forget()
@@ -324,7 +333,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_compressed_check.configure(text=self.tr("Descargar Comprimidos"))
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
-        self.processing_label.configure(text=self.tr("Procesando videos..."))
+        # self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
 
         self.update_info_text()
@@ -720,9 +729,9 @@ class ImageDownloaderApp(ctk.CTk):
         try:
             download_method(*args)
         finally:
-            self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
-            self.enable_widgets()  # Asegúrate de habilitar los widgets
-            self.export_logs()  # Llama a export_logs al finalizar la descarga
+            self.active_downloader = None
+            self.enable_widgets()
+            self.export_logs()
 
     # Download management
     def start_download(self):
@@ -733,7 +742,6 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.download_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
-        self.processing_label.pack()
         self.download_start_time = datetime.datetime.now()
         self.errors = []
         download_all = self.download_all_check.get()
@@ -781,7 +789,6 @@ class ImageDownloaderApp(ctk.CTk):
                 self.add_log_message_safe(self.tr("URL no válida"))
                 self.download_button.configure(state="normal")
                 self.cancel_button.configure(state="disabled")
-                self.processing_label.pack_forget()
                 return
 
             self.add_log_message_safe(self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site))
@@ -812,7 +819,6 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
-            self.processing_label.pack_forget()
             return
 
         download_thread.start()
