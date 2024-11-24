@@ -274,7 +274,7 @@ class Downloader:
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
         try:
-            self.log(self.tr("Starting download process..."))  # Log al iniciar el proceso de descarga
+            self.log(self.tr("Starting download process..."))
 
             posts = self.fetch_user_posts(site, user_id, service, query=query, initial_offset=initial_offset, log_fetching=download_all)
             if not posts:
@@ -287,53 +287,74 @@ class Downloader:
             futures = []
             grouped_media_urls = defaultdict(list)
 
-            # Listar archivos existentes al inicio
-            self.log(self.tr("Verifying existing files for duplicates..."))  # Log para indicar verificación de duplicados
-            existing_files = {}
-            for root, _, files in os.walk(self.download_folder):
-                for file in files:
-                    filepath = os.path.join(root, file)
-                    existing_files[file] = os.path.getsize(filepath)
+            # Construir la ruta específica de la carpeta para el user_id
+            specific_folder = os.path.join(self.download_folder, user_id)
 
-            # Recolectar todas las URLs de medios y nombres de archivos
-            all_media_urls = []
-            for post in posts:
-                media_urls = self.process_post(post)
-                for media_url in media_urls:
-                    extension = os.path.splitext(media_url)[1].lower()
-                    # Filtrar según los tipos de archivo seleccionados
-                    if (extension in self.image_extensions and not self.download_images) or \
-                    (extension in self.video_extensions and not self.download_videos) or \
-                    (extension in self.compressed_extensions and not self.download_compressed):
-                        continue  # Saltar archivos no seleccionados
+            # Verificar y crear la carpeta específica si no existe
+            os.makedirs(specific_folder, exist_ok=True)
 
-                    filename = os.path.basename(media_url).split('?')[0]
-                    all_media_urls.append((media_url, filename))
+            # Verificar si la carpeta de descargas está vacía
+            if not os.listdir(specific_folder):
+                self.log(self.tr("No existing files found in the specific folder, skipping duplicate check."))
+                for post in posts:
+                    media_urls = self.process_post(post)
+                    for media_url in media_urls:
+                        extension = os.path.splitext(media_url)[1].lower()
+                        # Filtrar según los tipos de archivo seleccionados
+                        if (extension in self.image_extensions and not self.download_images) or \
+                        (extension in self.video_extensions and not self.download_videos) or \
+                        (extension in self.compressed_extensions and not self.download_compressed):
+                            continue  # Saltar archivos no seleccionados
 
-            # Obtener tamaños de archivos remotos en paralelo
-            remote_sizes = {filename: None for _, filename in all_media_urls}
-            size_futures = []
-            for media_url, filename in all_media_urls:
-                size_futures.append(self.executor.submit(self.get_remote_file_size, media_url, filename))
+                        grouped_media_urls[post['id']].append(media_url)
+            else:
+                # Continuar con el flujo actual
+                self.log(self.tr("Verifying existing files for duplicates in the specific folder..."))
+                existing_files = {}
+                for root, _, files in os.walk(specific_folder):
+                    for file in files:
+                        filepath = os.path.join(root, file)
+                        existing_files[file] = os.path.getsize(filepath)
 
-            for future in as_completed(size_futures):
-                media_url, filename, size = future.result()
-                remote_sizes[filename] = size
+                # Recolectar todas las URLs de medios y nombres de archivos
+                all_media_urls = []
+                for post in posts:
+                    media_urls = self.process_post(post)
+                    for media_url in media_urls:
+                        extension = os.path.splitext(media_url)[1].lower()
+                        # Filtrar según los tipos de archivo seleccionados
+                        if (extension in self.image_extensions and not self.download_images) or \
+                        (extension in self.video_extensions and not self.download_videos) or \
+                        (extension in self.compressed_extensions and not self.download_compressed):
+                            continue  # Saltar archivos no seleccionados
 
-            # Filtrar archivos existentes y tamaños
-            for media_url, filename in all_media_urls:
-                if filename in existing_files:
-                    local_size = existing_files[filename]
-                    remote_size = remote_sizes[filename]
+                        filename = os.path.basename(media_url).split('?')[0]
+                        all_media_urls.append((media_url, filename))
 
-                    if remote_size is not None and local_size >= remote_size:
-                        self.log(self.tr("File already exists with the same or larger size, skipping: {filename}", filename=filename))
-                        self.skipped_files.append(filename)
-                        continue
+                # Obtener tamaños de archivos remotos en paralelo
+                remote_sizes = {filename: None for _, filename in all_media_urls}
+                size_futures = []
+                for media_url, filename in all_media_urls:
+                    size_futures.append(self.executor.submit(self.get_remote_file_size, media_url, filename))
 
-                grouped_media_urls[post['id']].append(media_url)
+                for future in as_completed(size_futures):
+                    media_url, filename, size = future.result()
+                    remote_sizes[filename] = size
 
-            self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
+                # Filtrar archivos existentes y tamaños
+                for media_url, filename in all_media_urls:
+                    if filename in existing_files:
+                        local_size = existing_files[filename]
+                        remote_size = remote_sizes[filename]
+
+                        if remote_size is not None and local_size >= remote_size:
+                            self.log(self.tr("File already exists with the same or larger size, skipping: {filename}", filename=filename))
+                            self.skipped_files.append(filename)
+                            continue
+
+                    grouped_media_urls[post['id']].append(media_url)
+
+            self .total_files = sum(len(urls) for urls in grouped_media_urls.values())
             self.completed_files = 0
 
             for post_id, media_urls in grouped_media_urls.items():
