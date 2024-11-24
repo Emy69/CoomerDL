@@ -107,9 +107,6 @@ class ProgressManager:
                         eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
                         self.progress_bars[file_id][2].configure(text=eta_text)
 
-                # Reordenar las barras de progreso para que las activas estén arriba
-                self.reorder_progress_bars()
-
         else:
             if file_id is None:
                 if self.progress_bar.winfo_exists():
@@ -126,13 +123,6 @@ class ProgressManager:
             speed_text = f"Speed: {speed / 1024:.2f} KB/s" if speed < 1048576 else f"Speed: {speed / 1048576:.2f} MB/s"
             self.footer_speed_label.configure(text=speed_text)
             self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
-
-    def reorder_progress_bars(self):
-        # Mover las descargas activas a la parte superior
-        for file_id, (progress_bar, percentage_label, eta_label, progress_bar_frame) in self.progress_bars.items():
-            if progress_bar.winfo_exists() and progress_bar.get() < 1.0:
-                progress_bar_frame.pack_forget()
-                progress_bar_frame.pack(fill='x', padx=5, pady=5)
 
     def remove_progress_bar(self, file_id):
         if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
