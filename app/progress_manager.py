@@ -38,6 +38,10 @@ class ProgressManager:
             self.progress_window.withdraw()
 
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
+        # Asegúrate de que la ventana de progreso esté creada
+        if self.progress_window is None or not self.progress_window.winfo_exists():
+            self.create_progress_window()
+
         if total > 0:
             percentage = (downloaded / total) * 100
             if file_id is None:
