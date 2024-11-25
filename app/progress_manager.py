@@ -42,8 +42,13 @@ class ProgressManager:
         if self.progress_window is None or not self.progress_window.winfo_exists():
             self.create_progress_window()
 
+        # Asegúrate de que progress_details_frame esté inicializado
+        if not hasattr(self, 'progress_details_frame') or self.progress_details_frame is None:
+            self.create_progress_window()
+
         if total > 0:
             percentage = (downloaded / total) * 100
+            remaining = total - downloaded
             if file_id is None:
                 if self.progress_bar.winfo_exists():
                     self.progress_bar.set(downloaded / total)
@@ -92,7 +97,8 @@ class ProgressManager:
                     progress_bar = ctk.CTkProgressBar(progress_bar_frame)
                     progress_bar.pack(fill='x', padx=5, pady=5)
 
-                    percentage_label = ctk.CTkLabel(progress_bar_frame, text=f"{percentage:.2f}%")
+                    # Mostrar porcentaje y megabytes restantes
+                    percentage_label = ctk.CTkLabel(progress_bar_frame, text=f"{percentage:.2f}% ({downloaded / 1048576:.2f} MB / {total / 1048576:.2f} MB)")
                     percentage_label.pack(side='left', padx=5)
 
                     eta_label = ctk.CTkLabel(progress_bar_frame, text=f"ETA: N/A")
@@ -102,10 +108,14 @@ class ProgressManager:
 
                 if file_id in self.progress_bars and self.progress_bars[file_id][0].winfo_exists():
                     self.progress_bars[file_id][0].set(downloaded / total)
-                    self.progress_bars[file_id][1].configure(text=f"{percentage:.2f}%")
+                    self.progress_bars[file_id][1].configure(text=f"{percentage:.2f}% ({downloaded / 1048576:.2f} MB / {total / 1048576:.2f} MB)")
                     if eta is not None:
                         eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
                         self.progress_bars[file_id][2].configure(text=eta_text)
+
+                    # Eliminar el frame si la descarga está completa
+                    if downloaded >= total:
+                        self.remove_progress_bar(file_id)
 
         else:
             if file_id is None:
@@ -125,6 +135,11 @@ class ProgressManager:
             self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
 
     def remove_progress_bar(self, file_id):
+        if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
+            # Programar la eliminación del frame después de 2 segundos
+            self.progress_bars[file_id][3].after(2000, lambda: self._forget_and_delete(file_id))
+
+    def _forget_and_delete(self, file_id):
         if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
             self.progress_bars[file_id][3].pack_forget()
             del self.progress_bars[file_id]
