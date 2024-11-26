@@ -1,4 +1,12 @@
 {   
+    "Selecciona esta opción para descargar todo el contenido disponible del perfil,\nen lugar de solo los posts del URL proporcionado.": {
+        "es": "Selecciona esta opción para descargar todo el contenido disponible del perfil,\nen lugar de solo los posts del URL proporcionado.",
+        "en": "Select this option to download all available content from the profile,\ninstead of only the posts from the provided URL.",
+        "fr": "Sélectionnez cette option pour télécharger tout le contenu disponible du profil,\nau lieu de seulement les messages de l'URL fourni.",
+        "ja": "このオプションを選択すると、指定されたURLからの投稿のみではなく、\nプロフィールの利用可能なすべてのコンテンツをダウンロードします。",
+        "ru": "Выберите этот вариант, чтобы скачать весь доступный контент профиля,\nвместо только постов по указанному URL.",
+        "zh": "选择此选项以下载个人资料中的所有可用内容，\n而不仅仅是提供的URL中的帖子。"
+    },
     "Descarga cancelada por el usuario.": {
         "es": "Descarga cancelada por el usuario.",
         "en": "Download canceled by the user.",
@@ -546,7 +554,7 @@
         "ru": "Получен сервис: {service} с сайта: {site}",
         "zh": "检索到的服务：{service}，来自站点：{site}。"
     },
-    "Invalid URL": {
+    "URL no válida": {
         "es": "URL no válida",
         "en": "Invalid URL",
         "fr": "URL non valide",

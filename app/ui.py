@@ -322,6 +322,49 @@ class ImageDownloaderApp(ctk.CTk):
         else:
             self.download_all_check.configure(text=self.tr("Descargar solo los posts del URL proporcionado"))
 
+        # Verificar si el icono de información ya existe
+        if not hasattr(self, 'info_label'):
+            # Cargar la imagen de información
+            info_icon = self.load_and_resize_image('resources/img/info_icon.png', (16, 16))
+            
+            # Crear un Label para el icono de información
+            self.info_label = ctk.CTkLabel(self.action_frame, image=info_icon, text="", cursor="hand2")
+            self.info_label.pack(side='left', padx=5)
+
+            # Añadir un tooltip al icono de información
+            self.create_tooltip(self.info_label, self.tr(
+                "Selecciona esta opción para descargar todo el contenido disponible del perfil,\n"
+                "en lugar de solo los posts del URL proporcionado."
+            ))
+
+    def create_tooltip(self, widget, text):
+        tooltip = tk.Toplevel(widget)
+        tooltip.wm_overrideredirect(True)  # Sin barra de título
+        tooltip.withdraw()  # Ocultar inicialmente
+
+        # Crear un Frame para el contenido del tooltip
+        tooltip_frame = tk.Frame(tooltip, bg="#333333", relief='solid', bd=1, padx=10, pady=10)
+
+        # Agregar un Label con el texto y estilo de la tarjeta
+        tooltip_label = tk.Label(tooltip_frame, text=text, bg="#333333", fg="white", font=("Arial", 10), justify="left")
+        tooltip_label.pack()
+
+        tooltip_frame.pack()
+
+        def enter(event):
+            x, y, cx, cy = widget.bbox("insert")
+            x += widget.winfo_rootx() + 20
+            y += widget.winfo_rooty() + 20
+            tooltip.wm_geometry(f"+{x}+{y}")
+            tooltip.deiconify() 
+
+        def leave(event):
+            tooltip.withdraw()  
+
+        widget.bind("<Enter>", enter)
+        widget.bind("<Leave>", leave)
+
+
     # Update UI texts
     def update_ui_texts(self):
 
@@ -346,6 +389,12 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
         # self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
+
+        # Actualizar el texto del tooltip de información
+        self.create_tooltip(self.info_label, self.tr(
+            "Selecciona esta opción para descargar todo el contenido disponible del perfil,\n"
+            "en lugar de solo los posts del URL proporcionado."
+        ))
 
         self.update_info_text()
     
@@ -423,7 +472,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.github_icon:
             resized_github_icon = self.github_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_github_icon = ctk.CTkImage(resized_github_icon)
-            github_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            github_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             github_frame.pack(side="right", padx=5)
             github_label = ctk.CTkLabel(
                 github_frame,
@@ -444,7 +493,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.discord_icon:
             resized_discord_icon = self.discord_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_discord_icon = ctk.CTkImage(resized_discord_icon)
-            discord_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            discord_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             discord_frame.pack(side="right", padx=5)
             discord_label = ctk.CTkLabel(
                 discord_frame,
@@ -464,7 +513,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.new_icon:
             resized_new_icon = self.new_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_new_icon = ctk.CTkImage(resized_new_icon)
-            new_icon_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            new_icon_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             new_icon_frame.pack(side="right", padx=5)
             new_icon_label = ctk.CTkLabel(
                 new_icon_frame,
