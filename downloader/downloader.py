@@ -115,7 +115,7 @@ class Downloader:
             if self.cancel_requested.is_set():
                 return all_posts
 
-            api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}"
+            api_url = f"https://{site}/api/v0/{service}/user/{user_id_encoded}"
             url_query = { "o": offset }
             if query is not None:
                 url_query["q"] = query
