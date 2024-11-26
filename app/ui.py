@@ -25,8 +25,10 @@ from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 from downloader.simpcity import SimpCity
+from downloader.jpg5 import Jpg5Downloader
+from app.progress_manager import ProgressManager
 
-VERSION = "CoomerV0.7.2.1"
+VERSION = "V0.8"
 MAX_LOG_LINES = 50  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -116,6 +118,16 @@ class ImageDownloaderApp(ctk.CTk):
             'zip': self.load_and_resize_image('resources/img/zip_icon.png', (40, 40)),
             'default': self.load_and_resize_image('resources/img/default_icon.png', (40, 40))
         }
+
+        # Progress manager
+        self.progress_manager = ProgressManager(
+            root=self,
+            icons=self.icons,
+            footer_speed_label=self.footer_speed_label,
+            footer_eta_label=self.footer_eta_label,
+            progress_bar=self.progress_bar,
+            progress_percentage=self.progress_percentage
+        )
 
     # Application close event
     def on_app_close(self):
@@ -261,15 +273,24 @@ class ImageDownloaderApp(ctk.CTk):
         self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
         self.progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
 
-        self.processing_label = ctk.CTkLabel(self.progress_frame, text=self.tr("Procesando videos..."), font=("Arial", 12))
-        self.processing_label.pack(side='top', pady=(0, 10))
-        self.processing_label.pack_forget()
+        # self.processing_label = ctk.CTkLabel(self.progress_frame, text=self.tr("Procesando videos..."), font=("Arial", 12))
+        # self.processing_label.pack(side='top', pady=(0, 10))
+        # self.processing_label.pack_forget()
 
         self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="0%")
         self.progress_percentage.pack(side='left')
 
-        self.toggle_details_button = ctk.CTkButton(self.progress_frame, text="...", width=5, command=self.toggle_progress_details)
+        # Cargar el icono de descarga con un tamaño mayor
+        self.download_icon = self.load_and_resize_image('resources/img/download_icon.png', (24, 24))  # Cambiado a (24, 24)
+
+        # Reemplazar el botón con una etiqueta que simule un botón
+        self.toggle_details_button = ctk.CTkLabel(self.progress_frame, image=self.download_icon, text="", cursor="hand2")
         self.toggle_details_button.pack(side='left', padx=(5, 0))
+        self.toggle_details_button.bind("<Button-1>", lambda e: self.toggle_progress_details())
+
+        # Agregar efecto hover
+        self.toggle_details_button.bind("<Enter>", lambda e: self.toggle_details_button.configure(fg_color="gray25"))
+        self.toggle_details_button.bind("<Leave>", lambda e: self.toggle_details_button.configure(fg_color="transparent"))
 
         self.progress_details_frame = ctk.CTkFrame(self)
         self.progress_details_frame.place_forget()
@@ -301,6 +322,49 @@ class ImageDownloaderApp(ctk.CTk):
         else:
             self.download_all_check.configure(text=self.tr("Descargar solo los posts del URL proporcionado"))
 
+        # Verificar si el icono de información ya existe
+        if not hasattr(self, 'info_label'):
+            # Cargar la imagen de información
+            info_icon = self.load_and_resize_image('resources/img/info_icon.png', (16, 16))
+            
+            # Crear un Label para el icono de información
+            self.info_label = ctk.CTkLabel(self.action_frame, image=info_icon, text="", cursor="hand2")
+            self.info_label.pack(side='left', padx=5)
+
+            # Añadir un tooltip al icono de información
+            self.create_tooltip(self.info_label, self.tr(
+                "Selecciona esta opción para descargar todo el contenido disponible del perfil,\n"
+                "en lugar de solo los posts del URL proporcionado."
+            ))
+
+    def create_tooltip(self, widget, text):
+        tooltip = tk.Toplevel(widget)
+        tooltip.wm_overrideredirect(True)  # Sin barra de título
+        tooltip.withdraw()  # Ocultar inicialmente
+
+        # Crear un Frame para el contenido del tooltip
+        tooltip_frame = tk.Frame(tooltip, bg="#333333", relief='solid', bd=1, padx=10, pady=10)
+
+        # Agregar un Label con el texto y estilo de la tarjeta
+        tooltip_label = tk.Label(tooltip_frame, text=text, bg="#333333", fg="white", font=("Arial", 10), justify="left")
+        tooltip_label.pack()
+
+        tooltip_frame.pack()
+
+        def enter(event):
+            x, y, cx, cy = widget.bbox("insert")
+            x += widget.winfo_rootx() + 20
+            y += widget.winfo_rooty() + 20
+            tooltip.wm_geometry(f"+{x}+{y}")
+            tooltip.deiconify() 
+
+        def leave(event):
+            tooltip.withdraw()  
+
+        widget.bind("<Enter>", enter)
+        widget.bind("<Leave>", leave)
+
+
     # Update UI texts
     def update_ui_texts(self):
 
@@ -323,8 +387,14 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_compressed_check.configure(text=self.tr("Descargar Comprimidos"))
         self.download_button.configure(text=self.tr("Descargar"))
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
-        self.processing_label.configure(text=self.tr("Procesando videos..."))
+        # self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
+
+        # Actualizar el texto del tooltip de información
+        self.create_tooltip(self.info_label, self.tr(
+            "Selecciona esta opción para descargar todo el contenido disponible del perfil,\n"
+            "en lugar de solo los posts del URL proporcionado."
+        ))
 
         self.update_info_text()
     
@@ -402,7 +472,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.github_icon:
             resized_github_icon = self.github_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_github_icon = ctk.CTkImage(resized_github_icon)
-            github_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            github_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             github_frame.pack(side="right", padx=5)
             github_label = ctk.CTkLabel(
                 github_frame,
@@ -423,7 +493,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.discord_icon:
             resized_discord_icon = self.discord_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_discord_icon = ctk.CTkImage(resized_discord_icon)
-            discord_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            discord_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             discord_frame.pack(side="right", padx=5)
             discord_label = ctk.CTkLabel(
                 discord_frame,
@@ -443,7 +513,7 @@ class ImageDownloaderApp(ctk.CTk):
         if self.new_icon:
             resized_new_icon = self.new_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_new_icon = ctk.CTkImage(resized_new_icon)
-            new_icon_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent", corner_radius=5)
+            new_icon_frame = ctk.CTkFrame(self.menu_bar,cursor="hand2", fg_color="transparent", corner_radius=5)
             new_icon_frame.pack(side="right", padx=5)
             new_icon_label = ctk.CTkLabel(
                 new_icon_frame,
@@ -580,6 +650,16 @@ class ImageDownloaderApp(ctk.CTk):
             max_workers=self.max_downloads,
             folder_structure=self.settings_window.settings.get('folder_structure', 'default')
         )
+    
+    def setup_jpg5_downloader(self):
+        self.active_downloader = Jpg5Downloader(
+            url=self.url_entry.get().strip(),
+            carpeta_destino=self.download_folder,
+            log_callback=self.add_log_message_safe,
+            tr=self.tr,
+            progress_manager=self.progress_manager,
+            max_workers=self.max_downloads
+        )
 
     # Folder selection
     def select_folder(self):
@@ -594,110 +674,21 @@ class ImageDownloaderApp(ctk.CTk):
         img = Image.open(path)
         return ctk.CTkImage(img, size=size)
     
-    # Progress management
+    # Reemplaza las llamadas a los métodos de progreso con self.progress_manager
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
-        if total > 0:
-            percentage = (downloaded / total) * 100
-            if file_id is None:
-                self.progress_bar.set(downloaded / total)
-                self.progress_percentage.configure(text=f"{percentage:.2f}%")
-            else:
-                if file_id not in self.progress_bars:
-                    file_name = os.path.basename(file_path)
-                    file_extension = os.path.splitext(file_path)[1].lower()
-
-                    # Determinar el icono
-                    if file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-                        icon = self.icons['image']
-                    elif file_extension in ['.mp4', '.avi', '.mkv']:
-                        icon = self.icons['video']
-                    elif file_extension in ['.zip', '.rar']:
-                        icon = self.icons['zip']
-                    else:
-                        icon = self.icons['default']
-
-                    progress_bar_frame = ctk.CTkFrame(self.progress_details_frame)
-                    progress_bar_frame.grid(row=len(self.progress_bars), column=0, sticky='ew', padx=5, pady=5)
-
-                    # Crear un contenedor para el icono y el texto
-                    icon_and_text_frame = ctk.CTkFrame(progress_bar_frame)
-                    icon_and_text_frame.grid(row=0, column=0, sticky='w')
-
-                    # Crear el icono con ctk.CTkLabel
-                    icon_label = ctk.CTkLabel(icon_and_text_frame, image=icon, text="")
-                    icon_label.grid(row=0, column=0, padx=5, pady=5)
-
-                    # Limitar el texto y mostrar puntos suspensivos si excede el límite
-                    max_text_length = 30
-                    if len(file_name) > max_text_length:
-                        displayed_file_name = file_name[:max_text_length] + '...'
-                    else:
-                        displayed_file_name = file_name
-
-                    progress_label = ctk.CTkLabel(icon_and_text_frame, text=displayed_file_name, anchor='w')
-                    progress_label.grid(row=0, column=1, padx=5, pady=5)
-
-                    # Crear barra de progreso y etiquetas de porcentaje y ETA
-                    progress_bar = ctk.CTkProgressBar(progress_bar_frame)
-                    progress_bar.grid(row=1, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
-
-                    percentage_label = ctk.CTkLabel(progress_bar_frame, text=f"{percentage:.2f}%")
-                    percentage_label.grid(row=2, column=0, padx=5, pady=5, sticky='w')
-
-                    eta_label = ctk.CTkLabel(progress_bar_frame, text=f"ETA: N/A")
-                    eta_label.grid(row=2, column=1, padx=5, pady=5, sticky='e')
-
-                    self.progress_bars[file_id] = (progress_bar, percentage_label, eta_label, progress_bar_frame)
-
-                self.progress_bars[file_id][0].set(downloaded / total)
-                self.progress_bars[file_id][1].configure(text=f"{percentage:.2f}%")
-                if eta is not None:
-                    eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
-                    self.progress_bars[file_id][2].configure(text=eta_text)
-
-                if downloaded >= total:
-                    self.after(2000, lambda: self.remove_progress_bar(file_id))
-        else:
-            if file_id is None:
-                self.progress_bar.set(0)
-                self.progress_percentage.configure(text="0%")
-            else:
-                if file_id in self.progress_bars:
-                    self.progress_bars[file_id][0].set(0)
-                    self.progress_bars[file_id][1].configure(text="0%")
-                    self.progress_bars[file_id][2].configure(text="ETA: N/A")
-
-        # Actualizar velocidad en el footer (si corresponde)
-        if speed is not None:
-            speed_text = f"Speed: {speed / 1024:.2f} KB/s" if speed < 1048576 else f"Speed: {speed / 1048576:.2f} MB/s"
-            self.footer_speed_label.configure(text=speed_text)
-            self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
+        self.progress_manager.update_progress(downloaded, total, file_id, file_path, speed, eta)
 
     def remove_progress_bar(self, file_id):
-        if file_id in self.progress_bars:
-            self.progress_bars[file_id][3].grid_forget()
-            del self.progress_bars[file_id]
+        self.progress_manager.remove_progress_bar(file_id)
 
     def update_global_progress(self, completed_files, total_files):
-        if total_files > 0:
-            percentage = (completed_files / total_files) * 100
-            self.progress_bar.set(completed_files / total_files)
-            self.progress_percentage.configure(text=f"{percentage:.2f}%")
+        self.progress_manager.update_global_progress(completed_files, total_files)
 
     def toggle_progress_details(self):
-        if self.progress_details_frame.winfo_ismapped():
-            self.progress_details_frame.place_forget()
-        else:
-            self.progress_details_frame.place(relx=0.5, rely=0.5, anchor='center')
-            self.progress_details_frame.lift()
+        self.progress_manager.toggle_progress_details()
 
     def center_progress_details_frame(self):
-        self.progress_details_frame.update_idletasks()
-        width = self.progress_details_frame.winfo_width()
-        height = self.progress_details_frame.winfo_height()
-        x = (self.winfo_width() // 2) - (width // 2)
-        y = (self.winfo_height() // 2) - (height // 2)
-        self.progress_details_frame.place(x=x, y=y, anchor='nw')
+        self.progress_manager.center_progress_details_frame()
 
     # Error logging
     def log_error(self, error_message):
@@ -708,9 +699,9 @@ class ImageDownloaderApp(ctk.CTk):
         try:
             download_method(*args)
         finally:
-            self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
-            self.enable_widgets()  # Asegúrate de habilitar los widgets
-            self.export_logs()  # Llama a export_logs al finalizar la descarga
+            self.active_downloader = None
+            self.enable_widgets()
+            self.export_logs()
 
     # Download management
     def start_download(self):
@@ -721,7 +712,6 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.download_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
-        self.processing_label.pack()
         self.download_start_time = datetime.datetime.now()
         self.errors = []
         download_all = self.download_all_check.get()
@@ -769,7 +759,6 @@ class ImageDownloaderApp(ctk.CTk):
                 self.add_log_message_safe(self.tr("URL no válida"))
                 self.download_button.configure(state="normal")
                 self.cancel_button.configure(state="disabled")
-                self.processing_label.pack_forget()
                 return
 
             self.add_log_message_safe(self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site))
@@ -789,11 +778,17 @@ class ImageDownloaderApp(ctk.CTk):
             # Iniciar la descarga en un hilo separado
             download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.download_images_from_simpcity, url))
         
+        elif "jpg5.su" in url:
+            self.add_log_message_safe(self.tr("Descargando desde Jpg5"))
+            self.setup_jpg5_downloader()
+            
+            # Usar wrapped_download para manejar la descarga
+            download_thread = threading.Thread(target=self.wrapped_download, args=(self.active_downloader.descargar_imagenes,))
+        
         else:
             self.add_log_message_safe(self.tr("URL no válida"))
             self.download_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
-            self.processing_label.pack_forget()
             return
 
         download_thread.start()
