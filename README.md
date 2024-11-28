@@ -31,20 +31,22 @@ The app supports various file extensions for different types of media:
 
 ## Supported Pages
 
-- [coomer.su](https://coomer.su/)
-- [kemono.su](https://kemono.su/)
-- [erome.com](https://www.erome.com/)
-- [bunkr-albums.io](https://bunkr-albums.io/)
-- [simpcity.su](https://simpcity.su/)
+[![coomer.su](https://img.shields.io/badge/Website-coomer.su-blue)](https://coomer.su/) 
+[![kemono.su](https://img.shields.io/badge/Website-kemono.su-pink)](https://kemono.su/) 
+[![erome.com](https://img.shields.io/badge/Website-erome.com-purple)](https://www.erome.com/) 
+[![bunkr-albums.io](https://img.shields.io/badge/Website-bunkr.albums.io-blue)](https://bunkr-albums.io/) 
+[![simpcity.su](https://img.shields.io/badge/Website-simpcity.su-lightgrey)](https://simpcity.su/)
+[![jpg5.su](https://img.shields.io/badge/Website-jpg5.su-orange)](https://jpg5.su/)
+
 
 ## Language Support
 
-- [Español (Spanish)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)
-- [English (English)]()
-- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)
-- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)
-- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)
-- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
+[![Español](https://img.shields.io/badge/Idioma-Español-red)](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md) 
+[![English](https://img.shields.io/badge/Language-English-blue)]() 
+[![日本語](https://img.shields.io/badge/Language-日本語-green)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md) 
+[![中文](https://img.shields.io/badge/Language-中文-yellow)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md) 
+[![Français](https://img.shields.io/badge/Language-Français-orange)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md) 
+[![Русский](https://img.shields.io/badge/Language-Русский-purple)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)
 
 ## Community
 
