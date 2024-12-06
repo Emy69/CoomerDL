@@ -68,16 +68,9 @@ class SettingsWindow:
         self.settings_window.after(10, self.settings_window.grab_set)  # Cambio: ahora usamos self.settings_window.after
         self.center_window(self.settings_window, 850, 850)
 
-        # Crear el marco de navegación y contenido
-        nav_frame = ctk.CTkFrame(self.settings_window, width=200)
-        nav_frame.pack(side="left", fill="y", padx=10, pady=10)
-
         self.content_frame = ctk.CTkFrame(self.settings_window)
         self.content_frame.pack(side="right", expand=True, fill="both", padx=(10, 20), pady=10)
 
-        # Crear botones de navegación
-        self.create_nav_button(nav_frame, "General", self.show_general_settings)
-        #self.create_nav_button(nav_frame, "About", self.show_about)
 
         # Mostrar la pestaña de General por defecto
         self.show_general_settings()
@@ -146,17 +139,6 @@ class SettingsWindow:
         apply_download_button.grid(row=9, column=1, pady=10, sticky="w", padx=(0, 10))
 
         # Línea divisoria
-        separator_4 = ttk.Separator(self.content_frame, orient="horizontal")
-        separator_4.grid(row=10, column=0, columnspan=3, sticky="ew", pady=5)
-
-        # Chequeo de actualizaciones
-        update_label = ctk.CTkLabel(self.content_frame, text=self.translate("Check for Updates"), font=("Helvetica", 16, "bold"))
-        update_label.grid(row=11, column=0, pady=10, sticky="w")
-
-        update_button = ctk.CTkButton(self.content_frame, text=self.translate("Check"), command=self.check_for_updates)
-        update_button.grid(row=11, column=1, pady=10, padx=(0, 10), sticky="w")
-
-        # Línea divisoria
         separator_5 = ttk.Separator(self.content_frame, orient="horizontal")
         separator_5.grid(row=12, column=0, columnspan=3, sticky="ew", pady=5)
 
@@ -175,116 +157,6 @@ class SettingsWindow:
 
         self.update_treeview()
 
-
-    def show_update_settings(self):
-        self.clear_frame(self.content_frame)
-
-        update_label = ctk.CTkLabel(self.content_frame, text=self.translate("Check for Updates"), font=("Helvetica", 16, "bold"))
-        update_label.pack(pady=10)
-
-        update_button = ctk.CTkButton(self.content_frame, text=self.translate("Check"), command=self.check_for_updates)
-        update_button.pack(pady=10)
-
-
-    def check_for_updates(self):
-        api_url = "https://api.github.com/repos/Emy69/CoomerDL/releases/latest"  
-
-        try:
-            response = requests.get(api_url)
-            response.raise_for_status()
-            latest_release = response.json()
-            latest_version = latest_release["tag_name"].lstrip('v')
-
-            if latest_version != self.version.lstrip('v'):
-                # Buscar el URL de descarga
-                download_url = None
-                for asset in latest_release['assets']:
-                    if asset['name'].endswith(('.zip', '.rar')): 
-                        download_url = asset['browser_download_url']
-                        break
-
-                if download_url:
-                    if messagebox.askyesno("Update Available", f"A new version {latest_version} is available.\nWould you like to download and install it?"):
-                        if self.download_and_replace(download_url):
-                            messagebox.showinfo("Update", "The application has been updated. Please restart the application.")
-                            sys.exit(0)  
-                else:
-                    messagebox.showerror("Update Error", "No downloadable asset found.")
-            else:
-                messagebox.showinfo("Update", "Your software is up to date.")
-        except requests.RequestException as e:
-            messagebox.showerror("Error", f"Unable to check for updates.\nError: {e}")
-
-    def download_and_replace(self, url):
-        # Crear una nueva ventana para mostrar el progreso
-        progress_window = tk.Toplevel(self.parent)
-        progress_window.title(self.translate("Progress"))
-        progress_window.geometry("300x100")
-        progress_window.transient(self.parent)  
-        progress_window.grab_set()  
-
-        # Centrar la ventana de progreso
-        self.center_window(progress_window, 300, 100)
-        
-        # Barra de progreso para la descarga
-        download_progress = ttk.Progressbar(progress_window, orient='horizontal', length=280, mode='determinate')
-        download_progress.pack(pady=10)
-        
-        # Etiqueta para mostrar el estado actual
-        status_label = tk.Label(progress_window, text=self.translate("Downloading..."))
-        status_label.pack(pady=5)
-        
-        # Extraer el nombre del archivo de la URL
-        file_name = url.split('/')[-1]
-        
-        # Preguntar al usuario dónde guardar el archivo descargado
-        filetypes = [('ZIP files', '*.zip'), ('RAR files', '*.rar')]
-        save_path = filedialog.asksaveasfilename(title="Save As", initialfile=file_name, defaultextension=".zip", filetypes=filetypes)
-        if not save_path:
-            messagebox.showinfo("Cancelled", "Download cancelled by user.")
-            progress_window.destroy()
-            return False
-        
-        # Descargar el archivo 
-        response = requests.get(url, stream=True)
-        total_length = int(response.headers.get('content-length', 0))
-        with open(save_path, "wb") as file:
-            for data in response.iter_content(chunk_size=4096):
-                file.write(data)
-                download_progress['value'] += len(data) / total_length * 100
-                progress_window.update_idletasks()
-        
-        # Actualizar el estado para la descompresión
-        status_label.config(text=self.translate("Extracting..."))
-        progress_window.update_idletasks()
-        
-        # Preguntar al usuario dónde descomprimir el archivo
-        target_directory = filedialog.askdirectory(title="Select Directory to Extract Files")
-        if not target_directory:
-            messagebox.showinfo("Cancelled", "Extraction cancelled by user.")
-            progress_window.destroy()
-            return False
-        
-        # Usar patoolib para descomprimir el archivo
-        try:
-            patoolib.extract_archive(save_path, outdir=target_directory)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to extract files.\nError: {e}")
-            progress_window.destroy()
-            return False
-        
-        # Limpiar archivo de actualización
-        os.remove(save_path)
-        messagebox.showinfo("Success", "Files extracted successfully.")
-        progress_window.destroy()
-        return True
-
-    def select_chrome_profile_folder(self):
-        folder_path = filedialog.askdirectory(title=self.translate("Select Chrome Profile Folder"))
-        if folder_path:
-            self.settings['chrome_profile_folder'] = folder_path
-            self.save_settings()
-            messagebox.showinfo(self.translate("Success"), self.translate("Chrome profile folder saved successfully."))
 
     def save_settings(self):
         with open('resources/config/settings.json', 'w') as f:
