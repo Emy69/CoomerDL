@@ -1,19 +1,17 @@
-import cloudscraper
-import time
-from bs4 import BeautifulSoup
 import os
-from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
+import json
+import re
 import queue
+from pathlib import Path
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import cloudscraper
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import requests
-import re
-import json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from concurrent.futures import ThreadPoolExecutor
 
 class SimpCity:
     def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, tr=None):
@@ -31,68 +29,47 @@ class SimpCity:
         self.scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
         self.tr = tr
 
+        # Selectors from original crawler
+        self.title_selector = "h1[class=p-title-value]"
+        self.posts_selector = "div[class*=message-main]"
+        self.post_content_selector = "div[class*=message-userContent]"
+        self.images_selector = "img[class*=bbImage]"
+        self.videos_selector = "video source"
+        self.iframe_selector = "iframe[class=saint-iframe]"
+        self.attachments_block_selector = "section[class=message-attachments]"
+        self.attachments_selector = "a"
+        self.next_page_selector = "a[class*=pageNav-jump--next]"
+
     def log(self, message):
         if self.log_callback:
             self.log_callback(message)
 
-    def request_cancel(self):
-        """ Solicita cancelar las descargas en curso. """
-        self.cancel_requested = True
-        self.log(self.tr("Descarga cancelada por el usuario."))
-
-    def start_download_thread(self, url):
-        """ Inicia un hilo para manejar las descargas. """
-        download_thread = threading.Thread(target=self.download_images_from_simpcity, args=(url,))
-        download_thread.start()
-
-    def save_cookies_to_file(self, cookies, file_path):
-        """ Guarda las cookies en un archivo JSON. """
-        with open(file_path, 'w') as file:
-            json.dump(cookies, file)
-        self.log(self.tr("Cookies guardadas en {file_path}").format(file_path=file_path))
-
-    def load_cookies_from_file(self, file_path):
-        """ Carga las cookies desde un archivo JSON. """
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
-                cookies = json.load(file)
-            self.log(self.tr("Cookies cargadas desde {file_path}").format(file_path=file_path))
-            return cookies
-        else:
-            self.log(self.tr("No se encontró el archivo de cookies: {file_path}").format(file_path=file_path))
-            return None
+    def sanitize_folder_name(self, name):
+        return re.sub(r'[<>:"/\\|?*]', '_', name)
 
     def get_cookies_with_selenium(self, url, cookies_file='resources/config/cookies.json'):
-        # Cargar cookies desde el archivo si existe
-        cookies = self.load_cookies_from_file(cookies_file)
-        if cookies:
-            return cookies
+        cookies = None
+        if os.path.exists(cookies_file):
+            with open(cookies_file, 'r') as file:
+                cookies = json.load(file)
 
-        # Abrir el navegador para que el usuario inicie sesión
-        options = Options()
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
+        if not cookies:
+            options = Options()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            driver = webdriver.Chrome(options=options)
+            driver.get(url)
 
-        driver = webdriver.Chrome(options=options)
-        driver.get(url)
-
-        self.log(self.tr("Por favor, inicia sesión en el navegador abierto."))
-
-        try:
-            # Esperar hasta que un elemento con el selector CSS '.message-content.js-messageContent' esté presente
+            self.log(self.tr("Por favor, inicia sesión en el navegador abierto."))
             WebDriverWait(driver, 300).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, '.message-content.js-messageContent'))
             )
             cookies = driver.get_cookies()
-        except Exception as e:
-            self.log(self.tr("Error al esperar el inicio de sesión: {e}").format(e=e))
-            cookies = None
-        finally:
             driver.quit()
 
-        if cookies:
-            # Guardar cookies en un archivo
-            self.save_cookies_to_file(cookies, cookies_file)
+            with open(cookies_file, 'w') as file:
+                json.dump(cookies, file)
+
         return cookies
 
     def set_cookies_in_scraper(self, cookies):
@@ -100,180 +77,83 @@ class SimpCity:
             self.scraper.cookies.set(cookie['name'], cookie['value'])
 
     def fetch_page(self, url):
-        """ Realiza una solicitud GET usando cloudscraper. """
         try:
-            # Cargar cookies desde el archivo si existe
-            cookies = self.load_cookies_from_file('resources/config/cookies.json')
-            if cookies:
-                self.set_cookies_in_scraper(cookies)
-
+            cookies = self.get_cookies_with_selenium(url)
+            self.set_cookies_in_scraper(cookies)
             response = self.scraper.get(url)
-            if response.status_code == 403:
-                self.log(self.tr("Acceso prohibido. Intentando de nuevo..."))
-
-                # Abrir el navegador para que el usuario inicie sesión y resuelva el captcha
-                cookies = self.get_cookies_with_selenium(url)
-                if cookies:
-                    self.set_cookies_in_scraper(cookies)
-                    response = self.scraper.get(url)
-                else:
-                    self.log(self.tr("No se pudieron obtener nuevas cookies elimina el archivo de cookies y vuelve a intentarlo."))
-
-            return response
-        except requests.exceptions.RequestException as e:
-            self.log(self.tr("Error al acceder a {url}: {e}").format(url=url, e=e))
+            if response.status_code == 200:
+                return BeautifulSoup(response.content, 'html.parser')
+            else:
+                self.log(self.tr(f"Error: {response.status_code} al acceder a {url}"))
+                return None
+        except Exception as e:
+            self.log(self.tr(f"Error al acceder a {url}: {e}"))
             return None
 
-    def download_images_from_simpcity(self, url):
-        """ Descarga las imágenes desde una URL específica de SimpCity. """
-        self.log(self.tr("Accediendo a {url}").format(url=url))
-        
-        # Procesar solo la página proporcionada
-        self.process_page(url)
+    def save_file(self, file_url, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        response = self.scraper.get(file_url, stream=True)
+        if response.status_code == 200:
+            with open(path, 'wb') as file:
+                for chunk in response.iter_content(1024):
+                    file.write(chunk)
+            self.log(self.tr(f"Archivo descargado: {path}"))
+        else:
+            self.log(self.tr(f"Error al descargar {file_url}: {response.status_code}"))
 
-        if not self.cancel_requested:
-            self.log(self.tr("Descarga de la página completada."))
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
+    def process_post(self, post_content, download_folder):
+        # Procesar imágenes
+        images = post_content.select(self.images_selector)
+        for img in images:
+            src = img.get('src')
+            if src:
+                file_name = os.path.basename(urlparse(src).path)
+                file_path = os.path.join(download_folder, file_name)
+                self.save_file(src, file_path)
 
-    def sanitize_folder_name(self, name):
-        # Reemplaza caracteres no válidos con un guion bajo
-        return re.sub(r'[<>:"/\\|?*]', '_', name)
+        # Procesar videos
+        videos = post_content.select(self.videos_selector)
+        for video in videos:
+            src = video.get('src')
+            if src:
+                file_name = os.path.basename(urlparse(src).path)
+                file_path = os.path.join(download_folder, file_name)
+                self.save_file(src, file_path)
+
+        # Procesar archivos adjuntos
+        attachments_block = post_content.select_one(self.attachments_block_selector)
+        if attachments_block:
+            attachments = attachments_block.select(self.attachments_selector)
+            for attachment in attachments:
+                href = attachment.get('href')
+                if href:
+                    file_name = os.path.basename(urlparse(href).path)
+                    file_path = os.path.join(download_folder, file_name)
+                    self.save_file(href, file_path)
 
     def process_page(self, url):
-        """ Procesa una página específica para descargar imágenes. """
-        response = self.fetch_page(url)
-        if response and response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Obtener el título de la página
-            title_element = soup.find('h1')
-            if title_element:
-                for a in title_element.find_all('a'):
-                    a.extract()
-                folder_name = title_element.get_text(strip=True)
-                folder_name = self.sanitize_folder_name(folder_name)  # Sanitizar el nombre de la carpeta
-            else:
-                folder_name = 'SimpCity_Download'
-            
-            download_folder = os.path.join(self.download_folder, folder_name)
-            os.makedirs(download_folder, exist_ok=True)
-            
-            message_inners = soup.find_all('div', class_='message-inner')
-            
-            for div in message_inners:
-                bbwrapper = div.find('div', class_='bbWrapper')
-                if bbwrapper:
-                    links = bbwrapper.find_all('a', class_='link--external')
-                    with ThreadPoolExecutor(max_workers=5) as executor:
-                        futures = []
-                        for link in links:
-                            if 'href' in link.attrs:
-                                imagen_url = link['href']
-                                if imagen_url not in self.descargadas:
-                                    futures.append(executor.submit(self.download_image_from_link, imagen_url, download_folder))
-                                    self.descargadas.add(imagen_url)
-                                else:
-                                    self.log(self.tr("Imagen ya descargada, saltando: {imagen_url}").format(imagen_url=imagen_url))
-                        
-                        # Esperar a que todas las descargas del bbWrapper terminen
-                        for future in as_completed(futures):
-                            try:
-                                future.result()  # Manejar excepciones aquí si es necesario
-                            except Exception as e:
-                                self.log(self.tr("Error al descargar: {e}").format(e=str(e)))
-        else:
-            self.log(self.tr("Error al acceder a {url}: Código de estado {status_code}").format(url=url, status_code=response.status_code))
-
-    def start_download_workers(self):
-        """ Inicia los trabajadores para descargar imágenes. """
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = []
-            while not self.download_queue.empty():
-                imagen_url, download_folder = self.download_queue.get()
-                futures.append(executor.submit(self.download_image_from_link, imagen_url, download_folder))
-                
-                # Limitar el número de tareas en progreso
-                if len(futures) >= self.max_workers:
-                    for future in as_completed(futures):
-                        if self.cancel_requested:
-                            self.log(self.tr("Descarga cancelada durante el proceso."))
-                            break
-                        try:
-                            future.result()  # Manejar excepciones aquí si es necesario
-                        except Exception as e:
-                            self.log(self.tr("Error al descargar: {e}").format(e=e))
-                    futures = []  # Resetear la lista de futuros para el siguiente lote
-
-            # Asegurarse de que todas las tareas restantes se completen
-            for future in as_completed(futures):
-                if self.cancel_requested:
-                    self.log(self.tr("Descarga cancelada durante el proceso."))
-                    break
-                try:
-                    future.result()  # Manejar excepciones aquí si es necesario
-                except Exception as e:
-                    self.log(self.tr("Error al descargar: {e}").format(e=e))
-
-    def download_image_from_link(self, imagen_url, download_folder):
-        """ Descarga una imagen desde el enlace especificado. """
-        if self.cancel_requested:
-            self.log(self.tr("Descarga cancelada."))
-            return
-        
-        response = self.scraper.get(imagen_url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            header_content_right = soup.find('div', class_='header-content-right')
-            
-            if header_content_right:
-                download_link = header_content_right.find('a', class_='btn-download')
-                if download_link and 'href' in download_link.attrs:
-                    image_url = download_link['href']
-                    image_name = os.path.basename(urlparse(image_url).path)
-                    destination_path = os.path.join(download_folder, image_name)
-                    
-                    # Asegúrate de que el directorio existe antes de guardar
-                    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-                    
-                    self.save_image(image_url, destination_path, file_id=image_url)
-        else:
-            self.log(self.tr("Error al acceder a {imagen_url}: Código de estado {response.status_code}").format(imagen_url=imagen_url, status_code=response.status_code))
-
-    def save_image(self, image_url, path, file_id=None):
-        """ Guarda la imagen desde la URL al destino especificado. """
-        if os.path.exists(path):
-            self.log(self.tr("File already exists, skipping: {path}").format(path=path))
-            self.completed_files += 1
-            if self.update_global_progress_callback:
-                self.update_global_progress_callback(self.completed_files, self.total_files)
+        soup = self.fetch_page(url)
+        if not soup:
             return
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        response = self.scraper.get(image_url, stream=True)
-        if response.status_code == 200:
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded_size = 0
+        title_element = soup.select_one(self.title_selector)
+        folder_name = self.sanitize_folder_name(title_element.text.strip()) if title_element else 'SimpCity_Download'
+        download_folder = os.path.join(self.download_folder, folder_name)
+        os.makedirs(download_folder, exist_ok=True)
 
-            if self.update_progress_callback:
-                self.update_progress_callback(0, total_size, file_id=file_id, file_path=path)
+        message_inners = soup.select(self.posts_selector)
+        for post in message_inners:
+            post_content = post.select_one(self.post_content_selector)
+            if post_content:
+                self.process_post(post_content, download_folder)
 
-            with open(path, 'wb') as file:
-                for chunk in response.iter_content(1024 * 10):  # Leer en chunks de 10KB
-                    if self.cancel_requested:
-                        self.log(self.tr("Descarga cancelada durante la escritura del archivo."))
-                        file.close()
-                        os.remove(path)
-                        return
-                    file.write(chunk)
-                    downloaded_size += len(chunk)
-                    # Actualizar el progreso cada 100KB descargados
-                    if downloaded_size % (1024 * 100) == 0 and self.update_progress_callback:
-                        self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=path)
+        next_page = soup.select_one(self.next_page_selector)
+        if next_page:
+            next_page_url = next_page.get('href')
+            if next_page_url:
+                self.process_page(self.base_url + next_page_url)
 
-            self.log(self.tr("Imagen descargada: {path}").format(path=path))
-            self.completed_files += 1
-            if self.update_global_progress_callback:
-                self.update_global_progress_callback(self.completed_files, self.total_files)
-        else:
-            self.log(self.tr("Error al descargar la imagen: {image_url}").format(image_url=image_url))
+    def download_images_from_simpcity(self, url):
+        self.log(self.tr(f"Procesando hilo: {url}"))
+        self.process_page(url)
+        self.log(self.tr("Descarga completada."))
