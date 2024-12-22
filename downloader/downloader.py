@@ -47,6 +47,7 @@ class Downloader:
         self.tr = tr
         self.shutdown_called = False  # Flag to prevent multiple shutdowns of the executor
         self.folder_structure = folder_structure
+        self.failed_retry_count = {}
 
     def log(self, message):
         if self.log_callback:
@@ -182,14 +183,13 @@ class Downloader:
         return media_folder
 
     def process_media_element(self, media_url, user_id, post_id=None):
-        # Normalize file path
         extension = os.path.splitext(media_url)[1].lower()
         if self.cancel_requested.is_set():
             return
 
         if (extension in self.image_extensions and not self.download_images) or \
-        (extension in self.video_extensions and not self.download_videos) or \
-        (extension in self.compressed_extensions and not self.download_compressed):
+           (extension in self.video_extensions and not self.download_videos) or \
+           (extension in self.compressed_extensions and not self.download_compressed):
             self.log(self.tr("Skipping {media_url} due to download settings.", media_url=media_url))
             return
 
@@ -199,7 +199,13 @@ class Downloader:
             response = self.safe_request(media_url)
             if response is None:
                 self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
-                self.failed_files.append(media_url)
+                # Contar este fallo
+                retries = self.failed_retry_count.get(media_url, 0)
+                if retries < 1:
+                    self.failed_retry_count[media_url] = retries + 1
+                    self.failed_files.append(media_url)  
+                else:
+                    self.log(self.tr("No more retries for {media_url}", media_url=media_url))
                 return
 
             media_folder = self.get_media_folder(extension, user_id, post_id)
@@ -207,9 +213,8 @@ class Downloader:
 
             filename = os.path.basename(media_url).split('?')[0]
             filename = self.sanitize_filename(filename)
-            filepath = os.path.normpath(os.path.join(media_folder, filename))  # Normalize path
+            filepath = os.path.normpath(os.path.join(media_folder, filename))
 
-            # Improved file existence check
             if os.path.exists(filepath):
                 remote_file_size = int(response.headers.get('content-length', 0))
                 local_file_size = os.path.getsize(filepath)
@@ -222,7 +227,6 @@ class Downloader:
                     self.log(self.tr("File is incomplete or corrupted, deleting and re-downloading: {filepath}", filepath=filepath))
                     os.remove(filepath)
 
-            # Continue with the downloading process if the file doesn't exist or is incomplete
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
             self.start_time = time.time()
@@ -238,7 +242,7 @@ class Downloader:
                     downloaded_size += len(chunk)
 
                     elapsed_time = time.time() - self.start_time
-                    speed = downloaded_size / elapsed_time
+                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
                     remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
 
                     if self.update_progress_callback:
@@ -252,7 +256,17 @@ class Downloader:
 
         except Exception as e:
             self.log(self.tr("Error downloading: {e}", e=e))
-            self.failed_files.append(media_url)
+            # Si falla, incrementamos el contador de reintentos para este media_url
+            retries = self.failed_retry_count.get(media_url, 0)
+            if retries < 1:
+                # Primer fallo: agregamos a la lista de fallidos
+                self.failed_retry_count[media_url] = retries + 1
+                self.failed_files.append(media_url)
+            else:
+                # Segundo fallo: no lo volvemos a agregar a failed_files y borramos el archivo parcial
+                if 'filepath' in locals() and os.path.exists(filepath):
+                    os.remove(filepath)
+                self.log(self.tr("Already retried once, not retrying again for {media_url}", media_url=media_url))
         
     def get_remote_file_size(self, media_url, filename):
         try:
