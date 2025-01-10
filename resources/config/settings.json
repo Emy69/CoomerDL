@@ -1,1 +1,5 @@
-{"max_downloads": 5, "folder_structure": "default"}
+{
+    "max_downloads": 3,
+    "folder_structure": "default",
+    "language": "en"
+}

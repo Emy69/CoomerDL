@@ -28,7 +28,7 @@ from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 
-VERSION = "V0.8.3"
+VERSION = "V0.8.5"
 MAX_LOG_LINES = 50  # Límite máximo de líneas de log
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -509,7 +509,7 @@ class ImageDownloaderApp(ctk.CTk):
             discord_label.bind("<Button-1>", lambda e: webbrowser.open("https://discord.gg/ku8gSPsesh"))
 
         # Añadir un nuevo icono PNG
-        self.new_icon = self.load_new_icon()
+        self.new_icon = self.load_patreon_icon()
         if self.new_icon:
             resized_new_icon = self.new_icon.resize((16, 16), Image.Resampling.LANCZOS)
             resized_new_icon = ctk.CTkImage(resized_new_icon)
@@ -518,7 +518,7 @@ class ImageDownloaderApp(ctk.CTk):
             new_icon_label = ctk.CTkLabel(
                 new_icon_frame,
                 image=resized_new_icon,
-                text="Support",
+                text="Patreon",
                 compound="left"
             )
             new_icon_label.pack(padx=5, pady=5)
@@ -526,7 +526,7 @@ class ImageDownloaderApp(ctk.CTk):
             new_icon_frame.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
             new_icon_label.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
             new_icon_label.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
-            new_icon_label.bind("<Button-1>", lambda e: webbrowser.open("https://buymeacoffee.com/emy_69"))
+            new_icon_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.patreon.com/Emy69"))
 
     def toggle_archivo_menu(self):
         if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
@@ -1032,5 +1032,5 @@ class ImageDownloaderApp(ctk.CTk):
     def load_discord_icon(self):
         return self.load_icon("resources/img/discord-alt-logo-24.png", "Discord")
 
-    def load_new_icon(self):
-        return self.load_icon("resources/img/dollar-circle-solid-24.png", "New Icon")
+    def load_patreon_icon(self):
+        return self.load_icon("resources/img/patreon-logo-24.png", "New Icon")
