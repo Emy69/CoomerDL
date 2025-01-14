@@ -247,10 +247,8 @@ class BunkrDownloader:
                             self.log("Cancelling remaining downloads.")
                             break
 
-                        # Update progress for processing the profile
-                        self.update_progress_callback(idx, total_links, file_id=None, file_path=None)
-
-                        image_page_url = link['href']
+                        # Resolve relative URLs to full URLs
+                        image_page_url = urljoin(url_perfil, link['href'])
                         self.log(f"Processing media page URL: {image_page_url}")
 
                         # Visit the page to get the media URL
@@ -261,20 +259,20 @@ class BunkrDownloader:
                             # Search for image URL
                             media_tag = image_soup.select_one("figure.relative img[class='w-full h-full absolute opacity-20 object-cover blur-sm z-10']")
                             if media_tag and 'src' in media_tag.attrs:
-                                media_url = media_tag['src']
+                                media_url = urljoin(image_page_url, media_tag['src'])  # Resolve media URL
                                 self.log(f"Found image URL: {media_url}")
                                 media_urls.append((media_url, ruta_carpeta))
 
                             # Search for video URL
                             video_tag = image_soup.select_one("video#player")
                             if video_tag and 'src' in video_tag.attrs:
-                                video_url = video_tag['src']
+                                video_url = urljoin(image_page_url, video_tag['src'])  # Resolve video URL
                                 self.log(f"Found video URL: {video_url}")
                                 media_urls.append((video_url, ruta_carpeta))
                             else:
                                 source_tag = video_tag.find('source') if video_tag else None
                                 if source_tag and 'src' in source_tag.attrs:
-                                    video_url = source_tag['src']
+                                    video_url = urljoin(image_page_url, source_tag['src'])  # Resolve video URL from source
                                     self.log(f"Found video URL from source: {video_url}")
                                     media_urls.append((video_url, ruta_carpeta))
 
