@@ -6,3 +6,4 @@ pillow
 psutil
 markdown2
 tkinterweb
+cloudscraper
