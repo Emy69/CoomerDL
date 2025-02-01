@@ -66,7 +66,15 @@ class ImageDownloaderApp(ctk.CTk):
         self.setup_window()
         
         # Settings window
-        self.settings_window = SettingsWindow(self, self.tr, self.load_translations, self.update_ui_texts, self.save_language_preference, VERSION, self)
+        self.settings_window = SettingsWindow(
+            self,
+            self.tr,
+            self.load_translations,
+            self.update_ui_texts,
+            self.save_language_preference,
+            VERSION,
+            None  # Por ahora, no se pasa ningún downloader
+        )
 
         # About window
         self.about_window = AboutWindow(self, self.tr, VERSION)  # Inicializa AboutWindow
@@ -108,6 +116,18 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_folder = self.load_download_folder() 
         if self.download_folder:
             self.folder_path.configure(text=self.download_folder)
+
+        self.default_downloader = Downloader(
+            download_folder=self.download_folder,
+            max_workers=self.max_downloads,
+            log_callback=self.add_log_message_safe,
+            update_progress_callback=self.update_progress,
+            update_global_progress_callback=self.update_global_progress,
+            tr=self.tr,
+            folder_structure=self.settings.get('folder_structure', 'default')
+        )
+        
+        self.settings_window.downloader = self.default_downloader
 
         self.active_downloader = None  # Initialize active_downloader
 

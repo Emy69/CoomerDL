@@ -43,3 +43,4 @@ app/user_panel.py
 resources/config/cookies.json
 resources/config/download_path/download_folder.json
 CLI/
+resources/config/downloads.db

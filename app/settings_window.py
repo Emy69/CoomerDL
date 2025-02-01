@@ -61,112 +61,115 @@ class SettingsWindow:
         self.settings_window.geometry("800x600")
         self.settings_window.transient(self.parent)
         self.settings_window.resizable(False, False)
-
         self.settings_window.deiconify()
-        self.settings_window.after(10, self.settings_window.grab_set()) 
+        self.settings_window.after(10, self.settings_window.grab_set())
         self.center_window(self.settings_window, 800, 600)
-
-        # Crear el contenedor principal con pestañas
         self.main_frame = ctk.CTkFrame(self.settings_window)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Crear el CTkTabview
         self.tabview = ctk.CTkTabview(self.main_frame, width=700, height=500)
         self.tabview.pack(fill="both", expand=True)
-
-        # Crear pestañas
+        # Existing tabs
         self.general_tab = self.tabview.add(self.translate("General"))
-        self.downloads_tab = self.tabview.add(self.translate("Descargas"))
-        self.structure_tab = self.tabview.add(self.translate("Estructura"))
-
-        # Renderizar las pestañas
+        self.downloads_tab = self.tabview.add(self.translate("Downloads"))
+        self.structure_tab = self.tabview.add(self.translate("Structure"))
+        # New tab for database
+        self.db_tab = self.tabview.add(self.translate("Database"))
         self.render_general_tab(self.general_tab)
         self.render_downloads_tab(self.downloads_tab)
         self.render_structure_tab(self.structure_tab)
+        self.render_db_tab(self.db_tab)
+    
+    def render_db_tab(self, tab):
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_rowconfigure(0, weight=1)
+        db_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        db_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        db_label = ctk.CTkLabel(db_frame, text=self.translate("Database Management"), font=("Helvetica", 16, "bold"))
+        db_label.pack(pady=(0, 10))
+        export_button = ctk.CTkButton(db_frame, text=self.translate("Export Database"), command=self.export_db)
+        export_button.pack(pady=10)
+        clear_button = ctk.CTkButton(db_frame, text=self.translate("Clear Database"), command=self.clear_db)
+        clear_button.pack(pady=10)
 
     def render_general_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(0, weight=0)
 
-        # Frame General
+        # General frame
         general_frame = ctk.CTkFrame(tab, fg_color="transparent")
         general_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         general_frame.grid_columnconfigure(1, weight=1)
 
-        # Etiqueta principal
-        general_label = ctk.CTkLabel(general_frame, text=self.translate("Opciones Generales"), font=("Helvetica", 16, "bold"))
+        # Main label
+        general_label = ctk.CTkLabel(general_frame, text=self.translate("General Options"), font=("Helvetica", 16, "bold"))
         general_label.grid(row=0, column=0, columnspan=3, sticky="w")
 
-        # Descripción de la sección
-        description_label = ctk.CTkLabel(general_frame, text=self.translate("Aquí puedes cambiar la apariencia y el idioma de la aplicación."), 
+        # Section description
+        description_label = ctk.CTkLabel(general_frame, text=self.translate("Here you can change the appearance and language of the application."), 
                                          font=("Helvetica", 11), text_color="gray")
         description_label.grid(row=1, column=0, columnspan=3, sticky="w", pady=(0, 15))
 
-        # Tema
-        theme_label = ctk.CTkLabel(general_frame, text=self.translate("Tema"), font=("Helvetica", 14))
+        # Theme
+        theme_label = ctk.CTkLabel(general_frame, text=self.translate("Theme"), font=("Helvetica", 14))
         theme_label.grid(row=2, column=0, pady=5, sticky="w")
 
         theme_combobox = ctk.CTkComboBox(general_frame, values=["Light", "Dark", "System"], state='readonly', width=120)
         theme_combobox.set(self.settings.get('theme', 'System'))
         theme_combobox.grid(row=2, column=1, pady=5, padx=(10,0), sticky="w")
 
-        apply_theme_button = ctk.CTkButton(general_frame, text=self.translate("Aplicar Tema"), 
+        apply_theme_button = ctk.CTkButton(general_frame, text=self.translate("Apply Theme"), 
                                            command=lambda: self.change_theme_in_thread(theme_combobox.get()))
         apply_theme_button.grid(row=2, column=2, pady=5, sticky="e")
 
-
-        # Separador
+        # Separator
         separator_1 = ttk.Separator(general_frame, orient="horizontal")
         separator_1.grid(row=3, column=0, columnspan=3, sticky="ew", pady=15)
 
-        # Idioma
-        language_label = ctk.CTkLabel(general_frame, text=self.translate("Idioma"), font=("Helvetica", 14))
+        # Language
+        language_label = ctk.CTkLabel(general_frame, text=self.translate("Language"), font=("Helvetica", 14))
         language_label.grid(row=4, column=0, pady=5, sticky="w")
 
         language_combobox = ctk.CTkComboBox(general_frame, values=list(self.languages.keys()), state='readonly', width=120)
         language_combobox.set(self.get_language_name(self.settings.get('language', 'en')))
         language_combobox.grid(row=4, column=1, pady=5, padx=(10,0), sticky="w")
 
-        apply_language_button = ctk.CTkButton(general_frame, text=self.translate("Aplicar Idioma"),
+        apply_language_button = ctk.CTkButton(general_frame, text=self.translate("Apply Language"),
                                               command=lambda: self.apply_language_settings(language_combobox.get()))
         apply_language_button.grid(row=4, column=2, pady=5, sticky="e")
-
 
     def render_downloads_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(0, weight=1)
 
-        # Frame Descargas
+        # Downloads frame
         downloads_frame = ctk.CTkFrame(tab, fg_color="transparent")
         downloads_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         downloads_frame.grid_columnconfigure(1, weight=1)
 
-        download_label = ctk.CTkLabel(downloads_frame, text=self.translate("Opciones de Descarga"), font=("Helvetica", 16, "bold"))
+        download_label = ctk.CTkLabel(downloads_frame, text=self.translate("Download Options"), font=("Helvetica", 16, "bold"))
         download_label.grid(row=0, column=0, columnspan=3, sticky="w")
 
-        description_label = ctk.CTkLabel(downloads_frame, text=self.translate("Aquí puedes ajustar el número de descargas simultáneas y la estructura de las carpetas."), 
+        description_label = ctk.CTkLabel(downloads_frame, text=self.translate("Here you can adjust the number of simultaneous downloads and the folder structure."), 
                                          font=("Helvetica", 11), text_color="gray")
         description_label.grid(row=1, column=0, columnspan=3, sticky="w", pady=(0,15))
 
-        # Descargas simultáneas
-        max_downloads_label = ctk.CTkLabel(downloads_frame, text=self.translate("Descargas simultáneas"))
+        # Simultaneous downloads
+        max_downloads_label = ctk.CTkLabel(downloads_frame, text=self.translate("Simultaneous Downloads"))
         max_downloads_label.grid(row=2, column=0, pady=5, sticky="w")
 
         max_downloads_combobox = ctk.CTkComboBox(downloads_frame, values=[str(i) for i in range(1, 11)], state='readonly', width=80)
         max_downloads_combobox.set(str(self.settings.get('max_downloads', 3)))
         max_downloads_combobox.grid(row=2, column=1, pady=5, padx=(10,0), sticky="w")
 
-
-        # Estructura de carpetas
-        folder_structure_label = ctk.CTkLabel(downloads_frame, text=self.translate("Estructura de carpetas"))
+        # Folder structure
+        folder_structure_label = ctk.CTkLabel(downloads_frame, text=self.translate("Folder Structure"))
         folder_structure_label.grid(row=3, column=0, pady=5, sticky="w")
 
         folder_structure_combobox = ctk.CTkComboBox(downloads_frame, values=["default", "post_number"], state='readonly', width=150)
         folder_structure_combobox.set(self.settings.get('folder_structure', 'default'))
         folder_structure_combobox.grid(row=3, column=1, pady=5, padx=(10,0), sticky="w")
 
-
-        apply_download_button = ctk.CTkButton(downloads_frame, text=self.translate("Aplicar configuración de Descargas"),
+        apply_download_button = ctk.CTkButton(downloads_frame, text=self.translate("Apply Download Settings"),
                                               command=lambda: self.apply_download_settings(max_downloads_combobox, folder_structure_combobox))
         apply_download_button.grid(row=4, column=1, pady=10, sticky="e")
 
@@ -174,11 +177,11 @@ class SettingsWindow:
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(1, weight=1)
 
-        structure_label = ctk.CTkLabel(tab, text=self.translate("Vista previa de la estructura de carpetas"), font=("Helvetica", 16, "bold"))
+        structure_label = ctk.CTkLabel(tab, text=self.translate("Folder Structure Preview"), font=("Helvetica", 16, "bold"))
         structure_label.grid(row=0, column=0, pady=(20,10), sticky="w")
 
-        # Descripción
-        description_label = ctk.CTkLabel(tab, text=self.translate("Aquí puedes visualizar cómo se organizarán tus archivos descargados en el disco."), 
+        # Description
+        description_label = ctk.CTkLabel(tab, text=self.translate("Here you can see how your downloaded files will be organized on disk."), 
                                          font=("Helvetica", 11), text_color="gray")
         description_label.grid(row=1, column=0, sticky="w", padx=20, pady=(0,15))
 
@@ -195,25 +198,48 @@ class SettingsWindow:
         self.post_treeview.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 
         self.update_treeview()
+    
+    def export_db(self):
+        db_path = self.downloader.db_path
+        if os.path.exists(db_path):
+            export_path = filedialog.asksaveasfilename(defaultextension=".db", 
+                                                       filetypes=[("SQLite DB", "*.db")],
+                                                       title=self.translate("Export Database"))
+            if export_path:
+                try:
+                    import shutil
+                    shutil.copy(db_path, export_path)
+                    messagebox.showinfo(self.translate("Success"), self.translate("The database was exported successfully."))
+                except Exception as e:
+                    messagebox.showerror(self.translate("Error"), self.translate(f"Error exporting database: {e}"))
+        else:
+            messagebox.showwarning(self.translate("Warning"), self.translate("Database not found."))
+
+    def clear_db(self):
+        confirm = messagebox.askyesno(self.translate("Confirm"), 
+                                      self.translate("Are you sure you want to clear the database? This will delete all download records."))
+        if confirm:
+            try:
+                self.downloader.clear_database()
+                messagebox.showinfo(self.translate("Success"), self.translate("The database was cleared successfully."))
+            except Exception as e:
+                messagebox.showerror(self.translate("Error"), self.translate(f"Error clearing database: {e}"))
 
     def apply_download_settings(self, max_downloads_combobox, folder_structure_combobox):
         try:
-
             max_downloads = int(max_downloads_combobox.get())
             folder_structure = folder_structure_combobox.get()
 
             self.settings['max_downloads'] = max_downloads
             self.settings['folder_structure'] = folder_structure
 
-
             self.save_settings()
-
 
             self.downloader.update_max_downloads(max_downloads)
 
-            messagebox.showinfo(self.translate("Éxito"), self.translate("La configuración de descargas se ha aplicado correctamente."))
+            messagebox.showinfo(self.translate("Success"), self.translate("Download settings applied successfully."))
         except ValueError:
-            messagebox.showerror(self.translate("Error"), self.translate("Por favor, ingresa un número válido para las descargas simultáneas."))
+            messagebox.showerror(self.translate("Error"), self.translate("Please enter a valid number for simultaneous downloads."))
 
     def apply_language_settings(self, selected_language_name):
         if selected_language_name in self.languages:
@@ -223,14 +249,13 @@ class SettingsWindow:
             self.save_language_preference(selected_language_code)
             self.load_translations(selected_language_code)
             self.update_ui_texts()
-            messagebox.showinfo(self.translate("Éxito"), self.translate("El idioma se ha aplicado correctamente."))
+            messagebox.showinfo(self.translate("Success"), self.translate("The language was applied successfully."))
         else:
-            messagebox.showwarning(self.translate("Advertencia"), self.translate("Por favor, selecciona un idioma."))
+            messagebox.showwarning(self.translate("Warning"), self.translate("Please select a language."))
 
     def update_treeview(self):
-        """Actualiza los TreeView para mostrar la estructura de carpetas."""
+        """Update the TreeViews to display the folder structure."""
         if hasattr(self, 'default_treeview') and hasattr(self, 'post_treeview'):
-
             self.default_treeview.delete(*self.default_treeview.get_children())
             self.post_treeview.delete(*self.post_treeview.get_children())
 
@@ -271,7 +296,7 @@ class SettingsWindow:
             ctk.set_appearance_mode("system")
         self.settings['theme'] = theme_name
         self.save_settings()
-        messagebox.showinfo(self.translate("Éxito"), self.translate("El tema se ha aplicado correctamente."))
+        messagebox.showinfo(self.translate("Success"), self.translate("The theme was applied successfully."))
 
     def center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()

@@ -1,5 +1,6 @@
 {
-    "max_downloads": 3,
+    "max_downloads": 5,
     "folder_structure": "default",
-    "language": "en"
+    "language": "en",
+    "theme": "Dark"
 }
