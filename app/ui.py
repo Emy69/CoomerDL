@@ -28,8 +28,8 @@ from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 
-VERSION = "V0.8.5.1"
-MAX_LOG_LINES = 50  # Límite máximo de líneas de log
+VERSION = "V0.8.7"
+MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """
@@ -75,6 +75,8 @@ class ImageDownloaderApp(ctk.CTk):
             VERSION,
             None  # Por ahora, no se pasa ningún downloader
         )
+
+        self.all_logs = []  # Lista para almacenar todos los logs
 
         # About window
         self.about_window = AboutWindow(self, self.tr, VERSION)  # Inicializa AboutWindow
@@ -275,7 +277,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.progress_label = ctk.CTkLabel(self.action_frame, text="")
         self.progress_label.pack(side='left', padx=10)
 
-        self.log_textbox = ctk.CTkTextbox(self, width=590, height=200, state='disabled')
+        self.log_textbox = ctk.CTkTextbox(self, width=590, height=200)
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
 
         self.download_all_check = ctk.CTkCheckBox(self.action_frame)
@@ -868,26 +870,39 @@ class ImageDownloaderApp(ctk.CTk):
             self.remove_progress_bar(file_id)
 
     # Log messages safely
-    def add_log_message_safe(self, message):
+    def add_log_message_safe(self, message: str):
+        # Almacena todos los logs en self.all_logs
+        self.all_logs.append(message)
+
+        # Detecta si es error o warning para contarlos
         if "error" in message.lower():
             self.errors.append(message)
         if "warning" in message.lower():
             self.warnings.append(message)
 
+        # Agrega en la interfaz
         def log_in_main_thread():
             self.log_textbox.configure(state='normal')
+            
+            # Inserta el nuevo mensaje
             self.log_textbox.insert('end', message + '\n')
-            self.limit_log_lines() 
+
+            # Si no quieres limitar líneas, ignora la parte de limit_log_lines.
+            # Si deseas un límite, llama a limit_log_lines().
+            if MAX_LOG_LINES is not None:
+                self.limit_log_lines()
+
             self.log_textbox.configure(state='disabled')
-            self.log_textbox.yview_moveto(1)
+
         self.after(0, log_in_main_thread)
 
     def limit_log_lines(self):
         log_lines = self.log_textbox.get("1.0", "end-1c").split("\n")
         if len(log_lines) > MAX_LOG_LINES:
-            self.log_textbox.configure(state='normal')
-            self.log_textbox.delete("1.0", f"{len(log_lines) - MAX_LOG_LINES}.0")
-            self.log_textbox.configure(state='disabled')
+            # Quitamos solo las líneas que sobran
+            overflow = len(log_lines) - MAX_LOG_LINES
+            self.log_textbox.delete("1.0", f"{overflow}.0")
+
 
     # Export logs to a file
     def export_logs(self):
@@ -906,32 +921,41 @@ class ImageDownloaderApp(ctk.CTk):
                 skipped_files = []
                 failed_files = []
             
+            # Info general
             total_images = completed_files if self.download_images_check.get() else 0
             total_videos = completed_files if self.download_videos_check.get() else 0
             errors = len(self.errors)
             warnings = len(self.warnings)
-            duration = datetime.datetime.now() - self.download_start_time
+            if self.download_start_time:
+                duration = datetime.datetime.now() - self.download_start_time
+            else:
+                duration = "N/A"
 
             skipped_files_summary = "\n".join(skipped_files)
             failed_files_summary = "\n".join(failed_files)
 
             summary = (
-                f"{self.tr('Total de archivos descargados')}: {total_files}\n"
-                f"{self.tr('Total de imágenes descargadas')}: {total_images}\n"
-                f"{self.tr('Total de videos descargados')}: {total_videos}\n"
-                f"{self.tr('Errores')}: {errors}\n"
-                f"{self.tr('Advertencias')}: {warnings}\n"
-                f"{self.tr('Tiempo total de descarga')}: {duration}\n\n"
-                f"{self.tr('Archivos saltados por ya estar descargados')}:\n{skipped_files_summary}\n\n"
-                f"{self.tr('Archivos fallidos')}:\n{failed_files_summary}\n\n"
+                f"Total de archivos descargados: {total_files}\n"
+                f"Total de imágenes descargadas: {total_images}\n"
+                f"Total de videos descargados: {total_videos}\n"
+                f"Errores: {errors}\n"
+                f"Advertencias: {warnings}\n"
+                f"Tiempo total de descarga: {duration}\n\n"
+                f"Archivos saltados:\n{skipped_files_summary}\n\n"
+                f"Archivos fallidos:\n{failed_files_summary}\n\n"
             )
 
             with open(log_file_path, 'w', encoding='utf-8') as file:
+                # Escribimos el resumen
                 file.write(summary)
-                file.write(self.log_textbox.get("1.0", tk.END))
-            self.add_log_message_safe(self.tr("Logs exportados exitosamente a {path}", path=log_file_path))
+                # Escribimos TODOS los mensajes (no solo los del textbox)
+                file.write("\n--- LOGS COMPLETOS ---\n")
+                file.write("\n".join(self.all_logs))
+
+            self.add_log_message_safe(f"Logs exportados exitosamente a {log_file_path}")
         except Exception as e:
-            self.add_log_message_safe(self.tr("No se pudo exportar los logs: {e}", e=e))
+            self.add_log_message_safe(f"No se pudo exportar los logs: {e}")
+
 
     # Clipboard operations
     def copy_to_clipboard(self):
