@@ -7,12 +7,13 @@ import re
 import requests
 import threading
 import time
-import sqlite3  # <-- Importamos sqlite3
+import sqlite3
 
 class Downloader:
     def __init__(self, download_folder, max_workers=5, log_callback=None, 
                  enable_widgets_callback=None, update_progress_callback=None, 
                  update_global_progress_callback=None, headers=None,
+                 max_retries=3, retry_interval=2.0,
                  download_images=True, download_videos=True, download_compressed=True, 
                  tr=None, folder_structure='default', rate_limit_interval=2.0):
         
@@ -52,6 +53,8 @@ class Downloader:
         self.shutdown_called = False  # Para evitar múltiples cierres del executor
         self.folder_structure = folder_structure
         self.failed_retry_count = {}
+        self.max_retries = max_retries
+        self.retry_interval = retry_interval
         
         # ----- NUEVA SECCIÓN: INICIALIZACIÓN DE LA BASE DE DATOS -----
         db_folder = os.path.join("resources", "config")
@@ -97,6 +100,10 @@ class Downloader:
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.rate_limit = Semaphore(max_workers)
+    
+    def set_retry_settings(self, max_retries, retry_interval):
+        self.max_retries = max_retries
+        self.rate_limit_interval = retry_interval 
 
     def request_cancel(self):
         self.cancel_requested.set()
@@ -113,33 +120,42 @@ class Downloader:
                 self.enable_widgets_callback()
             self.log(self.tr("All downloads completed or cancelled."))
 
-    def safe_request(self, url, max_retries=5):
-        retry_wait = 1
+    def safe_request(self, url, max_retries=None):
+        if max_retries is None:
+            max_retries = self.max_retries  # Usar el valor global si no se especifica
+
         domain = urlparse(url).netloc
+        retry_wait = 1
 
         for attempt in range(max_retries):
             if self.cancel_requested.is_set():
                 return None
 
             with self.domain_locks[domain]:
-                last_request_time = self.domain_last_request[domain]
-                elapsed_time = time.time() - last_request_time
+                # Respetar el intervalo de tiempo para este dominio
+                elapsed_time = time.time() - self.domain_last_request[domain]
                 if elapsed_time < self.rate_limit_interval:
                     time.sleep(self.rate_limit_interval - elapsed_time)
+
                 try:
                     with self.rate_limit:
                         response = self.session.get(url, stream=True, headers=self.headers)
                     response.raise_for_status()
-                    self.domain_last_request[domain] = time.time()
+                    self.domain_last_request[domain] = time.time()  # Actualizar la hora de la última solicitud
                     return response
+
                 except requests.exceptions.RequestException as e:
-                    if e.response and e.response.status_code == 429:
-                        self.log(f"Retry {attempt + 1}: Error 429 Too Many Requests for url: {url}, waiting {retry_wait} seconds before retrying.")
-                        time.sleep(retry_wait)
+                    # Si el error es 429 o 5xx se reintenta; de lo contrario se aborta
+                    status_code = getattr(e.response, 'status_code', None)
+                    if status_code in (429, 500, 502, 503, 504):
+                        self.log(f"Intento {attempt + 1}/{max_retries}: Reintentando después del error {status_code} para la URL: {url}")
+                        time.sleep(self.retry_interval)  # Intervalo definido por el usuario
                         retry_wait *= 2
                     else:
-                        self.log(f"Non-retryable error: {e}")
+                        self.log(f"Error no reintentable para la URL: {url} - {e}")
                         break
+
+        self.log(f"Se excedieron los reintentos máximos ({max_retries}) para la URL: {url}")
         return None
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
@@ -177,6 +193,28 @@ class Downloader:
             return [post for post in all_posts if post['id'] == specific_post_id]
         return all_posts
 
+    def get_filename(self, media_url, post_id=None, post_name=None):
+        base_name = os.path.basename(media_url).split('?')[0]
+        extension = os.path.splitext(base_name)[1]
+        if not hasattr(self, 'file_naming_mode'):
+            self.file_naming_mode = 0
+        mode = self.file_naming_mode
+
+        # DEBUG
+        #self.log(f"DEBUG -> mode={mode}, post_name='{post_name}', post_id='{post_id}', base_name='{base_name}'")
+
+        if mode == 0:
+            final_name = self.sanitize_filename(base_name)
+        elif mode == 1:
+            final_name = f"{self.sanitize_filename(post_name or 'post')}{extension}"
+        elif mode == 2:
+            final_name = f"{self.sanitize_filename(post_name or 'post')} - {post_id}{extension}"
+        else:
+            final_name = self.sanitize_filename(base_name)
+
+        #self.log(f"DEBUG -> final_name='{final_name}'")
+        return final_name
+
     def process_post(self, post):
         media_urls = []
         if 'file' in post and post['file']:
@@ -208,12 +246,13 @@ class Downloader:
             media_folder = os.path.join(self.download_folder, user_id, folder_name)
         return media_folder
 
-    def process_media_element(self, media_url, user_id, post_id=None):
-        extension = os.path.splitext(media_url)[1].lower()
+    def process_media_element(self, media_url, user_id, post_id=None, post_name=None):
+
         if self.cancel_requested.is_set():
             return
 
-        # Verificar si el tipo de archivo está habilitado para descarga.
+        # Determinar la extensión
+        extension = os.path.splitext(media_url)[1].lower()
         if (extension in self.image_extensions and not self.download_images) or \
         (extension in self.video_extensions and not self.download_videos) or \
         (extension in self.compressed_extensions and not self.download_compressed):
@@ -221,78 +260,87 @@ class Downloader:
             return
 
         self.log(self.tr("Starting download from {media_url}", media_url=media_url))
-        try:
-            # Definir la carpeta y la ruta del archivo (esto es útil para guardar el archivo una vez descargado)
-            media_folder = self.get_media_folder(extension, user_id, post_id)
-            os.makedirs(media_folder, exist_ok=True)
-            filename = os.path.basename(media_url).split('?')[0]
-            filename = self.sanitize_filename(filename)
-            filepath = os.path.normpath(os.path.join(media_folder, filename))
-            
-            # --- VERIFICACIÓN EXCLUSIVA EN LA BASE DE DATOS ---
-            # Si ya existe un registro para esta URL, se asume que el archivo ya se descargó.
-            if media_url in self.download_cache:
-                self.log(self.tr("File already exists in DB, skipping: {filepath}", filepath=filepath))
-                self.skipped_files.append(filepath)
-                return
-            # -------------------------------------------------------
 
-            # Proceder a la descarga
+        # Determinar el nombre final usando get_filename; se debe haber actualizado file_naming_mode
+        filename = self.get_filename(media_url, post_id=post_id, post_name=post_name)
+        media_folder = self.get_media_folder(extension, user_id, post_id)
+        os.makedirs(media_folder, exist_ok=True)
+
+        final_path = os.path.normpath(os.path.join(media_folder, filename))
+        tmp_path = final_path + ".tmp"  # Archivo temporal
+
+        # Si existe un archivo temporal incompleto, eliminarlo
+        if os.path.exists(tmp_path):
+            self.log(self.tr("Removing incomplete file: {tmp_path}", tmp_path=tmp_path))
+            os.remove(tmp_path)
+
+        # Revisar en la base de datos para evitar volver a descargar el mismo archivo
+        if media_url in self.download_cache:
+            self.log(self.tr("File already exists in DB, skipping: {final_path}", final_path=final_path))
+            self.skipped_files.append(final_path)
+            return
+
+        try:
             response = self.safe_request(media_url)
             if response is None:
                 self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
-                retries = self.failed_retry_count.get(media_url, 0)
-                if retries < 1:
-                    self.failed_retry_count[media_url] = retries + 1
-                    self.failed_files.append(media_url)
-                else:
-                    self.log(self.tr("No more retries for {media_url}", media_url=media_url))
+                self.failed_files.append(media_url)
                 return
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
             self.start_time = time.time()
-            with open(filepath, 'wb') as f:
+
+            with open(tmp_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1048576):
                     if self.cancel_requested.is_set():
                         f.close()
-                        os.remove(filepath)
+                        os.remove(tmp_path)
                         self.log(self.tr("Download cancelled from {media_url}", media_url=media_url))
                         return
+
                     f.write(chunk)
                     downloaded_size += len(chunk)
+
+                    # Calcular velocidad y tiempo restante
                     elapsed_time = time.time() - self.start_time
                     speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
                     remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                    if self.update_progress_callback:
-                        self.update_progress_callback(downloaded_size, total_size, file_id=media_url, file_path=filepath, speed=speed, eta=remaining_time)
 
-            if not self.cancel_requested.is_set():
-                self.completed_files += 1
-                self.log(self.tr("Download success from {media_url}", media_url=media_url))
-                if self.update_global_progress_callback:
-                    self.update_global_progress_callback(self.completed_files, self.total_files)
-                # Registrar en la base de datos
-                with self.db_lock:
-                    self.db_cursor.execute(
-                        "INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id) VALUES (?, ?, ?, ?, ?)",
-                        (media_url, filepath, total_size, user_id, post_id)
-                    )
-                    self.db_connection.commit()
-                # Actualizar la cache para futuras comprobaciones
-                self.download_cache[media_url] = (filepath, total_size)
+                    if self.update_progress_callback:
+                        self.update_progress_callback(
+                            downloaded_size, total_size,
+                            file_id=media_url,
+                            file_path=tmp_path,
+                            speed=speed,
+                            eta=remaining_time
+                        )
+
+            # Si la descarga se completó, renombrar el archivo temporal al nombre final
+            os.rename(tmp_path, final_path)
+
+            self.completed_files += 1
+            self.log(self.tr("Download success from {media_url}", media_url=media_url))
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
+
+            # Insertar el registro en la base de datos
+            with self.db_lock:
+                self.db_cursor.execute(
+                    """INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
+                    VALUES (?, ?, ?, ?, ?)""",
+                    (media_url, final_path, total_size, user_id, post_id)
+                )
+                self.db_connection.commit()
+
+            # Actualizar la caché local
+            self.download_cache[media_url] = (final_path, total_size)
 
         except Exception as e:
             self.log(self.tr("Error downloading: {e}", e=e))
-            retries = self.failed_retry_count.get(media_url, 0)
-            if retries < 1:
-                self.failed_retry_count[media_url] = retries + 1
-                self.failed_files.append(media_url)
-            else:
-                if 'filepath' in locals() and os.path.exists(filepath):
-                    os.remove(filepath)
-                self.log(self.tr("Already retried once, not retrying again for {media_url}", media_url=media_url))
-
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            self.failed_files.append(media_url)
 
     def get_remote_file_size(self, media_url, filename):
         try:
@@ -310,49 +358,86 @@ class Downloader:
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
         try:
             self.log(self.tr("Starting download process..."))
-            posts = self.fetch_user_posts(site, user_id, service, query=query, initial_offset=initial_offset, log_fetching=download_all)
+
+            posts = self.fetch_user_posts(
+                site, user_id, service,
+                query=query,
+                initial_offset=initial_offset,
+                log_fetching=download_all
+            )
             if not posts:
                 self.log(self.tr("No posts found for this user."))
                 return
-            if not download_all:
-                posts = posts[:50]
-            futures = []
-            grouped_media_urls = defaultdict(list)
-            # Definimos la carpeta específica (aunque ya no la usaremos para ver duplicados)
-            specific_folder = os.path.join(self.download_folder, user_id)
-            os.makedirs(specific_folder, exist_ok=True)
 
-            # --- NUEVO: Se omite la verificación en disco y en el tamaño remoto ---
-            # Se recorren todos los posts y se agrupan las URLs sin comprobar en disco,
-            # ya que la verificación se hará en process_media_element (usando la DB).
+            if not download_all:
+                # Limita a los primeros 50 posts si no es "download all"
+                posts = posts[:50]
+
+            futures = []
+            self.total_files = 0  # se recalculará
+
+            # Recorremos cada post
             for post in posts:
+                current_post_id = post.get('id') or "unknown_id"
+                # Tomamos el 'title' del post para usarlo como post_name
+                title = post.get('title') or ""
+
+                # Obtenemos la lista de URLs de archivos para este post
                 media_urls = self.process_post(post)
+
+                # Filtramos según extensiones (se puede omitir, pues ya está en process_post si quieres)
                 for media_url in media_urls:
                     extension = os.path.splitext(media_url)[1].lower()
-                    # Filtrar según tipos de archivo no seleccionados
                     if (extension in self.image_extensions and not self.download_images) or \
                     (extension in self.video_extensions and not self.download_videos) or \
                     (extension in self.compressed_extensions and not self.download_compressed):
                         continue
-                    grouped_media_urls[post['id']].append(media_url)
-            # -----------------------------------------------------------------------
 
-            self.total_files = sum(len(urls) for urls in grouped_media_urls.values())
-            self.completed_files = 0
+                    # Aumentamos total_files
+                    self.total_files += 1
 
-            for post_id, media_urls in grouped_media_urls.items():
+            # Segunda pasada, ya sabiendo cuántos archivos totales
+            # (Para el "progress" si así lo requieres)
+            futures = []
+            for post in posts:
+                current_post_id = post.get('id') or "unknown_id"
+                title = post.get('title') or ""
+
+                media_urls = self.process_post(post)
                 for media_url in media_urls:
+                    extension = os.path.splitext(media_url)[1].lower()
+                    if (extension in self.image_extensions and not self.download_images) or \
+                    (extension in self.video_extensions and not self.download_videos) or \
+                    (extension in self.compressed_extensions and not self.download_compressed):
+                        continue
+
+                    # Dependiendo del modo, encolamos o hacemos en serie
                     if self.download_mode == 'queue':
-                        self.process_media_element(media_url, user_id, post_id)
+                        # Llamada directa y secuencial
+                        self.process_media_element(
+                            media_url,
+                            user_id,
+                            post_id=current_post_id,
+                            post_name=title  
+                        )
                     else:
-                        future = self.executor.submit(self.process_media_element, media_url, user_id, post_id)
+                        # Modo multi (threaded)
+                        future = self.executor.submit(
+                            self.process_media_element,
+                            media_url,
+                            user_id,
+                            current_post_id,
+                            title  # <-- pasamos el título aquí
+                        )
                         futures.append(future)
 
+            # Espera a que terminen los hilos (si es multi)
             if self.download_mode == 'multi':
                 for future in as_completed(futures):
                     if self.cancel_requested.is_set():
                         break
 
+            # Intentamos re-descargar fallidos, si deseas
             if self.failed_files:
                 self.log(self.tr("Retrying failed downloads..."))
                 for media_url in self.failed_files:
@@ -420,3 +505,19 @@ class Downloader:
             self.db_cursor.execute("DELETE FROM downloads")
             self.db_connection.commit()
         self.log(self.tr("Database cleared."))
+    
+    def update_max_downloads(self, new_max):
+        """
+        Dynamically updates the number of max workers (threads) for this Downloader.
+        Recreates the ThreadPoolExecutor and the rate_limit Semaphore.
+        """
+        # shut down the old executor safely
+        if self.executor:
+            self.executor.shutdown(wait=True)
+
+        self.max_workers = new_max
+        self.executor = ThreadPoolExecutor(max_workers=new_max)
+        self.rate_limit = Semaphore(new_max)
+
+        self.log(f"Updated max_workers to {new_max}")
+

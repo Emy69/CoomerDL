@@ -28,7 +28,7 @@ from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 
-VERSION = "V0.8.7"
+VERSION = "V0.8.8"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -672,7 +672,8 @@ class ImageDownloaderApp(ctk.CTk):
             max_workers=self.max_downloads,
             folder_structure=self.settings_window.settings.get('folder_structure', 'default')
         )
-    
+        self.general_downloader.file_naming_mode = self.settings_window.settings.get('file_naming_mode', 0)
+
     def setup_jpg5_downloader(self):
         self.active_downloader = Jpg5Downloader(
             url=self.url_entry.get().strip(),

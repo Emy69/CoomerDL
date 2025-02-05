@@ -141,52 +141,181 @@ class SettingsWindow:
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(0, weight=1)
 
-        # Downloads frame
+        # Frame for the "Downloads" tab
         downloads_frame = ctk.CTkFrame(tab, fg_color="transparent")
         downloads_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         downloads_frame.grid_columnconfigure(1, weight=1)
 
         download_label = ctk.CTkLabel(downloads_frame, text=self.translate("Download Options"), font=("Helvetica", 16, "bold"))
-        download_label.grid(row=0, column=0, columnspan=3, sticky="w")
+        download_label.grid(row=0, column=0, columnspan=2, sticky="w")
 
-        description_label = ctk.CTkLabel(downloads_frame, text=self.translate("Here you can adjust the number of simultaneous downloads and the folder structure."), 
-                                         font=("Helvetica", 11), text_color="gray")
-        description_label.grid(row=1, column=0, columnspan=3, sticky="w", pady=(0,15))
+        description_label = ctk.CTkLabel(
+            downloads_frame,
+            text=self.translate("Here you can adjust the number of simultaneous downloads, file naming, retries, and more."),
+            font=("Helvetica", 11),
+            text_color="gray"
+        )
+        description_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 15))
 
+
+        # ----------------------------
         # Simultaneous downloads
+        # ----------------------------
         max_downloads_label = ctk.CTkLabel(downloads_frame, text=self.translate("Simultaneous Downloads"))
         max_downloads_label.grid(row=2, column=0, pady=5, sticky="w")
 
-        max_downloads_combobox = ctk.CTkComboBox(downloads_frame, values=[str(i) for i in range(1, 11)], state='readonly', width=80)
+        max_downloads_combobox = ctk.CTkComboBox(
+            downloads_frame,
+            values=[str(i) for i in range(1, 11)],
+            state='readonly',
+            width=80
+        )
         max_downloads_combobox.set(str(self.settings.get('max_downloads', 3)))
-        max_downloads_combobox.grid(row=2, column=1, pady=5, padx=(10,0), sticky="w")
+        max_downloads_combobox.grid(row=2, column=1, pady=5, padx=(10, 0), sticky="w")
 
+
+        # ----------------------------
         # Folder structure
+        # ----------------------------
         folder_structure_label = ctk.CTkLabel(downloads_frame, text=self.translate("Folder Structure"))
         folder_structure_label.grid(row=3, column=0, pady=5, sticky="w")
 
-        folder_structure_combobox = ctk.CTkComboBox(downloads_frame, values=["default", "post_number"], state='readonly', width=150)
+        folder_structure_combobox = ctk.CTkComboBox(
+            downloads_frame,
+            values=["default", "post_number"],
+            state='readonly',
+            width=150
+        )
         folder_structure_combobox.set(self.settings.get('folder_structure', 'default'))
-        folder_structure_combobox.grid(row=3, column=1, pady=5, padx=(10,0), sticky="w")
+        folder_structure_combobox.grid(row=3, column=1, pady=5, padx=(10, 0), sticky="w")
 
-        apply_download_button = ctk.CTkButton(downloads_frame, text=self.translate("Apply Download Settings"),
-                                              command=lambda: self.apply_download_settings(max_downloads_combobox, folder_structure_combobox))
-        apply_download_button.grid(row=4, column=1, pady=10, sticky="e")
+
+        # ----------------------------
+        # Max retries
+        # ----------------------------
+        retry_label = ctk.CTkLabel(downloads_frame, text=self.translate("Max Retries"))
+        retry_label.grid(row=4, column=0, pady=5, sticky="w")
+
+        retry_combobox = ctk.CTkComboBox(
+            downloads_frame,
+            values=[str(i) for i in range(1, 11)],
+            state='readonly',
+            width=80
+        )
+        retry_combobox.set(str(self.settings.get('max_retries', 3)))
+        retry_combobox.grid(row=4, column=1, pady=5, padx=(10, 0), sticky="w")
+
+
+        # ----------------------------
+        # Retry interval
+        # ----------------------------
+        retry_interval_label = ctk.CTkLabel(downloads_frame, text=self.translate("Retry Interval (seconds)"))
+        retry_interval_label.grid(row=5, column=0, pady=5, sticky="w")
+
+        retry_interval_entry = ctk.CTkEntry(downloads_frame, width=80)
+        retry_interval_entry.insert(0, str(self.settings.get('retry_interval', 2.0)))
+        retry_interval_entry.grid(row=5, column=1, pady=5, padx=(10, 0), sticky="w")
+
+
+        # ----------------------------
+        # File naming mode
+        # ----------------------------
+        naming_label = ctk.CTkLabel(downloads_frame, text=self.translate("File Naming Mode"))
+        naming_label.grid(row=6, column=0, pady=5, sticky="w")
+
+        naming_options = [
+            "Use File ID (default)",
+            "Use Sanitized Post Name",
+            "Post Name + Post ID Suffix"
+        ]
+
+        # 1) Crear PRIMERO el combobox
+        file_naming_combobox = ctk.CTkComboBox(
+            downloads_frame,
+            values=naming_options,
+            state='readonly',
+            width=200
+        )
+
+        # 2) Recuperar el valor desde settings (puede ser int o str). 
+        #    Si es int (0,1,2) mapeamos a la cadena; si es str, la usamos tal cual.
+        naming_mode = self.settings.get('file_naming_mode', 0)
+        if isinstance(naming_mode, int):
+            # Asegurarnos de no pasarnos de índice
+            if 0 <= naming_mode < len(naming_options):
+                file_naming_combobox.set(naming_options[naming_mode])
+            else:
+                file_naming_combobox.set(naming_options[0])
+        else:
+            # Aquí asumes que es una cadena. Si no, fallback a la primera
+            if naming_mode in naming_options:
+                file_naming_combobox.set(naming_mode)
+            else:
+                file_naming_combobox.set(naming_options[0])
+
+        file_naming_combobox.grid(row=6, column=1, pady=5, padx=(10, 0), sticky="w")
+
+
+        # ----------------------------
+        # Botón para aplicar configuración
+        # ----------------------------
+        apply_download_button = ctk.CTkButton(
+            downloads_frame,
+            text=self.translate("Apply Download Settings"),
+            command=lambda: self.apply_download_settings(
+                max_downloads_combobox,
+                folder_structure_combobox,
+                retry_combobox,
+                retry_interval_entry,
+                file_naming_combobox
+            )
+        )
+        apply_download_button.grid(row=7, column=1, pady=10, sticky="e")
+
+
 
     def render_structure_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(1, weight=1)
 
-        structure_label = ctk.CTkLabel(tab, text=self.translate("Folder Structure Preview"), font=("Helvetica", 16, "bold"))
+        structure_label = ctk.CTkLabel(
+            tab,
+            text=self.translate("Folder Structure Preview"),
+            font=("Helvetica", 16, "bold")
+        )
         structure_label.grid(row=0, column=0, pady=(20,10), sticky="w")
 
-        # Description
-        description_label = ctk.CTkLabel(tab, text=self.translate("Here you can see how your downloaded files will be organized on disk."), 
-                                         font=("Helvetica", 11), text_color="gray")
+        # Descripción principal
+        description_label = ctk.CTkLabel(
+            tab,
+            text=self.translate("Here you can see how your downloaded files will be organized on disk."),
+            font=("Helvetica", 11),
+            text_color="gray"
+        )
         description_label.grid(row=1, column=0, sticky="w", padx=20, pady=(0,15))
 
+        # -------- BLOQUE DE EJEMPLO: Ejemplos de nombres de archivos según la opción --------
+        examples_text = (
+            "Ejemplos de nombres según File Naming Mode:\n\n"
+            " • [Modo 0] Use File ID (default):  \n"
+            "     123456.mp4  (usa el nombre/ID original del archivo)\n\n"
+            " • [Modo 1] Use Sanitized Post Name:  \n"
+            "     Mi_Post_Ejemplo.mp4  (si el post se llama 'Mi Post Ejemplo')\n\n"
+            " • [Modo 2] Post Name + Post ID Suffix:  \n"
+            "     Mi_Post_Ejemplo - 98765.mp4  (agrega el post ID al final)\n"
+        )
+        examples_label = ctk.CTkLabel(
+            tab,
+            text=self.translate(examples_text),
+            font=("Helvetica", 11),
+            text_color="gray",
+            justify="left"
+        )
+        examples_label.grid(row=2, column=0, sticky="w", padx=20, pady=(0,15))
+        # ------------------------------------------------------------------------------------
+
         treeview_frame = ctk.CTkFrame(tab, fg_color="transparent")
-        treeview_frame.grid(row=2, column=0, sticky="nsew", padx=20, pady=20)
+        treeview_frame.grid(row=3, column=0, sticky="nsew", padx=20, pady=20)
         treeview_frame.grid_rowconfigure(0, weight=1)
         treeview_frame.grid_columnconfigure(0, weight=1)
         treeview_frame.grid_columnconfigure(1, weight=1)
@@ -225,21 +354,53 @@ class SettingsWindow:
             except Exception as e:
                 messagebox.showerror(self.translate("Error"), self.translate(f"Error clearing database: {e}"))
 
-    def apply_download_settings(self, max_downloads_combobox, folder_structure_combobox):
+    def apply_download_settings(self,max_downloads_combobox,folder_structure_combobox,retry_combobox,retry_interval_entry,file_naming_combobox):
         try:
+
             max_downloads = int(max_downloads_combobox.get())
             folder_structure = folder_structure_combobox.get()
+            max_retries = int(retry_combobox.get())
+            retry_interval = float(retry_interval_entry.get())
+
+            file_naming_mode_str = file_naming_combobox.get()
+
+            mapping = {
+                "Use File ID (default)": 0,
+                "Use Sanitized Post Name": 1,
+                "Post Name + Post ID Suffix": 2
+            }
+            numeric_mode = mapping.get(file_naming_mode_str, 0)
+            self.downloader.file_naming_mode = numeric_mode
 
             self.settings['max_downloads'] = max_downloads
             self.settings['folder_structure'] = folder_structure
+            self.settings['max_retries'] = max_retries
+            self.settings['retry_interval'] = retry_interval
+            self.settings['file_naming_mode'] = numeric_mode
 
             self.save_settings()
 
-            self.downloader.update_max_downloads(max_downloads)
+            if self.downloader:
+                self.downloader.update_max_downloads(max_downloads)
 
-            messagebox.showinfo(self.translate("Success"), self.translate("Download settings applied successfully."))
+                self.downloader.max_retries = max_retries
+                self.downloader.retry_interval = retry_interval
+
+                self.downloader.file_naming_mode = numeric_mode
+
+
+            messagebox.showinfo(
+                self.translate("Éxito"),
+                self.translate("La configuración de descargas se aplicó correctamente.")
+            )
+
         except ValueError:
-            messagebox.showerror(self.translate("Error"), self.translate("Please enter a valid number for simultaneous downloads."))
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate("Por favor, ingresa valores numéricos válidos.")
+            )
+
+
 
     def apply_language_settings(self, selected_language_name):
         if selected_language_name in self.languages:
