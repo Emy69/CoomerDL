@@ -300,9 +300,9 @@ class SettingsWindow:
             " • [Modo 0] Use File ID (default):  \n"
             "     123456.mp4  (usa el nombre/ID original del archivo)\n\n"
             " • [Modo 1] Use Sanitized Post Name:  \n"
-            "     Mi_Post_Ejemplo.mp4  (si el post se llama 'Mi Post Ejemplo')\n\n"
+            "     Mi_Post_Ejemplo_1_ab12.mp4  (nombre del post + índice del adjunto + hash único)\n\n"
             " • [Modo 2] Post Name + Post ID Suffix:  \n"
-            "     Mi_Post_Ejemplo - 98765.mp4  (agrega el post ID al final)\n"
+            "     Mi_Post_Ejemplo - 98765_1.mp4  (nombre del post + ID del post + índice del adjunto)\n"
         )
         examples_label = ctk.CTkLabel(
             tab,
