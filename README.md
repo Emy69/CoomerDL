@@ -43,6 +43,19 @@ If you find this tool helpful, please consider supporting my efforts:
 
 ---
 
+## CLI Tools
+
+If you prefer using command-line interfaces, check out the following projects:
+
+- **[Coomer CLI](https://github.com/Emy69/Coomer-cli)**  
+  A CLI tool for downloading media from Coomer and similar sites. It offers customizable options for file naming, download modes, rate limiting, checksum verification, and more.
+
+- **[Simpcity CLI](https://github.com/Emy69/SimpCityCLI)**  
+  A CLI tool specifically designed for downloading media from Simpcity. It shares many features with Coomer CLI and is tailored for the Simpcity platform.
+
+---
+
+
 ## Language Support
 
 - [Español](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)  
