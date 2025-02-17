@@ -135,10 +135,68 @@ class BunkrDownloader:
     def descargar_post_bunkr(self, url_post):
         try:
             self.log(f"Iniciando descarga para el post: {url_post}")
-            response = self.session.get(url_post, headers=self.headers)
-            self.log(f"Código de estado de la respuesta: {response.status_code} para {url_post}")
-            
-            if response.status_code == 200:
+
+            # Si se trata de una URL tipo '/f/', seguimos el flujo en dos pasos:
+            if '/f/' in url_post:
+                self.log("Detectado URL tipo '/f/'. Procediendo a extraer el enlace intermedio.")
+                # Paso 1: Accedemos a la URL original para obtener el primer enlace (intermedio)
+                response = self.session.get(url_post, headers=self.headers)
+                if response.status_code != 200:
+                    self.log(f"Error al acceder al post {url_post}: Estado {response.status_code}")
+                    return
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                first_anchor = soup.find('a', {
+                    'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold flex-1 ic-download-01 ic-before before:text-lg'
+                })
+
+                if not first_anchor or 'href' not in first_anchor.attrs:
+                    self.log("No se encontró el primer enlace de descarga en la página original.")
+                    return
+
+                intermediate_url = first_anchor['href']
+                self.log(f"Enlace intermedio encontrado: {intermediate_url}")
+
+                # Paso 2: Accedemos a la URL intermedia para extraer el enlace final de descarga
+                intermediate_response = self.session.get(intermediate_url, headers=self.headers)
+                if intermediate_response.status_code != 200:
+                    self.log(f"Error al acceder a la URL intermedia: {intermediate_url} (Estado {intermediate_response.status_code})")
+                    return
+
+                soup2 = BeautifulSoup(intermediate_response.text, 'html.parser')
+                # Buscamos la etiqueta <p> con la clase esperada y, dentro, el <a> con el enlace final
+                p_tag = soup2.find('p', class_="mt-3 text-center")
+                if not p_tag:
+                    self.log("No se encontró la etiqueta <p> con clase 'mt-3 text-center' en la página intermedia.")
+                    return
+
+                download_anchor = p_tag.find('a', {
+                    'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold ic-download-01 ic-before before:text-lg'
+                })
+                if not download_anchor or 'href' not in download_anchor.attrs:
+                    self.log("No se encontró el enlace de descarga final en la página intermedia.")
+                    return
+
+                final_download_url = download_anchor['href']
+                self.log(f"Enlace de descarga final encontrado: {final_download_url}")
+
+                # Creamos la carpeta de destino para este post
+                file_name = "bunkr_post"
+                folder_name = self.get_consistent_folder_name(url_post, file_name)
+                ruta_carpeta = os.path.join(self.download_folder, folder_name)
+                os.makedirs(ruta_carpeta, exist_ok=True)
+
+                # Preparamos la lista de medios con el enlace final
+                media_urls = [(final_download_url, ruta_carpeta)]
+
+            else:
+                # Lógica original para posts que contienen imágenes y videos
+
+                response = self.session.get(url_post, headers=self.headers)
+                if response.status_code != 200:
+                    self.log(f"Error al acceder al post {url_post}: Estado {response.status_code}")
+                    return
+
                 soup = BeautifulSoup(response.text, 'html.parser')
 
                 # Extraer y sanitizar el nombre de la carpeta para el post
@@ -148,15 +206,14 @@ class BunkrDownloader:
                     file_name = self.clean_filename(file_name)[:50]  # Limitar a 50 caracteres
                 else:
                     file_name = "bunkr_post"
-                
+
                 folder_name = self.get_consistent_folder_name(url_post, file_name)
                 ruta_carpeta = os.path.join(self.download_folder, folder_name)
                 os.makedirs(ruta_carpeta, exist_ok=True)
 
                 media_urls = []
-                self.log(f"Procesando URL de la página de medios: {url_post}")
 
-                # Buscar imágenes
+                # Buscar imágenes en etiquetas <figure>
                 media_divs = soup.find_all('figure', {'class': 'relative rounded-lg overflow-hidden flex justify-center items-center aspect-video bg-soft'})
                 for div in media_divs:
                     img_tags = div.find_all('img')
@@ -166,24 +223,26 @@ class BunkrDownloader:
                             self.log(f"URL de imagen encontrada: {img_url}")
                             media_urls.append((img_url, ruta_carpeta))
 
-                # Buscar videos usando el nuevo método
+                # Buscar videos: se recorre cada div que pueda contener el enlace intermedio de descarga
                 video_divs = soup.find_all('div', {'class': 'flex w-full md:w-auto gap-4'})
                 self.log(f"Se encontraron {len(video_divs)} divs de video.")
                 for video_div in video_divs:
                     self.log("Buscando enlace de página de descarga en el div de video.")
-                    download_page_link = video_div.find('a', {'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold flex-1 ic-download-01 ic-before before:text-lg'})
+                    download_page_link = video_div.find('a', {
+                        'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold flex-1 ic-download-01 ic-before before:text-lg'
+                    })
                     if download_page_link and 'href' in download_page_link.attrs:
                         video_page_url = download_page_link['href']
                         self.log(f"URL de la página de descarga encontrada: {video_page_url}. Accediendo ahora.")
-
-                        # Acceder a la página del video para obtener el enlace de descarga real
                         video_page_response = self.session.get(video_page_url, headers=self.headers)
                         self.log(f"Estado de la respuesta de la página de video: {video_page_response.status_code} para {video_page_url}")
-                        
+
                         if video_page_response.status_code == 200:
                             video_page_soup = BeautifulSoup(video_page_response.text, 'html.parser')
                             self.log("Buscando enlace de descarga real en la página de video.")
-                            download_link = video_page_soup.find('a', {'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold ic-download-01 ic-before before:text-lg'})
+                            download_link = video_page_soup.find('a', {
+                                'class': 'btn btn-main btn-lg rounded-full px-6 font-semibold ic-download-01 ic-before before:text-lg'
+                            })
                             if download_link and 'href' in download_link.attrs:
                                 video_url = download_link['href']
                                 self.log(f"URL de descarga de video encontrada: {video_url}")
@@ -193,28 +252,27 @@ class BunkrDownloader:
                         else:
                             self.log(f"Error al acceder a la página de video: {video_page_url} con estado {video_page_response.status_code}")
 
-                # Debug: Imprimir todas las URLs de medios encontradas
-                self.log(f"URLs de medios encontradas: {media_urls}")
+            # Proceder a la descarga de todos los medios encontrados
+            self.total_files = len(media_urls)
+            if media_urls:  # Solo proceder si hay URLs para descargar
+                from concurrent.futures import ThreadPoolExecutor, as_completed
+                with ThreadPoolExecutor(max_workers=self.max_downloads) as executor:
+                    futures = [executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
+                    for future in as_completed(futures):
+                        if self.cancel_requested:
+                            self.log("Cancelando descargas restantes.")
+                            break
+                        future.result()
 
-                self.total_files = len(media_urls)
-                if media_urls:  # Solo proceder si hay URLs para descargar
-                    with ThreadPoolExecutor(max_workers=self.max_downloads) as executor:
-                        futures = [executor.submit(self.download_file, url, folder, str(uuid.uuid4())) for url, folder in media_urls]
-                        for future in as_completed(futures):
-                            if self.cancel_requested:
-                                self.log("Cancelando descargas restantes.")
-                                break
-                            future.result()
-
-                self.log("Descarga iniciada para todos los medios.")
-                if self.enable_widgets_callback:
-                    self.enable_widgets_callback()
-            else:
-                self.log(f"Error al acceder al post {url_post}: Estado {response.status_code}")
-        except Exception as e:
-            self.log(f"Error al acceder al post {url_post}: {e}")
+            self.log("Descarga iniciada para todos los medios.")
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
+
+        except Exception as e:
+            self.log(f"Error al procesar el post {url_post}: {e}")
+            if self.enable_widgets_callback:
+                self.enable_widgets_callback()
+
 
     def descargar_perfil_bunkr(self, url_perfil):
         try:

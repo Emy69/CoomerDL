@@ -757,7 +757,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(self.tr("Descargando Bunkr"))
             self.setup_bunkr_downloader()
             self.active_downloader = self.bunkr_downloader
-            if "/v/" in url or "/i/" in url:
+            # Si la URL contiene "/v/", "/i/" o "/f/", la tratamos como un post individual.
+            if any(sub in url for sub in ["/v/", "/i/", "/f/"]):
                 self.add_log_message_safe(self.tr("URL del post"))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_post_bunkr, url))
             else:
