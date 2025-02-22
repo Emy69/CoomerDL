@@ -219,26 +219,37 @@ class Downloader:
             self.file_naming_mode = 0
         mode = self.file_naming_mode
 
+        def sanitize(name):
+            # Only remove forbidden characters; Unicode letters (e.g. Hiragana, Kanji) remain intact.
+            sanitized = self.sanitize_filename(name)
+            # If the result is empty (or only whitespace), return an empty string to trigger fallback.
+            return sanitized.strip()
+
         if mode == 0:
-            # Modo 0: Usa el nombre original del archivo (File ID)
-            sanitized = self.sanitize_filename(base_name)
-            # Se añade el índice para evitar conflictos (opcional)
+            # Use original file name (File ID)
+            sanitized = sanitize(base_name)
+            if not sanitized:
+                sanitized = "file"  # fallback default if needed
             final_name = f"{sanitized}_{attachment_index}{extension}"
         elif mode == 1:
-            # Modo 1: Usa el nombre del post
-            sanitized_post = self.sanitize_filename(post_name or "post")
-            # Para mayor unicidad, se añade el índice y un hash corto de la URL
+            # Use post name
+            sanitized_post = sanitize(post_name or "")
+            if not sanitized_post:
+                # Fallback to using post ID if available, or default to "post"
+                sanitized_post = f"post_{post_id}" if post_id else "post"
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             final_name = f"{sanitized_post}_{attachment_index}_{short_hash}{extension}"
         elif mode == 2:
-            # Modo 2: Usa el nombre del post y el post_id
-            sanitized_post = self.sanitize_filename(post_name or "post")
+            # Use post name and post ID
+            sanitized_post = sanitize(post_name or "")
+            if not sanitized_post:
+                sanitized_post = f"post_{post_id}" if post_id else "post"
             if post_id:
                 final_name = f"{sanitized_post} - {post_id}_{attachment_index}{extension}"
             else:
                 final_name = f"{sanitized_post}_{attachment_index}{extension}"
         else:
-            final_name = self.sanitize_filename(base_name)
+            final_name = sanitize(base_name)
 
         return final_name
 
