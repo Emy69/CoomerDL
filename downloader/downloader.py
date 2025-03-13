@@ -24,8 +24,8 @@ class Downloader:
         self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()  # Para manejar cancelaciones
         self.headers = headers or {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    'Referer': 'https://coomer.su/',
         }
         self.media_counter = 0
         self.session = requests.Session()
@@ -139,43 +139,37 @@ class Downloader:
                 self.enable_widgets_callback()
             self.log(self.tr("All downloads completed or cancelled."))
 
-    def safe_request(self, url, max_retries=None):
+    def safe_request(self, url, max_retries=None, stream=False):
         if max_retries is None:
-            max_retries = self.max_retries  # Usar el valor global si no se especifica
+            max_retries = self.max_retries
 
         domain = urlparse(url).netloc
-        retry_wait = 1
-
         for attempt in range(max_retries):
             if self.cancel_requested.is_set():
                 return None
 
             with self.domain_locks[domain]:
-                # Respetar el intervalo de tiempo para este dominio
                 elapsed_time = time.time() - self.domain_last_request[domain]
                 if elapsed_time < self.rate_limit_interval:
                     time.sleep(self.rate_limit_interval - elapsed_time)
 
                 try:
                     with self.rate_limit:
-                        response = self.session.get(url, stream=True, headers=self.headers)
+                        response = self.session.get(url, stream=stream, headers=self.headers, timeout=30)
                     response.raise_for_status()
-                    self.domain_last_request[domain] = time.time()  # Actualizar la hora de la última solicitud
+                    self.domain_last_request[domain] = time.time()
                     return response
-
                 except requests.exceptions.RequestException as e:
-                    # Si el error es 429 o 5xx se reintenta; de lo contrario se aborta
                     status_code = getattr(e.response, 'status_code', None)
                     if status_code in (429, 500, 502, 503, 504):
-                        self.log(f"Intento {attempt + 1}/{max_retries}: Reintentando después del error {status_code} para la URL: {url}")
-                        time.sleep(self.retry_interval)  # Intervalo definido por el usuario
-                        retry_wait *= 2
+                        self.log(f"Intento {attempt + 1}/{max_retries}: Reintentando tras error {status_code} en la URL: {url}")
+                        time.sleep(self.retry_interval)
                     else:
-                        self.log(f"Error no reintentable para la URL: {url} - {e}")
+                        self.log(f"Error no reintentable en la URL: {url} - {e}")
                         break
-
-        self.log(f"Se excedieron los reintentos máximos ({max_retries}) para la URL: {url}")
+        self.log(f"Se excedieron los reintentos ({max_retries}) para la URL: {url}")
         return None
+
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
         all_posts = []
@@ -193,10 +187,19 @@ class Downloader:
             if log_fetching:
                 self.log(self.tr("Fetching user posts from {api_url}", api_url=api_url))
             try:
-                with self.rate_limit:
-                    response = self.session.get(api_url, headers=self.headers)
+                # Para la llamada a la API no usamos stream
+                response = self.session.get(api_url, headers=self.headers)
                 response.raise_for_status()
-                posts = response.json()
+                try:
+                    posts_data = response.json()
+                except ValueError as e:
+                    self.log(self.tr("Error al parsear JSON: {e}", e=e))
+                    break
+                # Si la respuesta es un diccionario y tiene la clave 'data', se usa esa lista
+                if isinstance(posts_data, dict) and 'data' in posts_data:
+                    posts = posts_data['data']
+                else:
+                    posts = posts_data
                 if not posts:
                     break
                 if specific_post_id:
@@ -211,6 +214,7 @@ class Downloader:
         if specific_post_id:
             return [post for post in all_posts if post['id'] == specific_post_id]
         return all_posts
+
 
     def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1):
         base_name = os.path.basename(media_url).split('?')[0]
@@ -286,67 +290,66 @@ class Downloader:
             media_folder = os.path.join(self.download_folder, user_id, folder_name)
         return media_folder
 
-    def process_media_element(self, media_url, user_id, post_id=None, post_name=None):
-        # Si se ha solicitado cancelar, se aborta.
+    def process_media_element(self, media_url, user_id, post_id=None,
+                          post_name=None, download_id=None):
+    # Si se ha solicitado cancelar, se aborta.
         if self.cancel_requested.is_set():
             return
 
-        # Determinar la extensión del archivo.
         extension = os.path.splitext(media_url)[1].lower()
         if (extension in self.image_extensions and not self.download_images) or \
         (extension in self.video_extensions and not self.download_videos) or \
         (extension in self.compressed_extensions and not self.download_compressed):
-            self.log(self.tr("Skipping {media_url} due to download settings.", media_url=media_url))
+            self.log(f"Skipping {media_url} due to settings.")
             return
 
-        self.log(self.tr("Starting download from {media_url}", media_url=media_url))
-        
-        # Si se dispone de post_id, se utiliza para llevar un conteo de adjuntos de ese post.
+        self.log(f"Starting download from {media_url}")
+
+        # Actualizar contador para numerar archivos adjuntos
         if post_id:
             self.post_attachment_counter[post_id] += 1
             attachment_index = self.post_attachment_counter[post_id]
         else:
             attachment_index = 1
 
-        # Generar el nombre final usando la función get_filename actualizada.
-        filename = self.get_filename(media_url, post_id=post_id, post_name=post_name, attachment_index=attachment_index)
+        filename = self.get_filename(media_url, post_id=post_id, post_name=post_name,
+                                    attachment_index=attachment_index)
         media_folder = self.get_media_folder(extension, user_id, post_id)
         os.makedirs(media_folder, exist_ok=True)
-        
+
         final_path = os.path.normpath(os.path.join(media_folder, filename))
         tmp_path = final_path + ".tmp"
 
-        # Si el archivo ya figura en la base de datos, se omite la descarga.
+        # Si el archivo ya figura en la DB, se omite la descarga.
         if media_url in self.download_cache:
-            self.log(self.tr("File already exists in DB, skipping: {final_path}", final_path=final_path))
+            self.log(f"File from {media_url} is in DB, skipping.")
             self.skipped_files.append(final_path)
             return
 
-        # Solicitar la descarga del archivo.
-        response = self.safe_request(media_url)
+        response = self.safe_request(media_url, max_retries=self.max_retries)
         if response is None:
-            self.log(self.tr("Failed to download after multiple retries: {media_url}", media_url=media_url))
+            self.log(f"Failed to download {media_url} after retries.")
             self.failed_files.append(media_url)
             return
 
-        total_size = int(response.headers.get('content-length', 0))
+        try:
+            total_size = int(response.headers.get('content-length', 0))
+        except Exception as e:
+            self.log(f"Error getting total size: {e}")
+            total_size = 0
+
         downloaded_size = 0
         self.start_time = time.time()
 
-        # Usar un bloqueo (file_lock) para asegurar que solo un hilo manipule el archivo.
-        with self.file_lock:
-            # Si existe un archivo temporal previo, se elimina.
-            if os.path.exists(tmp_path):
-                self.log(self.tr("Removing incomplete file: {tmp_path}", tmp_path=tmp_path))
-                os.remove(tmp_path)
-            # Abrir el archivo temporal en modo escritura binaria y escribir en bloques.
-            with open(tmp_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=1048576):
-                    if self.cancel_requested.is_set():
-                        f.close()
-                        os.remove(tmp_path)
-                        self.log(self.tr("Download cancelled from {media_url}", media_url=media_url))
-                        return
+        # Abrir el archivo temporal para escribir los primeros chunks.
+        with open(tmp_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1048576):
+                if self.cancel_requested.is_set():
+                    f.close()
+                    os.remove(tmp_path)
+                    self.log(f"Download cancelled from {media_url}")
+                    return
+                if chunk:
                     f.write(chunk)
                     downloaded_size += len(chunk)
                     if self.update_progress_callback:
@@ -354,29 +357,50 @@ class Downloader:
                         speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
                         remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
                         self.update_progress_callback(downloaded_size, total_size,
-                                                    file_id=media_url,
+                                                    file_id=download_id,
                                                     file_path=tmp_path,
                                                     speed=speed,
                                                     eta=remaining_time)
-            # Si el archivo final ya existe, eliminarlo para evitar conflictos.
-            if os.path.exists(final_path):
-                self.log(self.tr("File {final_path} already exists. Removing it to avoid conflicts.", final_path=final_path))
-                os.remove(final_path)
-            # Intentar renombrar el archivo temporal al nombre final.
-            try:
-                os.rename(tmp_path, final_path)
-            except OSError as e:
-                self.log(self.tr("Error renaming file: {e}", e=e))
-                if os.path.exists(final_path):
-                    self.log(self.tr("Removing existing file {final_path} due to conflict.", final_path=final_path))
-                    os.remove(final_path)
-                    os.rename(tmp_path, final_path)
+
+        # Si no se ha descargado el total esperado, reanudar la descarga
+        while total_size and downloaded_size < total_size:
+            # Prepara cabecera para reanudar la descarga
+            resume_headers = self.headers.copy()
+            resume_headers['Range'] = f'bytes={downloaded_size}-'
+            self.log(f"Resuming download at byte {downloaded_size} for {media_url}")
+            part_response = self.session.get(media_url, stream=True, headers=resume_headers, timeout=30)
+            part_response.raise_for_status()
+
+            with open(tmp_path, 'ab') as f:
+                for chunk in part_response.iter_content(chunk_size=1048576):
+                    if self.cancel_requested.is_set():
+                        f.close()
+                        os.remove(tmp_path)
+                        self.log(f"Download cancelled from {media_url}")
+                        return
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_size += len(chunk)
+                        if self.update_progress_callback:
+                            elapsed_time = time.time() - self.start_time
+                            speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                            remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                            self.update_progress_callback(downloaded_size, total_size,
+                                                        file_id=download_id,
+                                                        file_path=tmp_path,
+                                                        speed=speed,
+                                                        eta=remaining_time)
+
+        # Una vez completada la descarga, renombrar el archivo.
+        if os.path.exists(final_path):
+            os.remove(final_path)
+        os.rename(tmp_path, final_path)
 
         self.completed_files += 1
-        self.log(self.tr("Download success from {media_url}", media_url=media_url))
+        self.log(f"Download success from {media_url}")
         if self.update_global_progress_callback:
             self.update_global_progress_callback(self.completed_files, self.total_files)
-        
+
         # Registrar el archivo en la base de datos.
         with self.db_lock:
             self.db_cursor.execute(
@@ -385,8 +409,9 @@ class Downloader:
                 (media_url, final_path, total_size, user_id, post_id)
             )
             self.db_connection.commit()
-        
+
         self.download_cache[media_url] = (final_path, total_size)
+
 
 
 
