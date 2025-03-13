@@ -28,7 +28,7 @@ from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 
-VERSION = "V0.8.8.1"
+VERSION = "V0.8.9"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -136,7 +136,7 @@ class ImageDownloaderApp(ctk.CTk):
         # Cargar iconos redimensionados
         self.icons = {
             'image': self.load_and_resize_image('resources/img/image_icon.png', (40, 40)),
-            'video': self.load_and_resize_image('resources/img/video_icon.png', (40, 40)),
+            'video': self.load_and_resize_image('resources/img/videos-solid-24.png', (40, 40)),
             'zip': self.load_and_resize_image('resources/img/zip_icon.png', (40, 40)),
             'default': self.load_and_resize_image('resources/img/default_icon.png', (40, 40))
         }
