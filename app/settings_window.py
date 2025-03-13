@@ -1,5 +1,6 @@
 import json
 import os
+import sqlite3
 import threading
 from tkinter import filedialog, messagebox, ttk
 import customtkinter as ctk
@@ -60,7 +61,6 @@ class SettingsWindow:
         self.settings_window.title(self.translate("Settings"))
         self.settings_window.geometry("800x600")
         self.settings_window.transient(self.parent)
-        self.settings_window.resizable(False, False)
         self.settings_window.deiconify()
         self.settings_window.after(10, self.settings_window.grab_set())
         self.center_window(self.settings_window, 800, 600)
@@ -84,12 +84,149 @@ class SettingsWindow:
         tab.grid_rowconfigure(0, weight=1)
         db_frame = ctk.CTkFrame(tab, fg_color="transparent")
         db_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        db_label = ctk.CTkLabel(db_frame, text=self.translate("Database Management"), font=("Helvetica", 16, "bold"))
-        db_label.pack(pady=(0, 10))
-        export_button = ctk.CTkButton(db_frame, text=self.translate("Export Database"), command=self.export_db)
-        export_button.pack(pady=10)
-        clear_button = ctk.CTkButton(db_frame, text=self.translate("Clear Database"), command=self.clear_db)
-        clear_button.pack(pady=10)
+        
+        header_label = ctk.CTkLabel(db_frame, text=self.translate("Database Management"), font=("Helvetica", 16, "bold"))
+        header_label.pack(pady=(0, 10))
+        
+        # Configurar un estilo personalizado para el Treeview
+        style = ttk.Style()
+        style.theme_use('clam')  # O puedes elegir 'default' o 'alt'
+        style.configure("Custom.Treeview",
+                        background="#2e2e2e",
+                        foreground="white",
+                        fieldbackground="#2e2e2e",
+                        rowheight=25,
+                        font=('Helvetica', 10))
+        style.configure("Custom.Treeview.Heading",
+                        background="#1e1e1e",
+                        foreground="white",
+                        font=('Helvetica', 10, 'bold'))
+        # Para filas alternas (opcional)
+        style.map("Custom.Treeview", background=[("selected", "#4a6984")])
+        
+        # Frame para el Treeview y su scrollbar
+        table_frame = tk.Frame(db_frame)
+        table_frame.pack(fill="both", expand=True)
+        
+        # Definir las columnas que se mostrarán en la parte derecha del Treeview
+        columns = ("id", "file_name", "type", "size", "downloaded_at")
+        self.db_tree = ttk.Treeview(table_frame, style="Custom.Treeview", columns=columns, show="tree headings", height=15)
+        
+        # Configurar encabezados
+        self.db_tree.heading("#0", text=self.translate("User/Post"), anchor="w")
+        self.db_tree.heading("id", text="ID", anchor="center")
+        self.db_tree.heading("file_name", text=self.translate("File Name"), anchor="w")
+        self.db_tree.heading("type", text=self.translate("Type"), anchor="center")
+        self.db_tree.heading("size", text=self.translate("Size"), anchor="center")
+        self.db_tree.heading("downloaded_at", text=self.translate("Downloaded At"), anchor="center")
+        
+        # Configurar ancho de columnas
+        self.db_tree.column("#0", width=180)
+        self.db_tree.column("id", width=30, anchor="center")
+        self.db_tree.column("file_name", width=200)
+        self.db_tree.column("type", width=80, anchor="center")
+        self.db_tree.column("size", width=80, anchor="center")
+        self.db_tree.column("downloaded_at", width=150, anchor="center")
+        
+        # Scrollbar vertical
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.db_tree.yview)
+        self.db_tree.configure(yscrollcommand=vsb.set)
+        self.db_tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+        
+        # Botones para exportar y limpiar
+        btn_frame = ctk.CTkFrame(db_frame, fg_color="transparent")
+        btn_frame.pack(pady=10)
+        export_button = ctk.CTkButton(btn_frame, text=self.translate("Export Database"), command=self.export_db)
+        export_button.pack(side="left", padx=10)
+        clear_button = ctk.CTkButton(btn_frame, text=self.translate("Clear Database"), command=self.clear_db)
+        clear_button.pack(side="left", padx=10)
+        
+        # Cargar los registros en el Treeview con agrupación por usuario y post
+        self.load_db_records()
+
+    def load_db_records(self):
+        """Consulta la base de datos y carga los registros en el Treeview agrupados por usuario y, opcionalmente, por post."""
+        db_path = self.downloader.db_path
+        if not os.path.exists(db_path):
+            tk.messagebox.showwarning(self.translate("Warning"), self.translate("Database not found."))
+            return
+
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, media_url, file_path, file_size, user_id, post_id, downloaded_at FROM downloads")
+            rows = cursor.fetchall()
+            conn.close()
+        except Exception as e:
+            tk.messagebox.showerror(self.translate("Error"), self.translate("Error loading database: {e}", e=e))
+            return
+
+        # Limpiar el Treeview
+        for child in self.db_tree.get_children():
+            self.db_tree.delete(child)
+
+        # Función auxiliar para determinar el tipo de archivo según la extensión
+        def get_file_type(file_path):
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']:
+                return self.translate("Image")
+            elif ext in ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v']:
+                return self.translate("Video")
+            elif ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
+                return self.translate("Document")
+            elif ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
+                return self.translate("Compressed")
+            else:
+                return self.translate("Other")
+
+        # Función para formatear el tamaño
+        def format_size(size):
+            if size < 1024:
+                return f"{size} B"
+            elif size < 1024**2:
+                return f"{size/1024:.2f} KB"
+            else:
+                return f"{size/1024**2:.2f} MB"
+
+        # Agrupar registros por usuario
+        usuarios = {}
+        for rec in rows:
+            rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
+            usuarios.setdefault(user_id, []).append(rec)
+
+        # Insertar cada usuario como nodo padre en el Treeview
+        for user, registros in usuarios.items():
+            user_node = self.db_tree.insert("", "end", text=user, open=False)
+            # Dentro de cada usuario, agrupar los registros que tienen post_id y los que no
+            posts = {}
+            sin_post = []
+            for rec in registros:
+                rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
+                if post_id:
+                    posts.setdefault(post_id, []).append(rec)
+                else:
+                    sin_post.append(rec)
+            # Insertar nodos para cada post
+            for post, recs in posts.items():
+                post_node = self.db_tree.insert(user_node, "end", text=post, open=False)
+                for rec in recs:
+                    rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
+                    file_name = os.path.basename(file_path)
+                    file_type = get_file_type(file_path)
+                    size_str = format_size(file_size)
+                    self.db_tree.insert(post_node, "end", values=(rec_id, file_name, file_type, size_str, downloaded_at))
+            # Insertar los registros sin post en un nodo especial
+            if sin_post:
+                sin_post_node = self.db_tree.insert(user_node, "end", text=self.translate("No Post"), open=False)
+                for rec in sin_post:
+                    rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
+                    file_name = os.path.basename(file_path)
+                    file_type = get_file_type(file_path)
+                    size_str = format_size(file_size)
+                    self.db_tree.insert(sin_post_node, "end", values=(rec_id, file_name, file_type, size_str, downloaded_at))
 
     def render_general_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
