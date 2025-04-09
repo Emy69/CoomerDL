@@ -57,6 +57,8 @@ class Downloader:
         self.retry_interval = retry_interval
         self.file_lock = threading.Lock()
         self.post_attachment_counter = defaultdict(int)
+        self.subdomain_cache = {}
+        self.subdomain_locks = defaultdict(threading.Lock)
 
         
         # ----- NUEVA SECCIÓN: INICIALIZACIÓN DE LA BASE DE DATOS -----
@@ -139,11 +141,14 @@ class Downloader:
                 self.enable_widgets_callback()
             self.log(self.tr("All downloads completed or cancelled."))
 
-    def safe_request(self, url, max_retries=None, stream=False):
+    def safe_request(self, url, max_retries=None):
         if max_retries is None:
             max_retries = self.max_retries
 
         domain = urlparse(url).netloc
+        path = urlparse(url).path
+        retry_wait = 1
+
         for attempt in range(max_retries):
             if self.cancel_requested.is_set():
                 return None
@@ -154,22 +159,70 @@ class Downloader:
                     time.sleep(self.rate_limit_interval - elapsed_time)
 
                 try:
-                    with self.rate_limit:
-                        response = self.session.get(url, stream=stream, headers=self.headers, timeout=30)
+                    response = self.session.get(url, stream=True, headers=self.headers)
+                    if response.status_code == 403 and "coomer.su" in url:
+                        self.log(self.tr("403_warning"))
+
+                        # Intentar subdominios (una sola vez protegida por lock)
+                        with self.subdomain_locks[path]:
+                            if path in self.subdomain_cache:
+                                alt_url = self.subdomain_cache[path]
+                            else:
+                                alt_url = self._find_valid_subdomain(url)
+                                self.subdomain_cache[path] = alt_url
+
+                        if alt_url != url:
+                            response = self.session.get(alt_url, stream=True, headers=self.headers)
+                            response.raise_for_status()
+                            return response
+                        else:
+                            self.log("❌ Ningún subdominio válido. Abortando.")
+                            return None
+
                     response.raise_for_status()
-                    self.domain_last_request[domain] = time.time()
                     return response
+
                 except requests.exceptions.RequestException as e:
                     status_code = getattr(e.response, 'status_code', None)
                     if status_code in (429, 500, 502, 503, 504):
-                        self.log(f"Intento {attempt + 1}/{max_retries}: Reintentando tras error {status_code} en la URL: {url}")
-                        time.sleep(self.retry_interval)
+                        self.log(self.tr("Intento {attempt}/{max_retries}: Error {status_code} - Reintentando...").format(
+                            attempt=attempt + 1, max_retries=max_retries, status_code=status_code))
+                        time.sleep(retry_wait)
+                        retry_wait *= 2
                     else:
-                        self.log(f"Error no reintentable en la URL: {url} - {e}")
-                        break
-        self.log(f"Se excedieron los reintentos ({max_retries}) para la URL: {url}")
+                        url_display = getattr(e.request, 'url', url)
+                        if len(url_display) > 60:
+                            url_display = url_display[:60] + "..."
+                        self.log(self.tr("Intento {attempt}/{max_retries}: Error al acceder a {url} - {error}").format(
+                            attempt=attempt + 1, max_retries=max_retries, url=url_display, error=e))
+                        if attempt < max_retries - 1:
+                            time.sleep(self.retry_interval)
+
         return None
 
+    def _find_valid_subdomain(self, url, max_subdomains=10):
+        parsed = urlparse(url)
+        original_domain = parsed.netloc
+        original_path = parsed.path
+        path = f"/data{original_path}" if not original_path.startswith("/data/") else original_path
+
+        for i in range(1, max_subdomains + 1):
+            new_domain = f"n{i}.coomer.su"
+            new_url = parsed._replace(netloc=new_domain, path=path).geturl()
+            try:
+                self.log(self.tr("subdomain_test").format(domain=new_domain))
+                resp = self.session.get(new_url, headers=self.headers, timeout=15, stream=True)
+                if resp.status_code == 200:
+                    self.log(f"✅ Subdominio funcional encontrado: {new_domain}")
+                    return new_url
+                else:
+                    self.log(self.tr("subdomain_invalid").format(domain=new_domain))
+            except requests.exceptions.ReadTimeout:
+                self.log(self.tr("subdomain_timeout").format(domain=new_domain))
+                return new_url
+            except Exception as e:
+                self.log(self.tr("subdomain_error").format(domain=new_domain, error=e))
+        return url
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
         all_posts = []

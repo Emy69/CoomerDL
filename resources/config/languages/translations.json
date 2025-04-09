@@ -1009,5 +1009,45 @@
         "ja": "エラー",
         "ru": "Ошибка",
         "zh": "错误"
+    },
+    "403_warning": {
+        "es": "⚠️ Error 403 detectado. Intentando con subdominios alternativos...",
+        "en": "⚠️ 403 error detected. Trying alternate subdomains...",
+        "fr": "⚠️ Erreur 403 détectée. Tentative avec des sous-domaines alternatifs...",
+        "ja": "⚠️ 403エラーが検出されました。別のサブドメインを試行中...",
+        "ru": "⚠️ Обнаружена ошибка 403. Попытка с альтернативными поддоменами...",
+        "zh": "⚠️ 检测到403错误。尝试使用备用子域..."
+    },
+    "subdomain_test": {
+        "es": "🔎 Probando subdominio: {domain}",
+        "en": "🔎 Testing subdomain: {domain}",
+        "fr": "🔎 Test du sous-domaine : {domain}",
+        "ja": "🔎 サブドメインをテスト中: {domain}",
+        "ru": "🔎 Проверка поддомена: {domain}",
+        "zh": "🔎 正在测试子域名：{domain}"
+    },
+    "subdomain_timeout": {
+        "es": "⏱️ Tiempo de espera agotado en: {domain}",
+        "en": "⏱️ Timeout at: {domain}",
+        "fr": "⏱️ Délai d'attente dépassé sur : {domain}",
+        "ja": "⏱️ タイムアウト発生: {domain}",
+        "ru": "⏱️ Время ожидания истекло: {domain}",
+        "zh": "⏱️ 超时：{domain}"
+    },
+    "subdomain_invalid": {
+        "es": "❌ Subdominio inválido: {domain}",
+        "en": "❌ Invalid subdomain: {domain}",
+        "fr": "❌ Sous-domaine invalide : {domain}",
+        "ja": "❌ 無効なサブドメイン: {domain}",
+        "ru": "❌ Недопустимый поддомен: {domain}",
+        "zh": "❌ 无效的子域名：{domain}"
+    },
+    "subdomain_error": {
+        "es": "❌ Error al probar {domain}: {error}",
+        "en": "❌ Error testing {domain}: {error}",
+        "fr": "❌ Erreur lors du test de {domain} : {error}",
+        "ja": "❌ {domain} のテスト中にエラーが発生しました: {error}",
+        "ru": "❌ Ошибка при проверке {domain}: {error}",
+        "zh": "❌ 测试 {domain} 时出错：{error}"
     }
 }
