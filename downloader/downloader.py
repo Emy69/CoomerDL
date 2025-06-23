@@ -499,10 +499,7 @@ class Downloader:
                 # Limita a los primeros 50 posts si no es "download all"
                 posts = posts[:50]
 
-            futures = []
-            self.total_files = 0  # se recalculará
-
-            # Recorremos cada post
+            self.total_files = 0
             for post in posts:
                 current_post_id = post.get('id') or "unknown_id"
                 # Tomamos el 'title' del post para usarlo como post_name
@@ -511,12 +508,12 @@ class Downloader:
                 # Obtenemos la lista de URLs de archivos para este post
                 media_urls = self.process_post(post)
 
-                # Filtramos según extensiones (se puede omitir, pues ya está en process_post si quieres)
+
                 for media_url in media_urls:
-                    extension = os.path.splitext(media_url)[1].lower()
-                    if (extension in self.image_extensions and not self.download_images) or \
-                    (extension in self.video_extensions and not self.download_videos) or \
-                    (extension in self.compressed_extensions and not self.download_compressed):
+                    ext = os.path.splitext(media_url)[1].lower()
+                    if (ext in self.image_extensions and not self.download_images) or \
+                       (ext in self.video_extensions and not self.download_videos) or \
+                       (ext in self.compressed_extensions and not self.download_compressed):
                         continue
 
                     # Aumentamos total_files
@@ -531,10 +528,10 @@ class Downloader:
 
                 media_urls = self.process_post(post)
                 for media_url in media_urls:
-                    extension = os.path.splitext(media_url)[1].lower()
-                    if (extension in self.image_extensions and not self.download_images) or \
-                    (extension in self.video_extensions and not self.download_videos) or \
-                    (extension in self.compressed_extensions and not self.download_compressed):
+                    ext = os.path.splitext(media_url)[1].lower()
+                    if (ext in self.image_extensions and not self.download_images) or \
+                       (ext in self.video_extensions and not self.download_videos) or \
+                       (ext in self.compressed_extensions and not self.download_compressed):
                         continue
 
                     # Dependiendo del modo, encolamos o hacemos en serie
@@ -553,7 +550,8 @@ class Downloader:
                             media_url,
                             user_id,
                             current_post_id,
-                            title  # <-- pasamos el título aquí
+                            title,  # <-- pasamos el título aquí
+                            media_url 
                         )
                         futures.append(future)
 
@@ -569,7 +567,11 @@ class Downloader:
                 for media_url in self.failed_files:
                     if self.cancel_requested.is_set():
                         break
-                    self.process_media_element(media_url, user_id)
+                    self.process_media_element(
+                        media_url,
+                        user_id,
+                        download_id=media_url
+                    )
                 self.failed_files.clear()
 
         except Exception as e:
