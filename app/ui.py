@@ -28,7 +28,7 @@ from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 
-VERSION = "V0.8.10"
+VERSION = "V0.8.11"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -280,14 +280,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200)
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
 
-        self.download_all_check = ctk.CTkCheckBox(self.action_frame)
-        self.download_all_check.pack(side='left', padx=10)
-        
-        # Conectar el evento del checkbox con una función de actualización
-        self.download_all_check.configure(command=self.update_info_text)
-        
-        self.update_info_text()
-
         # Progress frame
         self.progress_frame = ctk.CTkFrame(self)
         self.progress_frame.pack(pady=(0, 10), fill='x', padx=20)
@@ -412,13 +404,6 @@ class ImageDownloaderApp(ctk.CTk):
         # self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
 
-        # Actualizar el texto del tooltip de información
-        self.create_tooltip(self.info_label, self.tr(
-            "Selecciona esta opción para descargar todo el contenido disponible del perfil,\n"
-            "en lugar de solo los posts del URL proporcionado."
-        ))
-
-        self.update_info_text()
     
     def open_download_folder(self, event=None):
         if self.download_folder and os.path.exists(self.download_folder):
@@ -737,7 +722,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(state="normal")
         self.download_start_time = datetime.datetime.now()
         self.errors = []
-        download_all = self.download_all_check.get()
+        download_all = True
 
         parsed_url = urlparse(url)
         
@@ -792,7 +777,7 @@ class ImageDownloaderApp(ctk.CTk):
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_post_download, site, service, user, post))
             else:
                 query, offset = extract_ck_query(parsed_url)
-                self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..." if download_all else "Descargando solo los posts del URL proporcionado..."))
+                self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..."))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_profile_download, site, service, user, query, download_all, offset))
         
         elif "simpcity.su" in url:
@@ -1014,8 +999,7 @@ class ImageDownloaderApp(ctk.CTk):
     def enable_widgets(self):
         self.update_queue.put(lambda: self.download_button.configure(state="normal"))
         self.update_queue.put(lambda: self.cancel_button.configure(state="disabled"))
-        self.update_queue.put(lambda: self.download_all_check.configure(state="normal"))
-
+    
     # Save and load download folder
     def save_download_folder(self, folder_path):
         config = {'download_folder': folder_path}
