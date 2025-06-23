@@ -110,7 +110,7 @@ class SettingsWindow:
         
         # Definir las columnas que se mostrarán en la parte derecha del Treeview
         columns = ("id", "file_name", "type", "size", "downloaded_at")
-        self.db_tree = ttk.Treeview(table_frame, style="Custom.Treeview", columns=columns, show="tree headings", height=15)
+        self.db_tree = ttk.Treeview(table_frame, style="Custom.Treeview", columns=columns, show="tree headings", height=15, selectmode="extended")
         
         # Configurar encabezados
         self.db_tree.heading("#0", text=self.translate("User/Post"), anchor="w")
@@ -144,8 +144,68 @@ class SettingsWindow:
         clear_button = ctk.CTkButton(btn_frame, text=self.translate("Clear Database"), command=self.clear_db)
         clear_button.pack(side="left", padx=10)
         
+        delete_users_button = ctk.CTkButton(
+            btn_frame,
+            text=self.translate("Delete Selected Users"),
+            command=self.delete_selected_users
+        )
+        delete_users_button.pack(side="left", padx=10)
+        
         # Cargar los registros en el Treeview con agrupación por usuario y post
         self.load_db_records()
+    
+    def delete_selected_users(self):
+        selected = self.db_tree.selection()
+        if not selected:
+            messagebox.showwarning(
+                self.translate("Warning"),
+                self.translate("Please select at least one user to delete.")
+            )
+            return
+
+        user_ids = [
+            self.db_tree.item(node, 'text')
+            for node in selected
+            if self.db_tree.parent(node) == ''
+        ]
+        if not user_ids:
+            messagebox.showwarning(
+                self.translate("Warning"),
+                self.translate("Please select valid user entries (not posts/files).")
+            )
+            return
+
+        confirm = messagebox.askyesno(
+            self.translate("Confirm"),
+            self.translate(
+                "Are you sure you want to delete all records for user(s): {}?".format(
+                    ", ".join(user_ids)
+                )
+            )
+        )
+        if not confirm:
+            return
+
+        try:
+            conn = sqlite3.connect(self.downloader.db_path)
+            cursor = conn.cursor()
+            for uid in user_ids:
+                cursor.execute("DELETE FROM downloads WHERE user_id = ?", (uid,))
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo(
+                self.translate("Success"),
+                self.translate("Selected user(s) and their records were deleted.")
+            )
+            self.load_db_records()
+
+        except Exception as e:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Error deleting user(s): {e}")
+                )
+
 
     def load_db_records(self):
         """Consulta la base de datos y carga los registros en el Treeview agrupados por usuario y, opcionalmente, por post."""
