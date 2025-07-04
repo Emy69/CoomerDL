@@ -57,9 +57,3 @@ Si vous avez des problèmes ou souhaitez communiquer avec moi, rejoignez mon ser
 3. Cliquez sur le bouton de téléchargement et attendez que le processus se termine.
 
 ![GIF d'utilisation](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
-
-# Soutenez mon travail !
-
-Si vous aimez mon projet et souhaitez le soutenir, vous pouvez faire un don via PayPal, merci pour votre soutien !
-
-[![Faire un don avec PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
