@@ -57,12 +57,12 @@ If you prefer using command-line interfaces, check out the following projects:
 
 ## Language Support
 
-- [Español](https://github.com/Emy69/CoomerDL/blob/main/locales/es/README.md)  
+- [Español](#)  
 - [English](#)  
-- [日本語 (Japanese)](https://github.com/Emy69/CoomerDL/blob/main/locales/ja/README.md)  
-- [中文 (Chinese)](https://github.com/Emy69/CoomerDL/blob/main/locales/zh/README.md)  
-- [Français (French)](https://github.com/Emy69/CoomerDL/blob/main/locales/fr/README.md)  
-- [Русский (Russian)](https://github.com/Emy69/CoomerDL/blob/main/locales/ru/README.md)  
+- [日本語 (Japanese)](#)  
+- [中文 (Chinese)](#)  
+- [Français (French)](#)  
+- [Русский (Russian)](#)  
 
 ---
 
