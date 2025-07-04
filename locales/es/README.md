@@ -57,9 +57,3 @@ Si tienes algún problema o deseas comunicarte conmigo, únete a mi servidor de 
 3. Haz clic en el botón de descarga y espera a que se complete el proceso.
 
 ![GIF de uso](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
-
-# ¡Apoya mi trabajo!
-
-Si te gusta mi proyecto y deseas apoyarlo, puedes hacer una donación a través de PayPal. ¡Gracias por tu apoyo!
-
-[![Donar con PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal&style=for-the-badge)](https://www.paypal.com/paypalme/Emy699)
