@@ -1,3 +1,4 @@
+import threading
 import customtkinter as ctk
 import webbrowser
 import requests
@@ -38,7 +39,7 @@ class AboutWindow:
         # Crear una nueva ventana
         about_window = ctk.CTkToplevel(self.parent)
         about_window.title(self.translate("About"))
-        about_window.geometry("300x600")  
+        about_window.geometry("300x600")
         about_window.resizable(False, False)
 
         # Centrar la ventana
@@ -49,8 +50,9 @@ class AboutWindow:
         about_window.lift()
         about_window.grab_set()
 
-        # Obtener datos de GitHub
-        created_date, total_downloads = self.get_github_data()
+        # placeholders mientras carga
+        created_date = self.translate("Loading...")
+        total_downloads = self.translate("Loading...")
 
         # Crear un marco para el contenido
         about_frame = ctk.CTkFrame(about_window, corner_radius=15)
@@ -58,7 +60,7 @@ class AboutWindow:
 
         # Encabezado estilizado
         header_label = ctk.CTkLabel(
-            about_frame, 
+            about_frame,
             text=self.translate("About This App"), 
             font=("Helvetica", 20, "bold"),
             text_color="white",
@@ -72,23 +74,22 @@ class AboutWindow:
         downloads_icon = ctk.CTkImage(Image.open("resources/img/download_icon.png"), size=(20, 20))
         date_icon = ctk.CTkImage(Image.open("resources/img/calendar-event-line.png"), size=(20, 20))
 
-        # Detalles del desarrollador con íconos
+        # labels que se actualizarán
+        self.downloads_label = None
+        self.date_label = None
+
         details = [
-            (developer_icon, f"{self.translate('Developer')}: Emy69"),
-            (version_icon, f"{self.translate('Version')}: {self.version}"),
-            (downloads_icon, f"{self.translate('Total Downloads')}: {total_downloads}"),
-            (date_icon, f"{self.translate('Release Date')}: {created_date}")
+            (developer_icon, f"{self.translate('Developer')}: Emy69", None),
+            (version_icon, f"{self.translate('Version')}: {self.version}", None),
+            (downloads_icon, f"{self.translate('Total Downloads')}: {total_downloads}", "downloads"),
+            (date_icon, f"{self.translate('Release Date')}: {created_date}", "date")
         ]
 
-        for icon, text in details:
+        for icon, text, key in details:
             detail_frame = ctk.CTkFrame(about_frame, fg_color="transparent")
             detail_frame.pack(anchor="w", pady=5, padx=30)
 
-            icon_label = ctk.CTkLabel(
-                detail_frame,
-                text="", 
-                image=icon
-            )
+            icon_label = ctk.CTkLabel(detail_frame, text="", image=icon)
             icon_label.pack(side="left", padx=(0, 10))
 
             text_label = ctk.CTkLabel(
@@ -100,7 +101,11 @@ class AboutWindow:
             )
             text_label.pack(side="left")
 
-        # Separador
+            if key == "downloads":   # agregado
+                self.downloads_label = text_label
+            elif key == "date":      # agregado
+                self.date_label = text_label
+
         separator = ctk.CTkFrame(about_frame, height=1, fg_color="gray")
         separator.pack(fill="x", padx=10, pady=10)
 
@@ -127,17 +132,10 @@ class AboutWindow:
         for name, url in platforms:
             # Crear el marco para cada plataforma
             platform_frame = ctk.CTkFrame(about_frame, fg_color="transparent")
-            platform_frame.pack(anchor="w", pady=5, padx=10)  
+            platform_frame.pack(anchor="w", pady=5, padx=10)
 
-            # Cargar la imagen del ícono
-            icon_image = ctk.CTkImage(Image.open(f"resources/img/global-line.png"), size=(20, 20))
-
-            # Etiqueta para el ícono
-            icon_label = ctk.CTkLabel(
-                platform_frame,
-                text="",
-                image=icon_image
-            )
+            icon_image = ctk.CTkImage(Image.open("resources/img/global-line.png"), size=(20, 20))
+            icon_label = ctk.CTkLabel(platform_frame, text="", image=icon_image)
             icon_label.pack(side="left")
 
             # Botón con el nombre de la plataforma
@@ -160,6 +158,15 @@ class AboutWindow:
             anchor="w"
         )
         footer_label.pack(pady=(10, 10), padx=10, anchor="w")
+
+        # hilo para cargar datos
+        def fetch_and_update():  # agregado
+            cd, td = self.get_github_data()
+            about_window.after(0, lambda: self.date_label.configure(
+                text=f"{self.translate('Release Date')}: {cd}"))
+            about_window.after(0, lambda: self.downloads_label.configure(
+                text=f"{self.translate('Total Downloads')}: {td}"))
+        threading.Thread(target=fetch_and_update, daemon=True).start()  # agregado
 
 
     def center_window(self, window, width, height):
