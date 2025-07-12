@@ -27,6 +27,7 @@ from downloader.erome import EromeDownloader
 from downloader.simpcity import SimpCity
 from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
+from app.donors import DonorsModal
 
 VERSION = "V0.8.11"
 MAX_LOG_LINES = None
@@ -463,6 +464,18 @@ class ImageDownloaderApp(ctk.CTk):
         about_button.pack(side="left")
         about_button.bind("<Button-1>", lambda e: "break")
 
+        # Botón Donors
+        donors_button = ctk.CTkButton(
+            self.menu_bar,
+            text=self.tr("Donors"),
+            width=80,
+            fg_color="transparent",
+            hover_color="gray25",
+            command=self.show_donors_modal
+        )
+        donors_button.pack(side="left")
+        donors_button.bind("<Button-1>", lambda e: "break")
+
         # Inicializar variables para los menús desplegables
         self.archivo_menu_frame = None
         self.ayuda_menu_frame = None
@@ -534,6 +547,10 @@ class ImageDownloaderApp(ctk.CTk):
             new_icon_label.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
             new_icon_label.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
             new_icon_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.patreon.com/Emy69"))
+    
+    def show_donors_modal(self):
+        donors_modal = DonorsModal(self, self.tr)
+        donors_modal.focus_set()
 
     def toggle_archivo_menu(self):
         if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
