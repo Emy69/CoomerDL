@@ -12,7 +12,7 @@ from PIL import Image as PilImage
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
 
-    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version, downloader):
+    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version, downloader, check_for_new_version_func):
         self.parent = parent
         self.translate = translate
         self.load_translations = load_translations_func
@@ -20,6 +20,7 @@ class SettingsWindow:
         self.save_language_preference = save_language_preference_func
         self.version = version
         self.downloader = downloader
+        self.check_for_new_version = check_for_new_version_func
         self.languages = {
             "Español": "es",
             "English": "en",
@@ -333,6 +334,19 @@ class SettingsWindow:
         apply_language_button = ctk.CTkButton(general_frame, text=self.translate("Apply Language"),
                                               command=lambda: self.apply_language_settings(language_combobox.get()))
         apply_language_button.grid(row=4, column=2, pady=5, sticky="e")
+
+        # Separator for updates
+        separator_2 = ttk.Separator(general_frame, orient="horizontal")
+        separator_2.grid(row=5, column=0, columnspan=3, sticky="ew", pady=15)
+
+        # Check for Updates
+        update_label = ctk.CTkLabel(general_frame, text=self.translate("Check for Updates"), font=("Helvetica", 14))
+        update_label.grid(row=6, column=0, pady=5, sticky="w")
+
+        check_update_button = ctk.CTkButton(general_frame, text=self.translate("Check Now"),
+                                            command=lambda: threading.Thread(target=self.check_for_new_version, args=(False,)).start())
+        check_update_button.grid(row=6, column=1, pady=5, padx=(10,0), sticky="w")
+
 
     def render_downloads_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)

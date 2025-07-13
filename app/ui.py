@@ -16,6 +16,7 @@ from PIL import Image
 import customtkinter as ctk
 from PIL import Image, ImageTk
 import psutil
+import functools
 
 #from app.patch_notes import PatchNotes
 from app.settings_window import SettingsWindow
@@ -50,7 +51,7 @@ def extract_ck_query(url: ParseResult) -> tuple[Optional[str], int]:
 
     # This is kinda contrived but query parameters are awful to get right
     query = parse_qs(url.query)
-    q = query.get("q")[0] if query.get("q") is not None and len(query.get("q")) > 0 else None
+    q = query.get("q")[0] if query.get("q") is not None and len(query.get("q")) > 0 else "0"
     o = query.get("o")[0] if query.get("o") is not None and len(query.get("o")) > 0 else "0"
 
     return q, int(o) if str.isdigit(o) else 0
@@ -61,6 +62,7 @@ class ImageDownloaderApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
         super().__init__()
+        self.version = VERSION
         self.title(f"Downloader [{VERSION}]")
         
         # Setup window
@@ -74,7 +76,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.update_ui_texts,
             self.save_language_preference,
             VERSION,
-            None  # Por ahora, no se pasa ningún downloader
+            None,  # Por ahora, no se pasa ningún downloader
+            self.check_for_new_version
         )
 
         self.all_logs = []  # Lista para almacenar todos los logs
@@ -151,6 +154,9 @@ class ImageDownloaderApp(ctk.CTk):
             progress_bar=self.progress_bar,
             progress_percentage=self.progress_percentage
         )
+        
+        # Check for new version on startup
+        threading.Thread(target=self.check_for_new_version, args=(True,)).start()
 
     # Application close event
     def on_app_close(self):
@@ -226,6 +232,18 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Añadir botones al menú
         self.create_custom_menubar()
+
+        # Update alert frame (initially hidden)
+        self.update_alert_frame = ctk.CTkFrame(self, fg_color="#4CAF50", corner_radius=0) # Green background
+        self.update_alert_frame.pack(side="top", fill="x")
+        self.update_alert_frame.pack_forget() # Hide initially
+
+        self.update_alert_label = ctk.CTkLabel(self.update_alert_frame, text="", text_color="white", font=("Arial", 12, "bold"))
+        self.update_alert_label.pack(side="left", padx=10, pady=5)
+
+        self.update_download_button = ctk.CTkButton(self.update_alert_frame, text=self.tr("Download Now"), command=self.open_latest_release, fg_color="#388E3C", hover_color="#2E7D32")
+        self.update_download_button.pack(side="right", padx=10, pady=5)
+
         # Input frame
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.pack(fill='x', padx=20, pady=20)
@@ -387,7 +405,7 @@ class ImageDownloaderApp(ctk.CTk):
         for widget in self.menu_bar.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 text = widget.cget("text")
-                if text.strip() in ["Archivo", "Ayuda", "Donaciones"]:
+                if text.strip() in ["Archivo", "Ayuda", "Donaciones", "About", "Donors"]:
                     widget.configure(text=self.tr(text.strip()))
 
         # Si los menús están abiertos, recrearlos para actualizar los textos
@@ -404,6 +422,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(text=self.tr("Cancelar Descarga"))
         # self.processing_label.configure(text=self.tr("Procesando videos..."))
         self.title(self.tr(f"Downloader [{VERSION}]"))
+        self.update_download_button.configure(text=self.tr("Download Now"))
 
     
     def open_download_folder(self, event=None):
@@ -672,9 +691,9 @@ class ImageDownloaderApp(ctk.CTk):
             download_compressed=self.download_compressed_check.get(),
             tr=self.tr,
             max_workers=self.max_downloads,
-            folder_structure=self.settings_window.settings.get('folder_structure', 'default')
+            folder_structure=self.settings.get('folder_structure', 'default')
         )
-        self.general_downloader.file_naming_mode = self.settings_window.settings.get('file_naming_mode', 0)
+        self.general_downloader.file_naming_mode = self.settings.get('file_naming_mode', 0)
 
     def setup_jpg5_downloader(self):
         self.active_downloader = Jpg5Downloader(
@@ -1081,3 +1100,85 @@ class ImageDownloaderApp(ctk.CTk):
 
     def load_patreon_icon(self):
         return self.load_icon("resources/img/patreon-logo-24.png", "New Icon")
+
+    def parse_version_string(self, version_str):
+      # Removes 'V' prefix and splits by '.'
+      try:
+          return tuple(int(p) for p in version_str[1:].split('.'))
+      except (ValueError, IndexError):
+          return (0, 0, 0) # Fallback for invalid format
+
+    def check_for_new_version(self, startup_check=False):
+        repo_owner = "emy69"
+        repo_name = "CoomerDL"
+        github_api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+        
+        try:
+            response = requests.get(github_api_url)
+            response.raise_for_status() # Raise an exception for HTTP errors
+            latest_release = response.json()
+            
+            latest_tag = latest_release.get("tag_name")
+            latest_url = latest_release.get("html_url")
+
+            if latest_tag and latest_url:
+                # Use the global VERSION constant directly
+                current_version_parsed = self.parse_version_string(VERSION) 
+                latest_version_parsed = self.parse_version_string(latest_tag)
+
+                if latest_version_parsed > current_version_parsed:
+                    self.latest_release_url = latest_url
+                    # Use functools.partial to ensure 'self' is correctly bound
+                    self.after(0, functools.partial(self.show_update_alert, latest_tag))
+                    if not startup_check:
+                        self.after(0, lambda: messagebox.showinfo(
+                            self.tr("Update Available"),
+                            self.tr("A new version ({latest_tag}) is available! Please download it from GitHub.", latest_tag=latest_tag)
+                        ))
+                else:
+                    if not startup_check:
+                        self.after(0, lambda: messagebox.showinfo(
+                            self.tr("No Updates"),
+                            self.tr("You are running the latest version.")
+                        ))
+            else:
+                if not startup_check:
+                    self.after(0, lambda: messagebox.showwarning(
+                        self.tr("Update Check Failed"),
+                        self.tr("Could not retrieve latest version information from GitHub.")
+                    ))
+        except requests.exceptions.RequestException as e:
+            self.add_log_message_safe(f"Error checking for updates: {e}")
+            if not startup_check:
+                self.after(0, lambda: messagebox.showerror(
+                    self.tr("Network Error"),
+                    self.tr("Could not connect to GitHub to check for updates. Please check your internet connection.")
+                ))
+        except Exception as e:
+            self.add_log_message_safe(f"An unexpected error occurred during update check: {e}")
+            if not startup_check:
+                self.after(0, lambda: messagebox.showerror(
+                    self.tr("Error"),
+                    self.tr("An unexpected error occurred during update check.")
+                ))
+
+    def show_update_alert(self, latest_tag):
+        self.update_alert_label.configure(text=self.tr("New version ({latest_tag}) available!", latest_tag=latest_tag))
+        self.update_alert_frame.pack(side="top", fill="x")
+        # Re-pack other elements to ensure they are below the alert
+        self.input_frame.pack_forget()
+        self.input_frame.pack(fill='x', padx=20, pady=20)
+        self.options_frame.pack_forget()
+        self.options_frame.pack(pady=10, fill='x', padx=20)
+        self.action_frame.pack_forget()
+        self.action_frame.pack(pady=10, fill='x', padx=20)
+        self.log_textbox.pack_forget()
+        self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
+        self.progress_frame.pack_forget()
+        self.progress_frame.pack(pady=(0, 10), fill='x', padx=20)
+
+    def open_latest_release(self):
+        if hasattr(self, 'latest_release_url'):
+            webbrowser.open(self.latest_release_url)
+        else:
+            messagebox.showwarning(self.tr("No Release Found"), self.tr("No latest release URL available."))
