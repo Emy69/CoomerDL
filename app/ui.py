@@ -340,10 +340,10 @@ class ImageDownloaderApp(ctk.CTk):
         footer = ctk.CTkFrame(self, height=30, corner_radius=0)
         footer.pack(side="bottom", fill="x")
 
-        self.footer_eta_label = ctk.CTkLabel(footer, text="", font=("Arial", 10))
+        self.footer_eta_label = ctk.CTkLabel(footer, text="ETA: N/A", font=("Arial", 11))
         self.footer_eta_label.pack(side="left", padx=20)
 
-        self.footer_speed_label = ctk.CTkLabel(footer, text="", font=("Arial", 10))
+        self.footer_speed_label = ctk.CTkLabel(footer, text="Speed: 0 KB/s", font=("Arial", 11))
         self.footer_speed_label.pack(side="right", padx=20)
 
         # Actualizar textos después de inicializar la UI

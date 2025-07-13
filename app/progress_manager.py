@@ -122,9 +122,15 @@ class ProgressManager:
 
         # Actualizar velocidad en el footer (si corresponde)
         if speed is not None:
-            speed_text = f"Speed: {speed / 1024:.2f} KB/s" if speed < 1048576 else f"Speed: {speed / 1048576:.2f} MB/s"
+            if speed < 1_048_576:
+                speed_text = f"Speed: {speed / 1024:.2f} KB/s"
+            else:
+                speed_text = f"Speed: {speed / 1_048_576:.2f} MB/s"
             self.footer_speed_label.configure(text=speed_text)
-            self.footer_eta_label.configure(text=self.footer_eta_label.cget("text"))
+
+        if eta is not None:
+            mins, secs = divmod(int(eta), 60)
+            self.footer_eta_label.configure(text=f"ETA: {mins}m {secs}s")
 
     def remove_progress_bar(self, file_id):
         if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
@@ -136,9 +142,12 @@ class ProgressManager:
             self.progress_bars[file_id][3].pack_forget()
             del self.progress_bars[file_id]
 
-        # Mostrar el mensaje de "No hay descargas" si no hay más descargas
+        # Si ya no quedan descargas, mostrar mensaje y restablecer el footer
         if not self.progress_bars:
             self.no_downloads_label.pack(pady=20)
+            # Restablecer valores por defecto en el footer
+            self.footer_speed_label.configure(text="Speed: 0 KB/s")
+            self.footer_eta_label.configure(text="ETA: N/A")
 
     def update_global_progress(self, completed_files, total_files):
         if total_files > 0:
