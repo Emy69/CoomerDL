@@ -12,7 +12,8 @@ class ProgressManager:
         self.progress_bars = {}
         self.progress_window = None
         self.no_downloads_label = None
-
+        self.progress_details_frame = None
+        
     def create_progress_window(self):
         if self.progress_window is None or not self.progress_window.winfo_exists():
             self.progress_window = ctk.CTkToplevel(self.root)
@@ -49,6 +50,10 @@ class ProgressManager:
                 lambda: self.footer_eta_label.configure(text=base_eta)
             )
             return
+        
+        if self.progress_details_frame is None or \
+           not self.progress_details_frame.winfo_exists():
+            self.create_progress_window()
         
         if total > 0:
             percentage = (downloaded / total) * 100
