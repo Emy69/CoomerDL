@@ -14,8 +14,8 @@ class DonorsModal(ctk.CTkToplevel):
         self.geometry("400x500")
         self.resizable(False, False)
         self.transient(parent)
-        self.after_idle(self.grab_set)
-        
+
+        # Centrar la ventana y crear la UI
         self.center_window()
         self.create_ui()
         self.after_idle(self._safe_grab)
