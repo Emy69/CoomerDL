@@ -17,6 +17,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import psutil
 import functools
+import subprocess
 
 #from app.patch_notes import PatchNotes
 from app.settings_window import SettingsWindow
