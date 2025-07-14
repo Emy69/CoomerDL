@@ -77,12 +77,12 @@ class EromeDownloader:
         if self.cancel_requested:
             return
 
+        # Evita sobreescrituras y descargas duplicadas
         if os.path.exists(file_path):
             self.log(self.tr("File already exists, skipping: {file_path}",
                              file_path=file_path))
             return
 
-        # Asegura que la carpeta exista
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         self.log(self.tr("Start downloading {resource_type}: {file_path}",
                          resource_type=resource_type, file_path=file_path))
@@ -110,7 +110,7 @@ class EromeDownloader:
                             f.write(chunk)
                             downloaded_size += len(chunk)
 
-                            # Actualiza cada 0.5 s como máximo
+                            # Envía actualización cada 0.5 s máx.
                             now = time.time()
                             if now - last_update >= 0.5:
                                 elapsed = now - start_time
@@ -119,19 +119,35 @@ class EromeDownloader:
                                          if speed else None)
                                 self.update_progress_callback(
                                     downloaded_size, total_size,
-                                    file_id=file_id, file_path=file_path,
-                                    speed=speed, eta=eta
+                                    file_id=file_id,
+                                    file_path=file_path,
+                                    speed=speed,
+                                    eta=eta
                                 )
                                 last_update = now
 
-                    # Empuja un último update al terminar
+                    # ─────── Fin de la descarga ───────
+                    elapsed = time.time() - start_time
+                    final_speed = total_size / elapsed if elapsed else 0
+
+                    # 1· Fuerza la barra al 100 % (sin status)
                     self.update_progress_callback(
-                        downloaded_size, total_size,
-                        file_id=file_id, file_path=file_path,
-                        speed=0, eta=0, status="Completed"
+                        total_size, total_size,
+                        file_id=file_id,
+                        file_path=file_path,
+                        speed=final_speed,
+                        eta=0
                     )
 
-                # Contabiliza el archivo terminado
+                    # 2· Notifica “Completed” (no altera la barra)
+                    self.update_progress_callback(
+                        total_size, total_size,
+                        file_id=file_id,
+                        file_path=file_path,
+                        status="Completed"
+                    )
+
+                # Contabiliza y avanza la barra global
                 self.completed_files += 1
                 if self.update_global_progress_callback:
                     self.update_global_progress_callback(
@@ -139,9 +155,10 @@ class EromeDownloader:
                     )
 
                 self.log(self.tr("Download successful: {resource_type}, "
-                                 "{file_path}", resource_type=resource_type,
+                                 "{file_path}",
+                                 resource_type=resource_type,
                                  file_path=file_path))
-                break
+                break  # Éxito ⇒ sal del bucle
 
             except (requests.exceptions.ChunkedEncodingError,
                     requests.exceptions.ConnectionError,
@@ -150,7 +167,8 @@ class EromeDownloader:
                 self.log(self.tr("Error downloading {resource_type}, "
                                  "attempt {retries}/{max_retries}: {error}",
                                  resource_type=resource_type,
-                                 retries=retries, max_retries=max_retries,
+                                 retries=retries,
+                                 max_retries=max_retries,
                                  error=e))
                 if retries == max_retries:
                     self.log(self.tr("Max retries reached. Failed to "
