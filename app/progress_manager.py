@@ -37,8 +37,19 @@ class ProgressManager:
             self.progress_window.grab_release()
             self.progress_window.withdraw()
 
-    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
+    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status: str | None = None):
+        if status is not None:
+            original = self.footer_eta_label.cget("text")
+            base_eta = original.split(" | ")[0]
+            self.footer_eta_label.configure(text=f"{base_eta} | STATUS:{status}")
 
+            # Oculta el estado tras 5 s
+            self.footer_eta_label.after(
+                5000,
+                lambda: self.footer_eta_label.configure(text=base_eta)
+            )
+            return
+        
         if total > 0:
             percentage = (downloaded / total) * 100
             remaining = total - downloaded

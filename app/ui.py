@@ -670,8 +670,8 @@ class ImageDownloaderApp(ctk.CTk):
         return ctk.CTkImage(img, size=size)
     
     # Reemplaza las llamadas a los métodos de progreso con self.progress_manager
-    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None):
-        self.progress_manager.update_progress(downloaded, total, file_id, file_path, speed, eta)
+    def update_progress(self, downloaded, total,file_id=None, file_path=None,speed=None, eta=None, status=None):
+        self.progress_manager.update_progress(downloaded, total,file_id, file_path,speed, eta, status=status)
 
     def remove_progress_bar(self, file_id):
         self.progress_manager.remove_progress_bar(file_id)

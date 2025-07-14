@@ -161,9 +161,11 @@ class Downloader:
                 try:
                     response = self.session.get(url, stream=True, headers=self.headers)
                     if response.status_code == 403 and "coomer.su" in url:
-                        self.log(self.tr("403_warning"))
+                        # Aviso inicial
+                        if self.update_progress_callback:
+                            self.update_progress_callback(0, 0, status="403")
 
-                        # Intentar subdominios (una sola vez protegida por lock)
+                        # Buscar subdominio alternativo
                         with self.subdomain_locks[path]:
                             if path in self.subdomain_cache:
                                 alt_url = self.subdomain_cache[path]
@@ -172,11 +174,21 @@ class Downloader:
                                 self.subdomain_cache[path] = alt_url
 
                         if alt_url != url:
-                            response = self.session.get(alt_url, stream=True, headers=self.headers)
+                            # Aviso: subdominio encontrado
+                            found = urlparse(alt_url).netloc
+                            if self.update_progress_callback:
+                                self.update_progress_callback(
+                                    0, 0, status=f"Subdomain found: {found}"
+                                )
+
+                            response = self.session.get(alt_url, stream=True,
+                                                        headers=self.headers)
                             response.raise_for_status()
                             return response
                         else:
-                            self.log("❌ Ningún subdominio válido. Abortando.")
+                            # Todos fallaron
+                            if self.update_progress_callback:
+                                self.update_progress_callback(0, 0, status="Exhausted subdomains")
                             return None
 
                     response.raise_for_status()
@@ -202,26 +214,38 @@ class Downloader:
 
     def _find_valid_subdomain(self, url, max_subdomains=10):
         parsed = urlparse(url)
-        original_domain = parsed.netloc
-        original_path = parsed.path
-        path = f"/data{original_path}" if not original_path.startswith("/data/") else original_path
+        path = parsed.path if parsed.path.startswith("/data/") else f"/data{parsed.path}"
 
         for i in range(1, max_subdomains + 1):
-            new_domain = f"n{i}.coomer.su"
-            new_url = parsed._replace(netloc=new_domain, path=path).geturl()
+            domain = f"n{i}.coomer.su"
+            test_url = parsed._replace(netloc=domain, path=path).geturl()
+
+            # Aviso: probando
+            if self.update_progress_callback:
+                self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
+
             try:
-                self.log(self.tr("subdomain_test").format(domain=new_domain))
-                resp = self.session.get(new_url, headers=self.headers, timeout=15, stream=True)
+                resp = self.session.get(test_url, headers=self.headers,
+                                        timeout=15, stream=True)
                 if resp.status_code == 200:
-                    self.log(f"✅ Subdominio funcional encontrado: {new_domain}")
-                    return new_url
+                    # OK → la llamada que recibe safe_request mostrará “encontrado”
+                    return test_url
                 else:
-                    self.log(self.tr("subdomain_invalid").format(domain=new_domain))
+                    if self.update_progress_callback:
+                        self.update_progress_callback(
+                            0, 0, status=f"Invalid subdomain: {domain}"
+                        )
             except requests.exceptions.ReadTimeout:
-                self.log(self.tr("subdomain_timeout").format(domain=new_domain))
-                return new_url
-            except Exception as e:
-                self.log(self.tr("subdomain_error").format(domain=new_domain, error=e))
+                if self.update_progress_callback:
+                    self.update_progress_callback(
+                        0, 0, status=f"Timeout in: {domain}"
+                    )
+            except Exception:
+                if self.update_progress_callback:
+                    self.update_progress_callback(
+                        0, 0, status=f"Invalid subdomain: {domain}"
+                    )
+
         return url
 
     def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
