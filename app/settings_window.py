@@ -63,7 +63,7 @@ class SettingsWindow:
         self.settings_window.geometry("800x600")
         self.settings_window.transient(self.parent)
         self.settings_window.deiconify()
-        self.settings_window.after(10, self.settings_window.grab_set())
+        self.settings_window.after_idle(self.settings_window.grab_set)
         self.center_window(self.settings_window, 800, 600)
         self.main_frame = ctk.CTkFrame(self.settings_window)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
