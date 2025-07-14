@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.11"
+VERSION = "V0.8.11.1"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
