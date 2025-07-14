@@ -2,6 +2,7 @@ import customtkinter as ctk
 import requests
 import threading
 import json
+import tkinter as tk
 
 class DonorsModal(ctk.CTkToplevel):
     def __init__(self, parent, tr):
@@ -17,9 +18,17 @@ class DonorsModal(ctk.CTkToplevel):
         
         self.center_window()
         self.create_ui()
-        
+        self.after_idle(self._safe_grab)
         # Start loading data in a separate thread to prevent UI freeze
         threading.Thread(target=self._load_donors, daemon=True).start()
+        
+    def _safe_grab(self):
+        """Intenta grab_set hasta que la ventana sea visible."""
+        try:
+            self.grab_set()
+        except tk.TclError:
+            # Aún no es “viewable”; reintenta en 20 ms
+            self.after(20, self._safe_grab)
 
     def center_window(self):
         """Centers the modal window relative to the parent window."""
