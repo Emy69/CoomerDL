@@ -13,7 +13,7 @@ class DonorsModal(ctk.CTkToplevel):
         self.geometry("400x500")
         self.resizable(False, False)
         self.transient(parent)
-        self.grab_set()
+        self.after_idle(self.grab_set)
         
         self.center_window()
         self.create_ui()
