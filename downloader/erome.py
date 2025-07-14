@@ -1,15 +1,16 @@
 import re
-from tkinter import messagebox, simpledialog
 import uuid
 import requests
-from bs4 import BeautifulSoup
 import os
-from urllib.parse import urljoin, quote
-import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 import datetime
+
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, quote
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from requests.exceptions import ChunkedEncodingError
+from tkinter import messagebox, simpledialog
 
 class EromeDownloader:
     def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
@@ -77,46 +78,86 @@ class EromeDownloader:
             return
 
         if os.path.exists(file_path):
-            self.log(self.tr("File already exists, skipping: {file_path}", file_path=file_path))
+            self.log(self.tr("File already exists, skipping: {file_path}",
+                             file_path=file_path))
             return
 
-        folder_path = os.path.dirname(file_path)
-        os.makedirs(folder_path, exist_ok=True)
-
-        self.log(self.tr("Start downloading {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
+        # Asegura que la carpeta exista
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        self.log(self.tr("Start downloading {resource_type}: {file_path}",
+                         resource_type=resource_type, file_path=file_path))
 
         retries = 0
         while retries < max_retries:
             try:
-                response = requests.get(url, headers=self.headers, stream=True)
-                if response.status_code == 200:
-                    total_size = int(response.headers.get('content-length', 0))
-                    downloaded_size = 0
+                with requests.get(url, headers=self.headers,
+                                  stream=True, timeout=15) as response:
+                    if response.status_code != 200:
+                        self.log(self.tr("Error downloading {resource_type}, "
+                                         "status code: {status_code}",
+                                         resource_type=resource_type,
+                                         status_code=response.status_code))
+                        break
 
-                    # Download the file in chunks
-                    with open(file_path, 'wb') as f:
-                        for chunk in response.iter_content(chunk_size=65536):  # 64KB chunks
+                    total_size = int(response.headers.get("content-length", 0))
+                    downloaded_size = 0
+                    start_time = last_update = time.time()
+
+                    with open(file_path, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=65536):
                             if self.cancel_requested:
                                 return
                             f.write(chunk)
                             downloaded_size += len(chunk)
-                            if self.update_progress_callback:
-                                self.update_progress_callback(downloaded_size, total_size, file_id=file_id, file_path=file_path)
 
-                    self.completed_files += 1
-                    if self.update_global_progress_callback:
-                        self.update_global_progress_callback(self.completed_files, self.total_files)
+                            # Actualiza cada 0.5 s como máximo
+                            now = time.time()
+                            if now - last_update >= 0.5:
+                                elapsed = now - start_time
+                                speed = downloaded_size / elapsed if elapsed else 0
+                                eta   = ((total_size - downloaded_size) / speed
+                                         if speed else None)
+                                self.update_progress_callback(
+                                    downloaded_size, total_size,
+                                    file_id=file_id, file_path=file_path,
+                                    speed=speed, eta=eta
+                                )
+                                last_update = now
 
-                    self.log(self.tr("Download successful: {resource_type}, {file_path}", resource_type=resource_type, file_path=file_path))
-                    break
-                else:
-                    self.log(self.tr("Error downloading {resource_type}, status code: {status_code}", resource_type=resource_type, status_code=response.status_code))
-                    break
-            except (ChunkedEncodingError, requests.exceptions.ConnectionError) as e:
+                    # Empuja un último update al terminar
+                    self.update_progress_callback(
+                        downloaded_size, total_size,
+                        file_id=file_id, file_path=file_path,
+                        speed=0, eta=0, status="Completed"
+                    )
+
+                # Contabiliza el archivo terminado
+                self.completed_files += 1
+                if self.update_global_progress_callback:
+                    self.update_global_progress_callback(
+                        self.completed_files, self.total_files
+                    )
+
+                self.log(self.tr("Download successful: {resource_type}, "
+                                 "{file_path}", resource_type=resource_type,
+                                 file_path=file_path))
+                break
+
+            except (requests.exceptions.ChunkedEncodingError,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout) as e:
                 retries += 1
-                self.log(self.tr("Error downloading {resource_type}, attempt {retries}/{max_retries}: {error}", resource_type=resource_type, retries=retries, max_retries=max_retries, error=e))
+                self.log(self.tr("Error downloading {resource_type}, "
+                                 "attempt {retries}/{max_retries}: {error}",
+                                 resource_type=resource_type,
+                                 retries=retries, max_retries=max_retries,
+                                 error=e))
                 if retries == max_retries:
-                    self.log(self.tr("Max retries reached. Failed to download {resource_type}: {file_path}", resource_type=resource_type, file_path=file_path))
+                    self.log(self.tr("Max retries reached. Failed to "
+                                     "download {resource_type}: {file_path}",
+                                     resource_type=resource_type,
+                                     file_path=file_path))
+
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
@@ -133,26 +174,41 @@ class EromeDownloader:
                     folder_path = base_folder  # Use the base folder directly
 
                 media_urls = []
+                seen_urls = set() 
 
-                if self.download_videos:
-                    videos = soup.find_all('video')
-                    for video in videos:
+                # --- vídeos ---
+                if download_videos:
+                    for video in soup.find_all('video'):
                         source = video.find('source')
                         if source:
-                            video_src = source['src']
-                            abs_video_src = urljoin(page_url, video_src)
-                            video_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_video_src)))
-                            media_urls.append((abs_video_src, video_name, 'Video'))
+                            abs_video_src = urljoin(page_url, source['src'])
+                            if abs_video_src in seen_urls:      # ya lo tenemos
+                                continue
+                            seen_urls.add(abs_video_src)
+                            video_name = os.path.join(
+                                folder_path,
+                                self.clean_filename(os.path.basename(abs_video_src))
+                            )
+                            media_urls.append(
+                                (abs_video_src, video_name, 'Video')
+                            )
 
-                if self.download_images:
-                    image_divs = soup.select('div.img')
-                    for div in image_divs:
+                # --- imágenes ---
+                if download_images:
+                    for div in soup.select('div.img'):
                         img = div.find('img', attrs={'data-src': True})
                         if img:
-                            img_src = img['data-src']
-                            abs_img_src = urljoin(page_url, img_src)
-                            img_name = os.path.join(folder_path, self.clean_filename(os.path.basename(abs_img_src)))
-                            media_urls.append((abs_img_src, img_name, 'Image'))
+                            abs_img_src = urljoin(page_url, img['data-src'])
+                            if abs_img_src in seen_urls:
+                                continue
+                            seen_urls.add(abs_img_src)
+                            img_name = os.path.join(
+                                folder_path,
+                                self.clean_filename(os.path.basename(abs_img_src))
+                            )
+                            media_urls.append(
+                                (abs_img_src, img_name, 'Image')
+                            )
 
                 self.total_files += len(media_urls)
                 futures = [self.executor.submit(self.download_file, url, file_path, resource_type, str(uuid.uuid4())) for url, file_path, resource_type in media_urls]
