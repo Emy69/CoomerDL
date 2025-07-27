@@ -25,7 +25,7 @@ class Downloader:
         self.cancel_requested = threading.Event()  # Para manejar cancelaciones
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-    'Referer': 'https://coomer.su/',
+    'Referer': 'https://coomer.st/',
         }
         self.media_counter = 0
         self.session = requests.Session()
@@ -160,7 +160,7 @@ class Downloader:
 
                 try:
                     response = self.session.get(url, stream=True, headers=self.headers)
-                    if response.status_code == 403 and "coomer.su" in url:
+                    if response.status_code == 403 and "coomer.st" in url:
                         # Aviso inicial
                         if self.update_progress_callback:
                             self.update_progress_callback(0, 0, status="403")
@@ -217,7 +217,7 @@ class Downloader:
         path = parsed.path if parsed.path.startswith("/data/") else f"/data{parsed.path}"
 
         for i in range(1, max_subdomains + 1):
-            domain = f"n{i}.coomer.su"
+            domain = f"n{i}.coomer.st"
             test_url = parsed._replace(netloc=domain, path=path).geturl()
 
             # Aviso: probando
@@ -339,11 +339,11 @@ class Downloader:
     def process_post(self, post):
         media_urls = []
         if 'file' in post and post['file']:
-            file_url = urljoin("https://coomer.su/", post['file']['path'])
+            file_url = urljoin("https://coomer.st/", post['file']['path'])
             media_urls.append(file_url)
         if 'attachments' in post and post['attachments']:
             for attachment in post['attachments']:
-                attachment_url = urljoin("https://coomer.su/", attachment['path'])
+                attachment_url = urljoin("https://coomer.st/", attachment['path'])
                 media_urls.append(attachment_url)
         return media_urls
 
