@@ -1,4 +1,5 @@
 ![Windows Compatibility](https://img.shields.io/badge/Windows-10%2C%2011-blue)
+![Downloads](https://img.shields.io/github/downloads/emy69/CoomerDL/total)
 
 # Coomer Downloader App
 
