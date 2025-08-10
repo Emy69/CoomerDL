@@ -295,7 +295,7 @@ class Downloader:
 
     def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1):
         base_name = os.path.basename(media_url).split('?')[0]
-        extension = os.path.splitext(base_name)[1]
+        name_no_ext, extension = os.path.splitext(base_name)
         if not hasattr(self, 'file_naming_mode'):
             self.file_naming_mode = 0
         mode = self.file_naming_mode
@@ -303,12 +303,11 @@ class Downloader:
         def sanitize(name):
             # Only remove forbidden characters; Unicode letters (e.g. Hiragana, Kanji) remain intact.
             sanitized = self.sanitize_filename(name)
-            # If the result is empty (or only whitespace), return an empty string to trigger fallback.
             return sanitized.strip()
 
         if mode == 0:
             # Use original file name (File ID)
-            sanitized = sanitize(base_name)
+            sanitized = sanitize(name_no_ext)
             if not sanitized:
                 sanitized = "file"  # fallback default if needed
             final_name = f"{sanitized}_{attachment_index}{extension}"
@@ -316,7 +315,6 @@ class Downloader:
             # Use post name
             sanitized_post = sanitize(post_name or "")
             if not sanitized_post:
-                # Fallback to using post ID if available, or default to "post"
                 sanitized_post = f"post_{post_id}" if post_id else "post"
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             final_name = f"{sanitized_post}_{attachment_index}_{short_hash}{extension}"
@@ -330,7 +328,7 @@ class Downloader:
             else:
                 final_name = f"{sanitized_post}_{attachment_index}{extension}"
         else:
-            final_name = sanitize(base_name)
+            final_name = sanitize(name_no_ext) + extension
 
         return final_name
 
