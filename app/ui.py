@@ -140,10 +140,10 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Cargar iconos redimensionados
         self.icons = {
-            'image': self.load_and_resize_image('resources/img/image_icon.png', (40, 40)),
-            'video': self.load_and_resize_image('resources/img/videos-solid-24.png', (40, 40)),
-            'zip': self.load_and_resize_image('resources/img/zip_icon.png', (40, 40)),
-            'default': self.load_and_resize_image('resources/img/default_icon.png', (40, 40))
+            'image': self.load_and_resize_image('resources/img/iconos/ui/image_icon.png', (40, 40)),
+            'video': self.load_and_resize_image('resources/img/iconos/ui/videos-solid-24.png', (40, 40)),
+            'zip': self.load_and_resize_image('resources/img/iconos/ui/zip_icon.png', (40, 40)),
+            'default': self.load_and_resize_image('resources/img/iconos/ui/default_icon.png', (40, 40))
         }
 
         # Progress manager
@@ -315,7 +315,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.progress_percentage.pack(side='left')
 
         # Cargar el icono de descarga con un tamaño mayor
-        self.download_icon = self.load_and_resize_image('resources/img/download_icon.png', (24, 24))  # Cambiado a (24, 24)
+        self.download_icon = self.load_and_resize_image('resources/img/iconos/ui/download_icon.png', (24, 24))  # Cambiado a (24, 24)
 
         # Reemplazar el botón con una etiqueta que simule un botón
         self.toggle_details_button = ctk.CTkLabel(self.progress_frame, image=self.download_icon, text="", cursor="hand2")
@@ -1045,13 +1045,13 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Uso de la función genérica para cargar íconos específicos
     def load_github_icon(self):
-        return self.load_icon("resources/img/github-logo-24.png", "GitHub")
+        return self.load_icon("resources/img/iconos/ui/social/github-logo-24.png", "GitHub")
 
     def load_discord_icon(self):
-        return self.load_icon("resources/img/discord-alt-logo-24.png", "Discord")
+        return self.load_icon("resources/img/iconos/ui/social/discord-alt-logo-24.png", "Discord")
 
     def load_patreon_icon(self):
-        return self.load_icon("resources/img/patreon-logo-24.png", "New Icon")
+        return self.load_icon("resources/img/iconos/ui/social/patreon-logo-24.png", "New Icon")
 
     def parse_version_string(self, version_str):
       # Removes 'V' prefix and splits by '.'
