@@ -141,8 +141,8 @@ class ImageDownloaderApp(ctk.CTk):
         # Cargar iconos redimensionados
         self.icons = {
             'image': self.load_and_resize_image('resources/img/iconos/ui/image_icon.png', (40, 40)),
-            'video': self.load_and_resize_image('resources/img/iconos/ui/videos-solid-24.png', (40, 40)),
-            'zip': self.load_and_resize_image('resources/img/iconos/ui/zip_icon.png', (40, 40)),
+            'video': self.load_and_resize_image('resources/img/iconos/ui/video.png', (40, 40)),
+            'zip': self.load_and_resize_image('resources/img/iconos/ui/file-zip.png', (40, 40)),
             'default': self.load_and_resize_image('resources/img/iconos/ui/default_icon.png', (40, 40))
         }
 
