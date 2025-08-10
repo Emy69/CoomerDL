@@ -69,10 +69,10 @@ class AboutWindow:
         header_label.pack(pady=(10, 5), padx=10, anchor="w") 
 
         # Cargar las imágenes de los íconos
-        developer_icon = ctk.CTkImage(Image.open("resources/img/user-account-solid-24.png"), size=(20, 20))
-        version_icon = ctk.CTkImage(Image.open("resources/img/git-branch-line.png"), size=(20, 20))
-        downloads_icon = ctk.CTkImage(Image.open("resources/img/download_icon.png"), size=(20, 20))
-        date_icon = ctk.CTkImage(Image.open("resources/img/calendar-event-line.png"), size=(20, 20))
+        developer_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/user-account-solid-24.png"), size=(20, 20))
+        version_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/git-branch-line.png"), size=(20, 20))
+        downloads_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/download_icon.png"), size=(20, 20))
+        date_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/calendar-event-line.png"), size=(20, 20))
 
         # labels que se actualizarán
         self.downloads_label = None
@@ -134,7 +134,7 @@ class AboutWindow:
             platform_frame = ctk.CTkFrame(about_frame, fg_color="transparent")
             platform_frame.pack(anchor="w", pady=5, padx=10)
 
-            icon_image = ctk.CTkImage(Image.open("resources/img/global-line.png"), size=(20, 20))
+            icon_image = ctk.CTkImage(Image.open("resources/img/iconos/about/global-line.png"), size=(20, 20))
             icon_label = ctk.CTkLabel(platform_frame, text="", image=icon_image)
             icon_label.pack(side="left")
 
