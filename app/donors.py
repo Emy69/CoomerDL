@@ -1,8 +1,10 @@
+import os
 import customtkinter as ctk
 import requests
 import threading
 import json
 import tkinter as tk
+from PIL import Image
 
 class DonorsModal(ctk.CTkToplevel):
     def __init__(self, parent, tr):
@@ -122,7 +124,34 @@ class DonorsModal(ctk.CTkToplevel):
             return
 
         # Sort by amount in descending order, ensuring numeric comparison
-        donors.sort(key=lambda x: float(x.get("donated_amount", 0)) if isinstance(x.get("donated_amount"), (int, float, str)) and str(x.get("donated_amount")).replace('.', '', 1).isdigit() else 0.0, reverse=True)
+        def _to_float(v):
+            try:
+                return float(v)
+            except Exception:
+                return 0.0
+        donors.sort(key=lambda x: _to_float(x.get("donated_amount", 0)), reverse=True)
+
+        # Cache icons once (PNG medals and default)
+        if not hasattr(self, "_donor_icons"):
+            icon_dir = os.path.join("resources", "img", "iconos", "donors")
+
+            def _load_icon(fname):
+                path = os.path.join(icon_dir, fname)
+                if os.path.exists(path):
+                    return ctk.CTkImage(
+                        light_image=Image.open(path),
+                        dark_image=Image.open(path),
+                        size=(20, 20)
+                    )
+                return None
+
+            # Keep a dict for quick access and to hold references
+            self._donor_icons = {
+                "gold": _load_icon("gold.png"),
+                "silver": _load_icon("silver.png"),
+                "bronze": _load_icon("bronze.png"),
+                "default": _load_icon("default.png"),
+            }
 
         for i, donor in enumerate(donors):
             donor_name = donor.get("name", self.tr("Unknown Donor"))
@@ -132,52 +161,58 @@ class DonorsModal(ctk.CTkToplevel):
                 donated_amount = 0.0
 
             # Determine styling based on rank
-            rank_text = f"#{i+1}"
             font_size = 14
             font_weight = "normal"
             name_color = "white"
             amount_color = "#FFC107"
             row_bg_color = "transparent"
-            rank_icon = ""
 
+            # Select icon and colors
             if i == 0:
-                rank_icon = "🥇"
+                icon_key = "gold"
                 font_size = 18
                 font_weight = "bold"
                 name_color = "#FFD700"
                 amount_color = "#FFD700"
                 row_bg_color = "#3a3a2a"
             elif i == 1:
-                rank_icon = "🥈"
+                icon_key = "silver"
                 font_size = 16
                 font_weight = "bold"
                 name_color = "#C0C0C0"
                 amount_color = "#C0C0C0"
                 row_bg_color = "#303030"
             elif i == 2:
-                rank_icon = "🥉"
+                icon_key = "bronze"
                 font_size = 15
                 font_weight = "bold"
                 name_color = "#CD7F32"
                 amount_color = "#CD7F32"
                 row_bg_color = "#2a2a2a"
             else:
-                amount_color = "#4CAF50" if donated_amount >= 1000 else "#FFC107"
+                icon_key = "default"
+                name_color = "#B0B0B0"
+                amount_color = "#B0B0B0"
 
+            icon_img = self._donor_icons.get(icon_key)
+
+            # Row container
             donor_row_frame = ctk.CTkFrame(self.donors_frame, fg_color=row_bg_color, corner_radius=8)
-            donor_row_frame.pack(fill="x", pady=4, padx=5) # Add more padding
-            donor_row_frame.grid_columnconfigure(0, weight=0) # Rank icon/text
-            donor_row_frame.grid_columnconfigure(1, weight=1) # Name
-            donor_row_frame.grid_columnconfigure(2, weight=0) # Amount
+            donor_row_frame.pack(fill="x", pady=4, padx=5)
+            donor_row_frame.grid_columnconfigure(0, weight=0)  # Rank icon
+            donor_row_frame.grid_columnconfigure(1, weight=1)  # Name
+            donor_row_frame.grid_columnconfigure(2, weight=0)  # Amount
 
             # Rank label with icon
             rank_label = ctk.CTkLabel(
                 donor_row_frame,
-                text=f"{rank_icon} {rank_text}",
+                text="", # remove numeric order
+                image=icon_img,
+                compound="left",
                 font=ctk.CTkFont(size=font_size, weight=font_weight),
-                width=60, # Increased width for icon
+                width=40,
                 anchor="w",
-                text_color=name_color if i < 3 else "white" # Rank text color
+                text_color=name_color
             )
             rank_label.grid(row=0, column=0, padx=(5, 5), pady=5, sticky="w")
 
