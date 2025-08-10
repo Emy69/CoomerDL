@@ -51,7 +51,7 @@ class SettingsWindow:
     def load_icons(self):
         icons = {}
         try:
-            icons['folder'] = ImageTk.PhotoImage(PilImage.open("resources/img/folder.png").resize((20, 20), PilImage.Resampling.LANCZOS))
+            icons['folder'] = ImageTk.PhotoImage(PilImage.open("resources/img/iconos/settings/folder.png").resize((20, 20), PilImage.Resampling.LANCZOS))
         except Exception as e:
             messagebox.showerror(self.translate("Error"), self.translate(f"Error loading icons: {e}"))
             icons['folder'] = None
