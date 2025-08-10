@@ -13,7 +13,7 @@ class DonorsModal(ctk.CTkToplevel):
         self.tr = tr # Translation function
         
         self.title(self.tr("Donors Leaderboard"))
-        self.geometry("400x500")
+        self.geometry("450x500")
         self.resizable(False, False)
         self.transient(parent)
 
@@ -152,6 +152,20 @@ class DonorsModal(ctk.CTkToplevel):
                 "bronze": _load_icon("bronze.png"),
                 "default": _load_icon("default.png"),
             }
+        
+        # Info note about donors data update
+        info_label = ctk.CTkLabel(
+            self.donors_frame,
+            text=self.tr(
+                "Note: Donor information is updated every 10th of each month.\n"
+                "Names and donation amounts are retrieved from my Patreon page."
+            ),
+            font=ctk.CTkFont(size=12, slant="italic"),
+            text_color="gray",
+            justify="center",
+            wraplength=350  # wrap text to fit in ~350px width
+        )
+        info_label.pack(pady=(0, 10), fill="x")  # fill to center nicely
 
         for i, donor in enumerate(donors):
             donor_name = donor.get("name", self.tr("Unknown Donor"))
