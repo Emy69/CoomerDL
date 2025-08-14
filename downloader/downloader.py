@@ -256,7 +256,7 @@ class Downloader:
             if self.cancel_requested.is_set():
                 return all_posts
 
-            api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}"
+            api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}/posts"
             url_query = {"o": offset}
             if query is not None:
                 url_query["q"] = query
@@ -638,7 +638,7 @@ class Downloader:
             self.shutdown_executor()
     
     def fetch_single_post(self, site, post_id, service):
-        api_url = f"https://{site}.su/api/v1/{service}/post/{post_id}"
+        api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
         self.log(self.tr(f"Fetching post from {api_url}"))
         try:
             with self.rate_limit:

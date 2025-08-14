@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.11.2"
+VERSION = "V0.8.11.3"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -217,9 +217,6 @@ class ImageDownloaderApp(ctk.CTk):
         center_x = int((self.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((self.winfo_screenheight() / 2) - (window_height / 2))
         self.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-        
-        # Establecer el tamaño mínimo de la ventana
-        self.minsize(window_width, window_height)
         
         if sys.platform == "win32":
             self.iconbitmap("resources/img/window.ico")
