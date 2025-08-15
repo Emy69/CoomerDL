@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.11.3"
+VERSION = "V0.8.11.4"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -634,6 +634,7 @@ class ImageDownloaderApp(ctk.CTk):
             headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Referer': 'https://coomer.st/',
+                "Accept": "text/css"
             },
             download_images=self.download_images_check.get(),
             download_videos=self.download_videos_check.get(),
@@ -735,7 +736,7 @@ class ImageDownloaderApp(ctk.CTk):
                 self.add_log_message_safe(self.tr("URL del perfil"))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.bunkr_downloader.descargar_perfil_bunkr, url))
         
-        elif parsed_url.netloc in ["coomer.st", "kemono.su"]:
+        elif parsed_url.netloc in ["coomer.st", "kemono.cr"]:
             self.add_log_message_safe(self.tr("Iniciando descarga..."))
             self.setup_general_downloader()
             self.active_downloader = self.general_downloader

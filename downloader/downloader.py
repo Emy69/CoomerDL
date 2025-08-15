@@ -25,7 +25,8 @@ class Downloader:
         self.cancel_requested = threading.Event()  # Para manejar cancelaciones
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-    'Referer': 'https://coomer.st/',
+            'Referer': 'https://coomer.st/',
+            "Accept": "text/css"
         }
         self.media_counter = 0
         self.session = requests.Session()
