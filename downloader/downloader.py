@@ -146,8 +146,9 @@ class Downloader:
         if max_retries is None:
             max_retries = self.max_retries
 
-        domain = urlparse(url).netloc
-        path = urlparse(url).path
+        parsed = urlparse(url)
+        domain = parsed.netloc
+        path = parsed.path
         retry_wait = 1
 
         for attempt in range(max_retries):
@@ -161,12 +162,12 @@ class Downloader:
 
                 try:
                     response = self.session.get(url, stream=True, headers=self.headers)
-                    if response.status_code == 403 and "coomer.st" in url:
-                        # Aviso inicial
-                        if self.update_progress_callback:
-                            self.update_progress_callback(0, 0, status="403")
+                    sc = response.status_code
 
-                        # Buscar subdominio alternativo
+                    if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
+                        if self.update_progress_callback:
+                            self.update_progress_callback(0, 0, status=f"{sc} - probing subdomains")
+
                         with self.subdomain_locks[path]:
                             if path in self.subdomain_cache:
                                 alt_url = self.subdomain_cache[path]
@@ -175,19 +176,14 @@ class Downloader:
                                 self.subdomain_cache[path] = alt_url
 
                         if alt_url != url:
-                            # Aviso: subdominio encontrado
                             found = urlparse(alt_url).netloc
                             if self.update_progress_callback:
-                                self.update_progress_callback(
-                                    0, 0, status=f"Subdomain found: {found}"
-                                )
+                                self.update_progress_callback(0, 0, status=f"Subdomain found: {found}")
 
-                            response = self.session.get(alt_url, stream=True,
-                                                        headers=self.headers)
+                            response = self.session.get(alt_url, stream=True, headers=self.headers)
                             response.raise_for_status()
                             return response
                         else:
-                            # Todos fallaron
                             if self.update_progress_callback:
                                 self.update_progress_callback(0, 0, status="Exhausted subdomains")
                             return None
@@ -215,37 +211,43 @@ class Downloader:
 
     def _find_valid_subdomain(self, url, max_subdomains=10):
         parsed = urlparse(url)
-        path = parsed.path if parsed.path.startswith("/data/") else f"/data{parsed.path}"
+        original_path = parsed.path
+        
+        path = original_path
+        if not original_path.startswith("/data/"):
+            path = ("/data" + original_path) if not original_path.startswith("/data") else original_path
 
-        for i in range(1, max_subdomains + 1):
-            domain = f"n{i}.coomer.st"
-            test_url = parsed._replace(netloc=domain, path=path).geturl()
+        host = parsed.netloc
+        
+        if "coomer" in host:
+            base_domains = ["coomer.st"]
+        elif "kemono" in host:
+            # try both TLDs in case the content still lives at .su
+            base_domains = ["kemono.cr", "kemono.su"]
+        else:
+            base_domains = [host]
 
-            # Aviso: probando
-            if self.update_progress_callback:
-                self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
+        for base in base_domains:
+            for i in range(1, max_subdomains + 1):
+                domain = f"n{i}.{base}"
+                test_url = parsed._replace(netloc=domain, path=path).geturl()
 
-            try:
-                resp = self.session.get(test_url, headers=self.headers,
-                                        timeout=15, stream=True)
-                if resp.status_code == 200:
-                    # OK → la llamada que recibe safe_request mostrará “encontrado”
-                    return test_url
-                else:
+                if self.update_progress_callback:
+                    self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
+
+                try:
+                    resp = self.session.get(test_url, headers=self.headers, timeout=15, stream=True)
+                    if resp.status_code == 200:
+                        return test_url
+                    else:
+                        if self.update_progress_callback:
+                            self.update_progress_callback(0, 0, status=f"Invalid subdomain: {domain}")
+                except requests.exceptions.ReadTimeout:
                     if self.update_progress_callback:
-                        self.update_progress_callback(
-                            0, 0, status=f"Invalid subdomain: {domain}"
-                        )
-            except requests.exceptions.ReadTimeout:
-                if self.update_progress_callback:
-                    self.update_progress_callback(
-                        0, 0, status=f"Timeout in: {domain}"
-                    )
-            except Exception:
-                if self.update_progress_callback:
-                    self.update_progress_callback(
-                        0, 0, status=f"Invalid subdomain: {domain}"
-                    )
+                        self.update_progress_callback(0, 0, status=f"Timeout in: {domain}")
+                except Exception:
+                    if self.update_progress_callback:
+                        self.update_progress_callback(0, 0, status=f"Invalid subdomain: {domain}")
 
         return url
 
@@ -335,15 +337,27 @@ class Downloader:
 
 
 
-    def process_post(self, post):
+    def process_post(self, post, site):
+        base = f"https://{site}/"
+
+        def _full(path):
+            if not path:
+                return None
+            p = path if str(path).startswith('/') else f'/{path}'
+            return urljoin(base, p)
+
         media_urls = []
-        if 'file' in post and post['file']:
-            file_url = urljoin("https://coomer.st/", post['file']['path'])
-            media_urls.append(file_url)
-        if 'attachments' in post and post['attachments']:
-            for attachment in post['attachments']:
-                attachment_url = urljoin("https://coomer.st/", attachment['path'])
-                media_urls.append(attachment_url)
+
+        f = post.get('file') or {}
+        u = _full(f.get('path') or f.get('url') or f.get('name'))
+        if u:
+            media_urls.append(u)
+
+        for att in (post.get('attachments') or []):
+            u = _full(att.get('path') or att.get('url') or att.get('name'))
+            if u:
+                media_urls.append(u)
+
         return media_urls
 
     def sanitize_filename(self, filename):
@@ -529,7 +543,7 @@ class Downloader:
                 title = post.get('title') or ""
 
                 # Obtenemos la lista de URLs de archivos para este post
-                media_urls = self.process_post(post)
+                media_urls = self.process_post(post, site)
 
 
                 for media_url in media_urls:
@@ -549,7 +563,7 @@ class Downloader:
                 current_post_id = post.get('id') or "unknown_id"
                 title = post.get('title') or ""
 
-                media_urls = self.process_post(post)
+                media_urls = self.process_post(post, site)
                 for media_url in media_urls:
                     ext = os.path.splitext(media_url)[1].lower()
                     if (ext in self.image_extensions and not self.download_images) or \
@@ -608,7 +622,7 @@ class Downloader:
             if not post:
                 self.log(self.tr("No post found for this ID."))
                 return
-            media_urls = self.process_post(post[0])
+            media_urls = self.process_post(post[0], site)
             futures = []
             grouped_media_urls = defaultdict(list)
             for media_url in media_urls:
