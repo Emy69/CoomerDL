@@ -333,7 +333,10 @@ class Downloader:
         elif mode == 3:
             # Use post time and post name
             sanitized_post = sanitize(post_name or "")
+            if not sanitized_post:
+                sanitized_post = f"post_{post_id}" if post_id else "post"
             sanitized_time = sanitize(post_time or "")
+            short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             final_name = f"{sanitized_time} - {sanitized_post}_{attachment_index}_{short_hash}{extension}"
         else:
             final_name = sanitize(name_no_ext) + extension
