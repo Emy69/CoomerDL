@@ -296,7 +296,7 @@ class Downloader:
         return all_posts
 
 
-    def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1):
+    def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1, post_time=None):
         base_name = os.path.basename(media_url).split('?')[0]
         name_no_ext, extension = os.path.splitext(base_name)
         if not hasattr(self, 'file_naming_mode'):
@@ -330,6 +330,14 @@ class Downloader:
                 final_name = f"{sanitized_post} - {post_id}_{attachment_index}{extension}"
             else:
                 final_name = f"{sanitized_post}_{attachment_index}{extension}"
+        elif mode == 3:
+            # Use post time and post name
+            sanitized_post = sanitize(post_name or "")
+            if not sanitized_post:
+                sanitized_post = f"post_{post_id}" if post_id else "post"
+            sanitized_time = sanitize(post_time or "")
+            short_hash = f"{hash(media_url) & 0xFFFF:04x}"
+            final_name = f"{sanitized_time} - {sanitized_post}_{attachment_index}_{short_hash}{extension}"
         else:
             final_name = sanitize(name_no_ext) + extension
 
@@ -381,7 +389,7 @@ class Downloader:
         return media_folder
 
     def process_media_element(self, media_url, user_id, post_id=None,
-                          post_name=None, download_id=None):
+                          post_name=None, post_time=None, download_id=None):
     # Si se ha solicitado cancelar, se aborta.
         if self.cancel_requested.is_set():
             return
@@ -402,7 +410,7 @@ class Downloader:
         else:
             attachment_index = 1
 
-        filename = self.get_filename(media_url, post_id=post_id, post_name=post_name,
+        filename = self.get_filename(media_url, post_id=post_id, post_name=post_name, post_time=post_time,
                                     attachment_index=attachment_index)
         media_folder = self.get_media_folder(extension, user_id, post_id)
         os.makedirs(media_folder, exist_ok=True)
@@ -562,6 +570,7 @@ class Downloader:
             for post in posts:
                 current_post_id = post.get('id') or "unknown_id"
                 title = post.get('title') or ""
+                time = post.get('published') or ""
 
                 media_urls = self.process_post(post, site)
                 for media_url in media_urls:
@@ -578,7 +587,8 @@ class Downloader:
                             media_url,
                             user_id,
                             post_id=current_post_id,
-                            post_name=title  
+                            post_name=title,
+                            post_time=time
                         )
                     else:
                         # Modo multi (threaded)
@@ -588,6 +598,7 @@ class Downloader:
                             user_id,
                             current_post_id,
                             title,  # <-- pasamos el título aquí
+                            time,
                             media_url 
                         )
                         futures.append(future)

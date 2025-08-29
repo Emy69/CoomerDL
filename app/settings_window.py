@@ -437,7 +437,8 @@ class SettingsWindow:
         naming_options = [
             "Use File ID (default)",
             "Use Sanitized Post Name",
-            "Post Name + Post ID Suffix"
+            "Post Name + Post ID Suffix",
+            "Post Date/Time + Post Name"
         ]
 
         # 1) Crear PRIMERO el combobox
@@ -449,7 +450,7 @@ class SettingsWindow:
         )
 
         # 2) Recuperar el valor desde settings (puede ser int o str). 
-        #    Si es int (0,1,2) mapeamos a la cadena; si es str, la usamos tal cual.
+        #    Si es int (0,1,2,3) mapeamos a la cadena; si es str, la usamos tal cual.
         naming_mode = self.settings.get('file_naming_mode', 0)
         if isinstance(naming_mode, int):
             # Asegurarnos de no pasarnos de índice
@@ -514,6 +515,8 @@ class SettingsWindow:
             "     Mi_Post_Ejemplo_1_ab12.mp4  (nombre del post + índice del adjunto + hash único)\n\n"
             " • [Modo 2] Post Name + Post ID Suffix:  \n"
             "     Mi_Post_Ejemplo - 98765_1.mp4  (nombre del post + ID del post + índice del adjunto)\n"
+            " • [Modo 3] Post Time + Post Name:  \n"
+            "     2000-01-01T00_00_00 - Mi_Post_Ejemplo - 98765_1.mp4  (post date/time + nombre del post + índice del adjunto + hash único)\n"
         )
         examples_label = ctk.CTkLabel(
             tab,
@@ -578,7 +581,8 @@ class SettingsWindow:
             mapping = {
                 "Use File ID (default)": 0,
                 "Use Sanitized Post Name": 1,
-                "Post Name + Post ID Suffix": 2
+                "Post Name + Post ID Suffix": 2,
+                "Post Date/Time + Post Name": 3
             }
             numeric_mode = mapping.get(file_naming_mode_str, 0)
             self.downloader.file_naming_mode = numeric_mode
