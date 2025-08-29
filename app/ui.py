@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.11.4"
+VERSION = "V0.8.16"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -296,6 +296,7 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.log_textbox = ctk.CTkTextbox(self, width=590, height=200)
         self.log_textbox.pack(pady=(10, 0), padx=20, fill='both', expand=True)
+        self.log_textbox.configure(state="disabled")
 
         # Progress frame
         self.progress_frame = ctk.CTkFrame(self)
