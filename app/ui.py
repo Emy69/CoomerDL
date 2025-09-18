@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.16"
+VERSION = "V0.8.17"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -60,6 +60,9 @@ def extract_ck_query(url: ParseResult) -> tuple[Optional[str], int]:
 # Application class
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
+        self.errors = []  
+        self._log_buffer = []
+        self.github_stars = 0
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
         super().__init__()
@@ -85,6 +88,8 @@ class ImageDownloaderApp(ctk.CTk):
 
         # About window
         self.about_window = AboutWindow(self, self.tr, VERSION)  # Inicializa AboutWindow
+        
+        self.extras_window = None
 
         # Load settings
         self.settings = self.settings_window.load_settings()
@@ -845,30 +850,29 @@ class ImageDownloaderApp(ctk.CTk):
 
     # Log messages safely
     def add_log_message_safe(self, message: str):
-        # Almacena todos los logs en self.all_logs
-        self.all_logs.append(message)
+        # Asegura estructuras
+        if not hasattr(self, "errors") or self.errors is None:
+            self.errors = []
+        self.errors.append(message)
 
-        # Detecta si es error o warning para contarlos
-        if "error" in message.lower():
-            self.errors.append(message)
-        if "warning" in message.lower():
-            self.warnings.append(message)
+        # Intenta escribir en el textbox si existe; si no, bufferiza
+        try:
+            if hasattr(self, "log_textbox") and self.log_textbox:
+                self.log_textbox.configure(state="normal")
+                self.log_textbox.insert("end", message + "\n")
+                self.log_textbox.configure(state="disabled")
+                self.log_textbox.see("end")
+            else:
+                # aún no existe el textbox; guardamos
+                if not hasattr(self, "_log_buffer") or self._log_buffer is None:
+                    self._log_buffer = []
+                self._log_buffer.append(message)
+        except Exception:
+            # ante cualquier problema, también bufferiza
+            if not hasattr(self, "_log_buffer") or self._log_buffer is None:
+                self._log_buffer = []
+            self._log_buffer.append(message)
 
-        # Agrega en la interfaz
-        def log_in_main_thread():
-            self.log_textbox.configure(state='normal')
-            
-            # Inserta el nuevo mensaje
-            self.log_textbox.insert('end', message + '\n')
-
-            # Si no quieres limitar líneas, ignora la parte de limit_log_lines.
-            # Si deseas un límite, llama a limit_log_lines().
-            if MAX_LOG_LINES is not None:
-                self.limit_log_lines()
-
-            self.log_textbox.configure(state='disabled')
-
-        self.after(0, log_in_main_thread)
 
     def limit_log_lines(self):
         log_lines = self.log_textbox.get("1.0", "end-1c").split("\n")
@@ -1024,14 +1028,20 @@ class ImageDownloaderApp(ctk.CTk):
     def on_hover_leave(self, event):
         self.folder_path.configure(font=("Arial", 13))  # Quitar el subrayado al salir el ratón
 
-    def get_github_stars(self, user, repo):
+    def get_github_stars(self, user: str, repo: str, timeout: float = 2.5) -> int:
         try:
-            response = requests.get(f"https://api.github.com/repos/{user}/{repo}")
-            response.raise_for_status()
-            data = response.json()
-            return data.get("stargazers_count", 0)
-        except requests.RequestException as e:
-            self.add_log_message_safe(f"Error al obtener las estrellas de GitHub: {e}")
+            url = f"https://api.github.com/repos/{user}/{repo}"
+            headers = {
+                "User-Agent": "CoomerDL",
+                "Accept": "application/vnd.github+json",
+            }
+            r = requests.get(url, headers=headers, timeout=timeout)
+            r.raise_for_status()
+            data = r.json()
+            return int(data.get("stargazers_count", 0))
+        except Exception:
+            # No rompas el arranque si no hay internet
+            self.add_log_message_safe(self.tr("Offline mode: GitHub stars could not be retrieved."))
             return 0
 
     def load_icon(self, icon_path, icon_name):
@@ -1099,12 +1109,19 @@ class ImageDownloaderApp(ctk.CTk):
                         self.tr("Could not retrieve latest version information from GitHub.")
                     ))
         except requests.exceptions.RequestException as e:
-            self.add_log_message_safe(f"Error checking for updates: {e}")
-            if not startup_check:
-                self.after(0, lambda: messagebox.showerror(
-                    self.tr("Network Error"),
-                    self.tr("Could not connect to GitHub to check for updates. Please check your internet connection.")
+            if self._is_offline_error(e):
+                self.add_log_message_safe(self.tr("Offline mode: could not check for updates."))
+                self.after(0, lambda: messagebox.showinfo(
+                    self.tr("No Internet connection"),
+                    self.tr("We couldn't check for updates. You may not be connected to the Internet right now.\n\nThe app will continue to work in offline mode.")
                 ))
+            else:
+                self.add_log_message_safe(f"Error checking for updates: {e}")
+                if not startup_check:
+                    self.after(0, lambda: messagebox.showerror(
+                        self.tr("Network Error"),
+                        self.tr("Could not connect to GitHub to check for updates. Please check your internet connection.")
+                    ))
         except Exception as e:
             self.add_log_message_safe(f"An unexpected error occurred during update check: {e}")
             if not startup_check:
@@ -1133,3 +1150,13 @@ class ImageDownloaderApp(ctk.CTk):
             webbrowser.open(self.latest_release_url)
         else:
             messagebox.showwarning(self.tr("No Release Found"), self.tr("No latest release URL available."))
+
+    def _is_offline_error(self, err: Exception) -> bool:
+        s = str(err)
+        return (
+            isinstance(err, requests.exceptions.ConnectionError)
+            or "NameResolutionError" in s
+            or "getaddrinfo failed" in s
+            or "Failed to establish a new connection" in s
+            or "Max retries exceeded" in s
+        )

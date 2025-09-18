@@ -87,7 +87,7 @@ class DonorsModal(ctk.CTkToplevel):
         try:
             # Explicitly set Accept and User-Agent headers
             resp = requests.get(
-                'https://emydev.com/coomer/donadores.php',
+                'https://emydevs.com/coomer/donadores.php',
                 headers={
                     'Accept': 'application/json',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
