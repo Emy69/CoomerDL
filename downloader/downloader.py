@@ -142,7 +142,7 @@ class Downloader:
                 self.enable_widgets_callback()
             self.log(self.tr("All downloads completed or cancelled."))
 
-    def safe_request(self, url, max_retries=None):
+    def safe_request(self, url, max_retries=None, headers=None):
         if max_retries is None:
             max_retries = self.max_retries
 
@@ -161,7 +161,8 @@ class Downloader:
                     time.sleep(self.rate_limit_interval - elapsed_time)
 
                 try:
-                    response = self.session.get(url, stream=True, headers=self.headers)
+                    req_headers = headers or self.headers
+                    response = self.session.get(url, stream=True, headers=req_headers)
                     sc = response.status_code
 
                     if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
@@ -418,12 +419,23 @@ class Downloader:
         final_path = os.path.normpath(os.path.join(media_folder, filename))
         tmp_path = final_path + ".tmp"
 
+        # New behavior: if the folder already exists, look for an existing .tmp
+        # file with same final name and size > 1MB. If found, resume from that point.
+        existing_tmp_size = 0
+        if os.path.exists(tmp_path):
+            try:
+                existing_tmp_size = os.path.getsize(tmp_path)
+            except Exception:
+                existing_tmp_size = 0
+
         # Si el archivo ya figura en la DB, se omite la descarga.
         if media_url in self.download_cache:
             self.log(f"File from {media_url} is in DB, skipping.")
             self.skipped_files.append(final_path)
             return
 
+        # Request initial response. If we have an existing tmp larger than 1MB,
+        # request normally first to get total size and then we'll use Range for resume.
         response = self.safe_request(media_url, max_retries=self.max_retries)
         if response is None:
             self.log(f"Failed to download {media_url} after retries.")
@@ -439,76 +451,159 @@ class Downloader:
         downloaded_size = 0
         self.start_time = time.time()
 
-        # Abrir el archivo temporal para escribir los primeros chunks.
-        with open(tmp_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1048576):
-                if self.cancel_requested.is_set():
-                    f.close()
-                    os.remove(tmp_path)
-                    self.log(f"Download cancelled from {media_url}")
+        success = False
+
+        try:
+            # If there's an existing tmp file > 1MB, prefer to resume from it.
+            resume_from = 0
+            if existing_tmp_size and existing_tmp_size > 1024 * 1024:
+                resume_from = existing_tmp_size
+                downloaded_size = existing_tmp_size
+                self.log(f"Found existing tmp file at {tmp_path} ({existing_tmp_size} bytes), will attempt to resume.")
+
+            # If we're resuming, request with Range header to continue
+            if resume_from > 0:
+                resume_headers = self.headers.copy()
+                resume_headers['Range'] = f'bytes={resume_from}-'
+                part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
+                if part_response is None:
+                    self.log(f"Failed to resume {media_url} after retries.")
+                    self.failed_files.append(media_url)
                     return
-                if chunk:
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    if self.update_progress_callback:
-                        elapsed_time = time.time() - self.start_time
-                        speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                        remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                        self.update_progress_callback(downloaded_size, total_size,
-                                                    file_id=download_id,
-                                                    file_path=tmp_path,
-                                                    speed=speed,
-                                                    eta=remaining_time)
 
-        # Si no se ha descargado el total esperado, reanudar la descarga
-        while total_size and downloaded_size < total_size:
-            # Prepara cabecera para reanudar la descarga
-            resume_headers = self.headers.copy()
-            resume_headers['Range'] = f'bytes={downloaded_size}-'
-            self.log(f"Resuming download at byte {downloaded_size} for {media_url}")
-            part_response = self.session.get(media_url, stream=True, headers=resume_headers, timeout=30)
-            part_response.raise_for_status()
+                # open in append mode and continue writing
+                with open(tmp_path, 'ab') as f:
+                    for chunk in part_response.iter_content(chunk_size=1048576):
+                        if self.cancel_requested.is_set():
+                            try:
+                                f.close()
+                            except Exception:
+                                pass
+                            # keep tmp file so user can resume later
+                            self.log(f"Download cancelled from {media_url} (tmp preserved: {tmp_path})")
+                            return
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if self.update_progress_callback:
+                                elapsed_time = time.time() - self.start_time
+                                speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                self.update_progress_callback(downloaded_size, total_size,
+                                                            file_id=download_id,
+                                                            file_path=tmp_path,
+                                                            speed=speed,
+                                                            eta=remaining_time)
+            else:
+                # No existing tmp to resume, download fresh into tmp_path
+                with open(tmp_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1048576):
+                        if self.cancel_requested.is_set():
+                            try:
+                                f.close()
+                            except Exception:
+                                pass
+                            # keep small tmp files removed, but preserve larger ones is handled above
+                            if os.path.exists(tmp_path):
+                                try:
+                                    os.remove(tmp_path)
+                                except Exception:
+                                    self.log(f"Unable to remove temp file {tmp_path}")
+                            self.log(f"Download cancelled from {media_url}")
+                            return
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if self.update_progress_callback:
+                                elapsed_time = time.time() - self.start_time
+                                speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                self.update_progress_callback(downloaded_size, total_size,
+                                                            file_id=download_id,
+                                                            file_path=tmp_path,
+                                                            speed=speed,
+                                                            eta=remaining_time)
 
-            with open(tmp_path, 'ab') as f:
-                for chunk in part_response.iter_content(chunk_size=1048576):
-                    if self.cancel_requested.is_set():
-                        f.close()
-                        os.remove(tmp_path)
-                        self.log(f"Download cancelled from {media_url}")
-                        return
-                    if chunk:
-                        f.write(chunk)
-                        downloaded_size += len(chunk)
-                        if self.update_progress_callback:
-                            elapsed_time = time.time() - self.start_time
-                            speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                            remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                            self.update_progress_callback(downloaded_size, total_size,
-                                                        file_id=download_id,
-                                                        file_path=tmp_path,
-                                                        speed=speed,
-                                                        eta=remaining_time)
+            # Si no se ha descargado el total esperado, reanudar la descarga
+            while total_size and downloaded_size < total_size:
+                # Prepara cabecera para reanudar la descarga
+                resume_headers = self.headers.copy()
+                resume_headers['Range'] = f'bytes={downloaded_size}-'
+                self.log(f"Resuming download at byte {downloaded_size} for {media_url}")
 
-        # Una vez completada la descarga, renombrar el archivo.
-        if os.path.exists(final_path):
-            os.remove(final_path)
-        os.rename(tmp_path, final_path)
+                # Use safe_request so retries and domain locking are respected
+                part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
+                if part_response is None:
+                    self.log(f"Failed to resume {media_url} during resume loop.")
+                    # Do not delete large tmp files so user can resume later
+                    self.failed_files.append(media_url)
+                    return
 
-        self.completed_files += 1
-        self.log(f"Download success from {media_url}")
-        if self.update_global_progress_callback:
-            self.update_global_progress_callback(self.completed_files, self.total_files)
+                with open(tmp_path, 'ab') as f:
+                    for chunk in part_response.iter_content(chunk_size=1048576):
+                        if self.cancel_requested.is_set():
+                            try:
+                                f.close()
+                            except Exception:
+                                pass
+                            # keep tmp file so user can resume later
+                            self.log(f"Download cancelled from {media_url} (tmp preserved: {tmp_path})")
+                            return
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if self.update_progress_callback:
+                                elapsed_time = time.time() - self.start_time
+                                speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                self.update_progress_callback(downloaded_size, total_size,
+                                                            file_id=download_id,
+                                                            file_path=tmp_path,
+                                                            speed=speed,
+                                                            eta=remaining_time)
 
-        # Registrar el archivo en la base de datos.
-        with self.db_lock:
-            self.db_cursor.execute(
-                """INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
-                VALUES (?, ?, ?, ?, ?)""",
-                (media_url, final_path, total_size, user_id, post_id)
-            )
-            self.db_connection.commit()
+            # Una vez completada la descarga, renombrar el archivo.
+            try:
+                if os.path.exists(final_path):
+                    os.remove(final_path)
+                os.rename(tmp_path, final_path)
+            except Exception as e:
+                self.log(f"Error renaming temp file to final path: {e}")
+                raise
 
-        self.download_cache[media_url] = (final_path, total_size)
+            success = True
+
+            self.completed_files += 1
+            self.log(f"Download success from {media_url}")
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
+
+            # Registrar el archivo en la base de datos.
+            with self.db_lock:
+                self.db_cursor.execute(
+                    """INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
+                    VALUES (?, ?, ?, ?, ?)""",
+                    (media_url, final_path, total_size, user_id, post_id)
+                )
+                self.db_connection.commit()
+
+            self.download_cache[media_url] = (final_path, total_size)
+
+        except Exception as e:
+            # Asegurar limpieza del archivo temporal en errores
+            self.log(f"Download failed for {media_url}: {e}")
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    self.log(f"Couldn't remove temp file {tmp_path}")
+            # marcar para reintento
+            self.failed_files.append(media_url)
+            return
+        finally:
+            # Si el download no tuvo éxito y no fue marcado como cancelado, nos aseguramos
+            # de no dejar handles abiertos. Si fue exitoso, tmp ya fue renombrado.
+            pass
 
 
 
