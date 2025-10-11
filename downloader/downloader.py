@@ -10,13 +10,13 @@ import time
 import sqlite3
 
 class Downloader:
-    def __init__(self, download_folder, max_workers=5, log_callback=None, 
-                 enable_widgets_callback=None, update_progress_callback=None, 
+    def __init__(self, download_folder, max_workers=5, log_callback=None,
+                 enable_widgets_callback=None, update_progress_callback=None,
                  update_global_progress_callback=None, headers=None,
                  max_retries=3, retry_interval=2.0,
-                 download_images=True, download_videos=True, download_compressed=True, 
+                 download_images=True, download_videos=True, download_compressed=True,
                  tr=None, folder_structure='default', rate_limit_interval=2.0):
-        
+
         self.download_folder = download_folder
         self.log_callback = log_callback
         self.enable_widgets_callback = enable_widgets_callback
@@ -47,7 +47,7 @@ class Downloader:
         self.futures = []  # Lista para almacenar los objetos Future de tareas concurrentes
         self.total_files = 0
         self.completed_files = 0
-        self.skipped_files = []  
+        self.skipped_files = []
         self.failed_files = []
         self.start_time = None
         self.tr = tr
@@ -60,10 +60,10 @@ class Downloader:
         self.post_attachment_counter = defaultdict(int)
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
-    # When true, temporary files will be removed when cancel is explicitly requested
-    self.remove_tmp_on_cancel = False
+        # When true, temporary files will be removed when cancel is explicitly requested
+        self.remove_tmp_on_cancel = False
 
-        
+
         # ----- NUEVA SECCIÓN: INICIALIZACIÓN DE LA BASE DE DATOS -----
         db_folder = os.path.join("resources", "config")
         os.makedirs(db_folder, exist_ok=True)  # Se asegura que la carpeta exista
@@ -105,13 +105,13 @@ class Downloader:
 
     def set_download_mode(self, mode, max_workers):
         """
-        Actualiza dinámicamente el modo de descarga ('multi' o 'queue') y 
+        Actualiza dinámicamente el modo de descarga ('multi' o 'queue') y
         el número máximo de threads (max_workers).
         Si el modo es 'queue', forzamos max_workers=1 para no tener concurrencia.
         """
         if mode == 'queue':
             max_workers = 1  # Forzar a 1 hilo en modo cola
-        
+
         self.download_mode = mode
         self.max_workers = max_workers
 
@@ -124,10 +124,10 @@ class Downloader:
         self.rate_limit = Semaphore(max_workers)
 
         self.log(f"Updated download mode to {mode} with max_workers = {max_workers}")
-    
+
     def set_retry_settings(self, max_retries, retry_interval):
         self.max_retries = max_retries
-        self.rate_limit_interval = retry_interval 
+        self.rate_limit_interval = retry_interval
 
     def request_cancel(self, remove_tmp=False):
         """Request cancellation of downloads.
@@ -222,13 +222,13 @@ class Downloader:
     def _find_valid_subdomain(self, url, max_subdomains=10):
         parsed = urlparse(url)
         original_path = parsed.path
-        
+
         path = original_path
         if not original_path.startswith("/data/"):
             path = ("/data" + original_path) if not original_path.startswith("/data") else original_path
 
         host = parsed.netloc
-        
+
         if "coomer" in host:
             base_domains = ["coomer.st"]
         elif "kemono" in host:
@@ -563,18 +563,18 @@ class Downloader:
                                         self.log(f"Unable to remove temp file {tmp_path}")
                                 self.log(f"Download cancelled from {media_url} (tmp preserved: {tmp_path})")
                                 return
-                        if chunk:
-                            f.write(chunk)
-                            downloaded_size += len(chunk)
-                            if self.update_progress_callback:
-                                elapsed_time = time.time() - self.start_time
-                                speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                                self.update_progress_callback(downloaded_size, total_size,
-                                                            file_id=download_id,
-                                                            file_path=tmp_path,
-                                                            speed=speed,
-                                                            eta=remaining_time)
+                            if chunk:
+                                f.write(chunk)
+                                downloaded_size += len(chunk)
+                                if self.update_progress_callback:
+                                    elapsed_time = time.time() - self.start_time
+                                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                    self.update_progress_callback(downloaded_size, total_size,
+                                                                file_id=download_id,
+                                                                file_path=tmp_path,
+                                                                speed=speed,
+                                                                eta=remaining_time)
 
             # Una vez completada la descarga, renombrar el archivo.
             try:
@@ -708,7 +708,7 @@ class Downloader:
                             current_post_id,
                             title,  # <-- pasamos el título aquí
                             time,
-                            media_url 
+                            media_url
                         )
                         futures.append(future)
 
@@ -771,7 +771,7 @@ class Downloader:
             self.log(self.tr(f"Error during download: {e}"))
         finally:
             self.shutdown_executor()
-    
+
     def fetch_single_post(self, site, post_id, service):
         api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
         self.log(self.tr(f"Fetching post from {api_url}"))
@@ -790,7 +790,7 @@ class Downloader:
             self.db_cursor.execute("DELETE FROM downloads")
             self.db_connection.commit()
         self.log(self.tr("Database cleared."))
-    
+
     def update_max_downloads(self, new_max):
         """
         Dynamically updates the number of max workers (threads) for this Downloader.
