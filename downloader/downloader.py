@@ -60,6 +60,8 @@ class Downloader:
         self.post_attachment_counter = defaultdict(int)
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
+    # When true, temporary files will be removed when cancel is explicitly requested
+    self.remove_tmp_on_cancel = False
 
         
         # ----- NUEVA SECCIÓN: INICIALIZACIÓN DE LA BASE DE DATOS -----
@@ -127,7 +129,14 @@ class Downloader:
         self.max_retries = max_retries
         self.rate_limit_interval = retry_interval 
 
-    def request_cancel(self):
+    def request_cancel(self, remove_tmp=False):
+        """Request cancellation of downloads.
+
+        If remove_tmp is True, temporary files will be deleted by the worker
+        threads when they detect the cancellation. By default temp files are
+        preserved for later resume.
+        """
+        self.remove_tmp_on_cancel = remove_tmp
         self.cancel_requested.set()
         self.log(self.tr("Download cancellation requested."))
         for future in self.futures:
@@ -504,7 +513,7 @@ class Downloader:
                             except Exception:
                                 pass
                             # keep small tmp files removed, but preserve larger ones is handled above
-                            if os.path.exists(tmp_path):
+                            if os.path.exists(tmp_path) and self.remove_tmp_on_cancel:
                                 try:
                                     os.remove(tmp_path)
                                 except Exception:
@@ -541,14 +550,19 @@ class Downloader:
 
                 with open(tmp_path, 'ab') as f:
                     for chunk in part_response.iter_content(chunk_size=1048576):
-                        if self.cancel_requested.is_set():
-                            try:
-                                f.close()
-                            except Exception:
-                                pass
-                            # keep tmp file so user can resume later
-                            self.log(f"Download cancelled from {media_url} (tmp preserved: {tmp_path})")
-                            return
+                            if self.cancel_requested.is_set():
+                                try:
+                                    f.close()
+                                except Exception:
+                                    pass
+                                # remove tmp only if explicit remove requested
+                                if os.path.exists(tmp_path) and self.remove_tmp_on_cancel:
+                                    try:
+                                        os.remove(tmp_path)
+                                    except Exception:
+                                        self.log(f"Unable to remove temp file {tmp_path}")
+                                self.log(f"Download cancelled from {media_url} (tmp preserved: {tmp_path})")
+                                return
                         if chunk:
                             f.write(chunk)
                             downloaded_size += len(chunk)
@@ -592,7 +606,7 @@ class Downloader:
         except Exception as e:
             # Asegurar limpieza del archivo temporal en errores
             self.log(f"Download failed for {media_url}: {e}")
-            if os.path.exists(tmp_path):
+            if os.path.exists(tmp_path) and self.remove_tmp_on_cancel:
                 try:
                     os.remove(tmp_path)
                 except Exception:
