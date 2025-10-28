@@ -142,7 +142,6 @@ class ImageDownloaderApp(ctk.CTk):
             update_progress_callback=self.update_progress,
             update_global_progress_callback=self.update_global_progress,
             tr=self.tr,
-            max_retries=max_retries_setting,
             retry_interval=retry_interval_setting,
             folder_structure=folder_structure_setting,
             max_retries=max_retries_setting
