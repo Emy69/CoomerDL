@@ -149,7 +149,6 @@ class Downloader:
         parsed = urlparse(url)
         domain = parsed.netloc
         path = parsed.path
-        retry_wait = 1
 
         for attempt in range(max_retries + 1):
             if self.cancel_requested.is_set():
@@ -196,8 +195,7 @@ class Downloader:
                     if status_code in (429, 500, 502, 503, 504):
                         self.log(self.tr("Intento {attempt}/{max_retries}: Error {status_code} - Reintentando...").format(
                             attempt=attempt + 1, max_retries=max_retries, status_code=status_code))
-                        time.sleep(retry_wait)
-                        retry_wait *= 2
+                        time.sleep(self.retry_interval)
                     else:
                         url_display = getattr(e.request, 'url', url)
                         if len(url_display) > 60:
