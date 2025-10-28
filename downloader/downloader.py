@@ -151,7 +151,7 @@ class Downloader:
         path = parsed.path
         retry_wait = 1
 
-        for attempt in range(max_retries):
+        for attempt in range(max_retries + 1):
             if self.cancel_requested.is_set():
                 return None
 
