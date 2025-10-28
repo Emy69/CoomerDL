@@ -22,7 +22,7 @@ class Downloader:
         self.enable_widgets_callback = enable_widgets_callback
         self.update_progress_callback = update_progress_callback
         self.update_global_progress_callback = update_global_progress_callback
-        self.cancel_requested = threading.Event()
+        self.cancel_requested = threading.Event()  
         self.headers = headers or {
             'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
             'Referer': 'https://coomer.st/',
@@ -30,13 +30,13 @@ class Downloader:
         }
         self.media_counter = 0
         self.session = requests.Session()
-        self.max_workers = max_workers
+        self.max_workers = max_workers  
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
-        self.rate_limit = Semaphore(self.max_workers)
+        self.rate_limit = Semaphore(self.max_workers)  
         self.domain_locks = defaultdict(lambda: Semaphore(2))
-        self.domain_last_request = defaultdict(float)
+        self.domain_last_request = defaultdict(float)  
         self.rate_limit_interval = rate_limit_interval
-        self.download_mode = "multi"
+        self.download_mode = "multi"  
         self.video_extensions = ('.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v')
         self.image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')
         self.document_extensions = ('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx')
@@ -44,14 +44,14 @@ class Downloader:
         self.download_images = download_images
         self.download_videos = download_videos
         self.download_compressed = download_compressed
-        self.futures = []
+        self.futures = []  
         self.total_files = 0
         self.completed_files = 0
-        self.skipped_files = []
+        self.skipped_files = []  
         self.failed_files = []
         self.start_time = None
         self.tr = tr
-        self.shutdown_called = False
+        self.shutdown_called = False  
         self.folder_structure = folder_structure
         self.failed_retry_count = {}
         self.max_retries = max_retries
@@ -61,10 +61,11 @@ class Downloader:
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
 
+        
         db_folder = os.path.join("resources", "config")
-        os.makedirs(db_folder, exist_ok=True)
+        os.makedirs(db_folder, exist_ok=True)  
         self.db_path = os.path.join(db_folder, "downloads.db")
-        self.db_lock = threading.Lock()
+        self.db_lock = threading.Lock()  
         self.init_db()
         self.load_download_cache()
         
@@ -99,7 +100,7 @@ class Downloader:
     def set_download_mode(self, mode, max_workers):
         
         if mode == 'queue':
-            max_workers = 1
+            max_workers = 1  
         
         self.download_mode = mode
         self.max_workers = max_workers
@@ -116,7 +117,7 @@ class Downloader:
     
     def set_retry_settings(self, max_retries, retry_interval):
         self.max_retries = max_retries
-        self.rate_limit_interval = retry_interval
+        self.rate_limit_interval = retry_interval 
 
     def request_cancel(self):
         self.cancel_requested.set()
@@ -201,7 +202,7 @@ class Downloader:
                             url_display = url_display[:60] + "..."
                         self.log(self.tr("Intento {attempt}/{max_retries_val}: Error al acceder a {url} - {error}").format(
                             attempt=attempt + 1, max_retries_val=max_retries + 1, url=url_display, error=e))
-                        if attempt < max_retries:
+                        if attempt < max_retries: 
                             time.sleep(self.retry_interval)
                     
                     if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
@@ -313,7 +314,7 @@ class Downloader:
             
             sanitized = sanitize(name_no_ext)
             if not sanitized:
-                sanitized = "file"
+                sanitized = "file"  
             final_name = f"{sanitized}_{attachment_index}{extension}"
         elif mode == 1:
             
@@ -343,6 +344,7 @@ class Downloader:
             final_name = sanitize(name_no_ext) + extension
 
         return final_name
+
 
 
     def process_post(self, post, site):
@@ -426,61 +428,38 @@ class Downloader:
 
         self.log(f"Starting download from {media_url}")
 
-        for attempt in range(self.max_retries + 1):
+        for attempt in range(self.max_retries + 1): 
             if self.cancel_requested.is_set():
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
                 self.log(f"Download cancelled from {media_url}")
                 return
             
-            downloaded_size = 0
-            headers_to_use = self.headers.copy()
-            
-            if os.path.exists(tmp_path):
-                downloaded_size = os.path.getsize(tmp_path)
-                if downloaded_size > 0:
-                    headers_to_use['Range'] = f'bytes={downloaded_size}-'
-                    self.log(f"Resuming download from byte {downloaded_size} for {media_url}")
-                else:
-                    os.remove(tmp_path)
-                    downloaded_size = 0
-            
-            response = self.safe_request(media_url, max_retries=self.max_retries, headers=headers_to_use)
+            response = self.safe_request(media_url, max_retries=self.max_retries)
             
             if response is None:
                 if attempt < self.max_retries:
                     self.log(f"Initial request failed for {media_url}. Retrying entire download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
                     time.sleep(self.retry_interval)
-                    continue
+                    continue 
                 else:
                     break
 
             try:
                 try:
-                    
-                    total_size = int(response.headers.get('content-length', 0)) + downloaded_size
+                    total_size = int(response.headers.get('content-length', 0))
                 except Exception as e:
                     self.log(f"Error getting total size: {e}")
                     total_size = 0
-                
-                is_resumed = response.status_code == 206
 
-                if not is_resumed:
-                    if downloaded_size > 0 and response.status_code == 200:
-                        self.log(f"Server did not honor Range request (HTTP 200). Restarting download for {media_url}.")
-                        downloaded_size = 0
-                        total_size = int(response.headers.get('content-length', 0))
-                        if os.path.exists(tmp_path):
-                            os.remove(tmp_path)
-
-
+                downloaded_size = 0
                 self.start_time = time.time()
+
                 
-                mode = 'ab' if downloaded_size > 0 else 'wb'
-                with open(tmp_path, mode) as f:
+                with open(tmp_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=1048576):
                         if self.cancel_requested.is_set():
-                            raise Exception("Cancellation Requested")
+                            raise Exception("Cancellation Requested") 
                         if chunk:
                             f.write(chunk)
                             downloaded_size += len(chunk)
@@ -493,6 +472,35 @@ class Downloader:
                                                             file_path=tmp_path,
                                                             speed=speed,
                                                             eta=remaining_time)
+
+                
+                while total_size and downloaded_size < total_size:
+                    
+                    resume_headers = self.headers.copy()
+                    resume_headers['Range'] = f'bytes={downloaded_size}-'
+                    self.log(f"Resuming download at byte {downloaded_size} for {media_url}")
+                    
+                    part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
+
+                    if part_response is None:
+                        raise Exception("Resumption Failed after retries") 
+
+                    with open(tmp_path, 'ab') as f:
+                        for chunk in part_response.iter_content(chunk_size=1048576):
+                            if self.cancel_requested.is_set():
+                                raise Exception("Cancellation Requested")
+                            if chunk:
+                                f.write(chunk)
+                                downloaded_size += len(chunk)
+                                if self.update_progress_callback:
+                                    elapsed_time = time.time() - self.start_time
+                                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                    self.update_progress_callback(downloaded_size, total_size,
+                                                                file_id=download_id,
+                                                                file_path=tmp_path,
+                                                                speed=speed,
+                                                                eta=remaining_time)
 
                 
                 if total_size > 0 and downloaded_size != total_size:
@@ -529,12 +537,13 @@ class Downloader:
                     if os.path.exists(tmp_path):
                         os.remove(tmp_path)
                     self.log(f"Download cancelled from {media_url}")
-                    return
+                    return 
 
                 if attempt < self.max_retries:
                     self.log(f"Download process failure for {media_url}: {e}. Retrying entire download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
                     
-                    
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
                     time.sleep(self.retry_interval)
                     continue
                 else:
@@ -582,7 +591,6 @@ class Downloader:
             for post in posts:
                 
                 current_post_id = post.get('id') or "unknown_id"
-                
                 
                 title = post.get('title') or ""
 
@@ -632,9 +640,9 @@ class Downloader:
                             media_url,
                             user_id,
                             current_post_id,
-                            title,
+                            title,  
                             time,
-                            media_url
+                            media_url 
                         )
                         futures.append(future)
 
