@@ -409,7 +409,7 @@ class SettingsWindow:
 
         retry_combobox = ctk.CTkComboBox(
             downloads_frame,
-            values=[str(i) for i in range(0, 11)],
+            values=[str(i) for i in range(0, 11)] + [float('inf')],
             state='readonly',
             width=80
         )
