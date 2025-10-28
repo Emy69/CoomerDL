@@ -122,7 +122,13 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_start_time = None
         self.errors = []
         self.warnings = []
-        self.max_downloads = self.settings_window.settings.get('max_downloads', 3)
+
+        
+        # Load all settings with defaults from the settings object
+        self.max_downloads = self.settings.get('max_downloads', 3)
+        max_retries_setting = self.settings.get('max_retries', 3)
+        retry_interval_setting = self.settings.get('retry_interval', 2.0)
+        folder_structure_setting = self.settings.get('folder_structure', 'default')
         
         # Load download folder
         self.download_folder = self.load_download_folder() 
@@ -136,7 +142,9 @@ class ImageDownloaderApp(ctk.CTk):
             update_progress_callback=self.update_progress,
             update_global_progress_callback=self.update_global_progress,
             tr=self.tr,
-            folder_structure=self.settings.get('folder_structure', 'default')
+            max_retries=max_retries_setting,
+            retry_interval=retry_interval_setting,
+            folder_structure=folder_structure_setting
         )
         
         self.settings_window.downloader = self.default_downloader
