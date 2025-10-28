@@ -144,7 +144,8 @@ class ImageDownloaderApp(ctk.CTk):
             tr=self.tr,
             max_retries=max_retries_setting,
             retry_interval=retry_interval_setting,
-            folder_structure=folder_structure_setting
+            folder_structure=folder_structure_setting,
+            max_retries=max_retries_setting
         )
         
         self.settings_window.downloader = self.default_downloader
