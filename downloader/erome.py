@@ -88,7 +88,7 @@ class EromeDownloader:
                          resource_type=resource_type, file_path=file_path))
 
         retries = 0
-        while retries < max_retries:
+        while retries <= max_retries:
             try:
                 with requests.get(url, headers=self.headers,
                                   stream=True, timeout=15) as response:
