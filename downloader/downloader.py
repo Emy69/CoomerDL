@@ -193,16 +193,16 @@ class Downloader:
                 except requests.exceptions.RequestException as e:
                     status_code = getattr(e.response, 'status_code', None)
                     if status_code in (429, 500, 502, 503, 504):
-                        self.log(self.tr("Intento {attempt}/{max_retries}: Error {status_code} - Reintentando...").format(
+                        self.log(self.tr("Intento {attempt}/{max_retries + 1}: Error {status_code} - Reintentando...").format(
                             attempt=attempt + 1, max_retries=max_retries, status_code=status_code))
                         time.sleep(self.retry_interval)
                     else:
                         url_display = getattr(e.request, 'url', url)
                         if len(url_display) > 60:
                             url_display = url_display[:60] + "..."
-                        self.log(self.tr("Intento {attempt}/{max_retries}: Error al acceder a {url} - {error}").format(
+                        self.log(self.tr("Intento {attempt}/{max_retries + 1}: Error al acceder a {url} - {error}").format(
                             attempt=attempt + 1, max_retries=max_retries, url=url_display, error=e))
-                        if attempt < max_retries - 1:
+                        if attempt <= max_retries:
                             time.sleep(self.retry_interval)
 
         return None
