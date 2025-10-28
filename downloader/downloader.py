@@ -435,7 +435,19 @@ class Downloader:
                 self.log(f"Download cancelled from {media_url}")
                 return
             
-            response = self.safe_request(media_url, max_retries=self.max_retries)
+            downloaded_size = 0
+            headers_to_use = self.headers.copy()
+            
+            if os.path.exists(tmp_path):
+                downloaded_size = os.path.getsize(tmp_path)
+                if downloaded_size > 0:
+                    headers_to_use['Range'] = f'bytes={downloaded_size}-'
+                    self.log(f"Resuming download from byte {downloaded_size} for {media_url}")
+                else:
+                    os.remove(tmp_path)
+                    downloaded_size = 0
+            
+            response = self.safe_request(media_url, max_retries=self.max_retries, headers=headers_to_use)
             
             if response is None:
                 if attempt < self.max_retries:
@@ -447,16 +459,27 @@ class Downloader:
 
             try:
                 try:
-                    total_size = int(response.headers.get('content-length', 0))
+                    
+                    total_size = int(response.headers.get('content-length', 0)) + downloaded_size
                 except Exception as e:
                     self.log(f"Error getting total size: {e}")
                     total_size = 0
-
-                downloaded_size = 0
-                self.start_time = time.time()
-
                 
-                with open(tmp_path, 'wb') as f:
+                is_resumed = response.status_code == 206
+
+                if not is_resumed:
+                    if downloaded_size > 0 and response.status_code == 200:
+                        self.log(f"Server did not honor Range request (HTTP 200). Restarting download for {media_url}.")
+                        downloaded_size = 0
+                        total_size = int(response.headers.get('content-length', 0))
+                        if os.path.exists(tmp_path):
+                            os.remove(tmp_path)
+
+
+                self.start_time = time.time()
+                
+                mode = 'ab' if downloaded_size > 0 else 'wb'
+                with open(tmp_path, mode) as f:
                     for chunk in response.iter_content(chunk_size=1048576):
                         if self.cancel_requested.is_set():
                             raise Exception("Cancellation Requested") 
@@ -472,35 +495,6 @@ class Downloader:
                                                             file_path=tmp_path,
                                                             speed=speed,
                                                             eta=remaining_time)
-
-                
-                while total_size and downloaded_size < total_size:
-                    
-                    resume_headers = self.headers.copy()
-                    resume_headers['Range'] = f'bytes={downloaded_size}-'
-                    self.log(f"Resuming download at byte {downloaded_size} for {media_url}")
-                    
-                    part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
-
-                    if part_response is None:
-                        raise Exception("Resumption Failed after retries") 
-
-                    with open(tmp_path, 'ab') as f:
-                        for chunk in part_response.iter_content(chunk_size=1048576):
-                            if self.cancel_requested.is_set():
-                                raise Exception("Cancellation Requested")
-                            if chunk:
-                                f.write(chunk)
-                                downloaded_size += len(chunk)
-                                if self.update_progress_callback:
-                                    elapsed_time = time.time() - self.start_time
-                                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                                    self.update_progress_callback(downloaded_size, total_size,
-                                                                file_id=download_id,
-                                                                file_path=tmp_path,
-                                                                speed=speed,
-                                                                eta=remaining_time)
 
                 
                 if total_size > 0 and downloaded_size != total_size:
@@ -542,8 +536,7 @@ class Downloader:
                 if attempt < self.max_retries:
                     self.log(f"Download process failure for {media_url}: {e}. Retrying entire download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
                     
-                    if os.path.exists(tmp_path):
-                        os.remove(tmp_path)
+                    
                     time.sleep(self.retry_interval)
                     continue
                 else:
