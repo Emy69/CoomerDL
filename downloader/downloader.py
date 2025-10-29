@@ -13,7 +13,7 @@ class Downloader:
 	def __init__(self, download_folder, max_workers=5, log_callback=None, 
 				enable_widgets_callback=None, update_progress_callback=None, 
 				update_global_progress_callback=None, headers=None,
-				max_retries=999999, retry_interval=1.0, stream_read_timeout=15,
+				max_retries=999999, retry_interval=1.0, stream_read_timeout=10,
 				download_images=True, download_videos=True, download_compressed=True, 
 				tr=None, folder_structure='default', rate_limit_interval=1.0):
 		
@@ -549,16 +549,8 @@ class Downloader:
 					return 
 
 				if attempt < self.max_retries:
-					self.log(f"Download error for {media_url}: {e}. Resuming download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
-					
-					if os.path.exists(tmp_path):
-						os.remove(tmp_path)
 					time.sleep(self.retry_interval)
 					continue
-				else:
-					if os.path.exists(tmp_path):
-						os.remove(tmp_path)
-					break
 
 		self.log(f"Failed to download {media_url} after {self.max_retries + 1} total download attempts.")
 		with self.file_lock:
