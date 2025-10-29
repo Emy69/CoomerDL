@@ -73,7 +73,7 @@ class EromeDownloader:
                         messagebox.showerror(self.tr("Error"), self.tr("Could not create folder: {folder_name}\nError: {error}", folder_name=folder_name, error=e), parent=self.root)
         return folder_name
 
-    def download_file(self, url, file_path, resource_type, file_id=None, max_retries=5):
+    def download_file(self, url, file_path, resource_type, file_id=None, max_retries=999999):
         if self.cancel_requested:
             return
 
@@ -88,7 +88,7 @@ class EromeDownloader:
                          resource_type=resource_type, file_path=file_path))
 
         retries = 0
-        while retries < max_retries:
+        while retries <= max_retries:
             try:
                 with requests.get(url, headers=self.headers,
                                   stream=True, timeout=15) as response:
