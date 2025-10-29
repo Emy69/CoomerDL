@@ -13,9 +13,9 @@ class Downloader:
 	def __init__(self, download_folder, max_workers=5, log_callback=None, 
 				enable_widgets_callback=None, update_progress_callback=None, 
 				update_global_progress_callback=None, headers=None,
-				max_retries=999999, retry_interval=0.0,
+				max_retries=999999, retry_interval=1.0, stream_read_timeout=10,
 				download_images=True, download_videos=True, download_compressed=True, 
-				tr=None, folder_structure='default', rate_limit_interval=0.0):
+				tr=None, folder_structure='default', rate_limit_interval=1.0):
 		
 		self.download_folder = download_folder
 		self.log_callback = log_callback
@@ -33,7 +33,7 @@ class Downloader:
 		self.max_workers = max_workers  
 		self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
 		self.rate_limit = Semaphore(self.max_workers)  
-		self.domain_locks = defaultdict(lambda: Semaphore(2))
+		self.domain_locks = defaultdict(lambda: Semaphore(self.max_workers))
 		self.domain_last_request = defaultdict(float)  
 		self.rate_limit_interval = rate_limit_interval
 		self.download_mode = "multi"  
@@ -60,7 +60,7 @@ class Downloader:
 		self.post_attachment_counter = defaultdict(int)
 		self.subdomain_cache = {}
 		self.subdomain_locks = defaultdict(threading.Lock)
-		self.stream_read_timeout = 5.0 
+		self.stream_read_timeout = stream_read_timeout 
 
 		
 		db_folder = os.path.join("resources", "config")
@@ -190,18 +190,7 @@ class Downloader:
 
 				except requests.exceptions.RequestException as e:
 					status_code = getattr(e.response, 'status_code', None)
-					
-					log_message = self.tr("Intento {attempt}/{max_retries_val}: Error {status_code} - Reintentando...").format(
-						attempt=attempt + 1, max_retries_val=max_retries + 1, status_code=status_code)
-						
-					if isinstance(e, requests.exceptions.ReadTimeout):
-						self.log(self.tr("Intento {attempt}/{max_retries_val}: Read timeout ({stream_timeout}s) - Reintentando...").format(
-							attempt=attempt + 1, 
-							max_retries_val=max_retries + 1, 
-							stream_timeout=self.stream_read_timeout
-						))
-						time.sleep(self.retry_interval)
-					elif status_code in (429, 500, 502, 503, 504):
+					if status_code in (429, 500, 502, 503, 504):
 						self.log(log_message)
 						time.sleep(self.retry_interval)
 					elif status_code not in (403, 404):
@@ -212,12 +201,23 @@ class Downloader:
 							attempt=attempt + 1, max_retries_val=max_retries + 1, url=url_display, error=e))
 						if attempt < max_retries: 
 							time.sleep(self.retry_interval)
-					
+					else:
+						if isinstance(e, requests.exceptions.ReadTimeout):
+							self.log(self.tr("Intento {attempt}/{max_retries_val}: Read timeout ({stream_timeout}s) - Reintentando...").format(
+								attempt=attempt + 1, 
+								max_retries_val=max_retries + 1, 
+								stream_timeout=self.stream_read_timeout
+							))
+							time.sleep(self.retry_interval)
+						else:			
+							log_message = self.tr("Intento {attempt}/{max_retries_val}: Error {status_code} - Reintentando...").format(
+								attempt=attempt + 1, max_retries_val=max_retries + 1, status_code=status_code)
+						
 					if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
 						self.log(self.tr("Fallo final al acceder a {url} con error {status_code}").format(url=url, status_code=status_code))
 
 
-				return None
+		return None
 
 	def _find_valid_subdomain(self, url, max_subdomains=10):
 		parsed = urlparse(url)
@@ -246,7 +246,8 @@ class Downloader:
 					self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
 
 				try:
-					resp = self.session.get(test_url, headers=self.headers, timeout=15, stream=True)
+					resp = self.session.get(test_url, headers=self.headers,
+						timeout=self.stream_read_timeout, stream=True)
 					if resp.status_code == 200:
 						return test_url
 					else:
@@ -447,7 +448,7 @@ class Downloader:
 			
 			if response is None:
 				if attempt < self.max_retries:
-					self.log(f"Initial request failed for {media_url}. Retrying entire download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
+					self.log(f"Initial request failed for {media_url}. Resuming download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
 					time.sleep(self.retry_interval)
 					continue 
 				else:
@@ -548,7 +549,7 @@ class Downloader:
 					return 
 
 				if attempt < self.max_retries:
-					self.log(f"Download process failure for {media_url}: {e}. Retrying entire download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
+					self.log(f"Download error for {media_url}: {e}. Resuming download in {self.retry_interval}s. (Attempt {attempt+1}/{self.max_retries + 1})")
 					
 					if os.path.exists(tmp_path):
 						os.remove(tmp_path)
