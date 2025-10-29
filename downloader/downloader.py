@@ -13,7 +13,7 @@ class Downloader:
 	def __init__(self, download_folder, max_workers=5, log_callback=None, 
 				enable_widgets_callback=None, update_progress_callback=None, 
 				update_global_progress_callback=None, headers=None,
-				max_retries=999999, retry_interval=1.0, stream_read_timeout=10,
+				max_retries=999999, retry_interval=1.0, stream_read_timeout=15,
 				download_images=True, download_videos=True, download_compressed=True, 
 				tr=None, folder_structure='default', rate_limit_interval=1.0):
 		
