@@ -259,9 +259,7 @@ class ImageDownloaderApp(ctk.CTk):
                     dd.download_retry_attempts = int(new_settings.get("download_retry_attempts", 3) or 3)
                 except Exception:
                     pass
-
-            # Si tienes un manager/pool que dependa de max_downloads, actualízalo aquí también
-            # (opcional) si ya existe un método tuyo para refrescar UI/settings
+                
             if hasattr(self, "refresh_download_settings"):
                 try:
                     self.refresh_download_settings()
@@ -840,7 +838,7 @@ class ImageDownloaderApp(ctk.CTk):
                 self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..."))
                 download_thread = threading.Thread(target=self.wrapped_download, args=(self.start_ck_profile_download, site, service, user, query, download_all, offset))
         
-        elif "simpcity.su" in url:
+        elif "simpcity.cr" in url:
             self.add_log_message_safe(self.tr("Descargando SimpCity"))
             self.setup_simpcity_downloader()
             self.active_downloader = self.simpcity_downloader
