@@ -109,6 +109,8 @@ class ImageDownloaderApp(ctk.CTk):
 
         # Cargar el icono de GitHub
         self.github_icon = self.load_github_icon()
+        
+        self.autoscroll_logs_var = tk.BooleanVar(value=False) 
 
         # Initialize UI
         self.initialize_ui()
@@ -303,6 +305,14 @@ class ImageDownloaderApp(ctk.CTk):
 
         self.cancel_button = ctk.CTkButton(self.action_frame, text=self.tr("Cancelar Descarga"), state="disabled", command=self.cancel_download)
         self.cancel_button.pack(side='left', padx=10)
+        
+        # Logs options (autoscroll)
+        self.autoscroll_logs_checkbox = ctk.CTkCheckBox(
+            self.action_frame,
+            text=self.tr("Auto-scroll logs"),
+            variable=self.autoscroll_logs_var
+        )
+        self.autoscroll_logs_checkbox.pack(side="right")
 
         self.progress_label = ctk.CTkLabel(self.action_frame, text="")
         self.progress_label.pack(side='left', padx=10)
@@ -869,7 +879,9 @@ class ImageDownloaderApp(ctk.CTk):
                 self.log_textbox.configure(state="normal")
                 self.log_textbox.insert("end", message + "\n")
                 self.log_textbox.configure(state="disabled")
-                self.log_textbox.see("end")
+
+                if getattr(self, "autoscroll_logs_var", None) and self.autoscroll_logs_var.get():
+                    self.log_textbox.see("end")
             else:
                 # aún no existe el textbox; guardamos
                 if not hasattr(self, "_log_buffer") or self._log_buffer is None:
