@@ -12,8 +12,8 @@ class DonorsModal(ctk.CTkToplevel):
         self.parent = parent
         self.tr = tr # Translation function
         
-        self.title(self.tr("Donors Leaderboard"))
-        self.geometry("450x500")
+        self.title(self.tr("Patreons"))
+        self.geometry("600x600")
         self.resizable(False, False)
         self.transient(parent)
 
@@ -54,24 +54,24 @@ class DonorsModal(ctk.CTkToplevel):
 
         title_label = ctk.CTkLabel(
             main_frame,
-            text=self.tr("Donors"),
+            text=self.tr("Patreons"),
             font=ctk.CTkFont(size=24, weight="bold")
         )
         title_label.pack(pady=(0, 20))
 
         self.donors_frame = ctk.CTkScrollableFrame(main_frame, fg_color="transparent")
         self.donors_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        self.donors_frame.grid_columnconfigure(0, weight=0) # For rank
-        self.donors_frame.grid_columnconfigure(1, weight=1) # For name
-        self.donors_frame.grid_columnconfigure(2, weight=0) # For amount
+        
+        self.grid_container = ctk.CTkFrame(self.donors_frame, fg_color="transparent")
+        self.grid_container.pack(fill="both", expand=True)
 
         self.status_label = ctk.CTkLabel(
-            self.donors_frame,
-            text=self.tr("Loading donors..."),
+            self.grid_container,
+            text=self.tr("Loading Patreons..."),
             font=ctk.CTkFont(size=14),
             text_color="gray"
         )
-        self.status_label.pack(pady=20)
+        self.status_label.grid(pady=20)
 
         close_button = ctk.CTkButton(
             main_frame,
@@ -113,14 +113,21 @@ class DonorsModal(ctk.CTkToplevel):
     def _show_donors(self, donors):
         """Displays donor data in the modal."""
         # Clear status label
-        self.status_label.pack_forget()
+        self.status_label.grid_forget()
 
         # Clear existing data
-        for widget in self.donors_frame.winfo_children():
+        for widget in self.grid_container.winfo_children():
+            if widget is self.status_label:
+                continue
             widget.destroy()
-
+            
+        columns = 2
+        for c in range(columns):
+            self.grid_container.grid_columnconfigure(c, weight=1)
+        
         if not donors:
-            ctk.CTkLabel(self.donors_frame, text=self.tr("No donors found.")).pack(pady=20)
+            empty = ctk.CTkLabel(self.grid_container, text=self.tr("No donors found."), text_color="gray")
+            empty.grid(row=0, column=0, columnspan=columns, pady=20)
             return
 
         # Sort by amount in descending order, ensuring numeric comparison
@@ -155,7 +162,7 @@ class DonorsModal(ctk.CTkToplevel):
         
         # Info note about donors data update
         info_label = ctk.CTkLabel(
-            self.donors_frame,
+            self.grid_container,
             text=self.tr(
                 "Note: Donor information is updated every 10th of each month.\n"
                 "Names and donation amounts are retrieved from my Patreon page."
@@ -165,57 +172,26 @@ class DonorsModal(ctk.CTkToplevel):
             justify="center",
             wraplength=350  # wrap text to fit in ~350px width
         )
-        info_label.pack(pady=(0, 10), fill="x")  # fill to center nicely
+        info_label.grid(row=0, column=0, columnspan=columns, pady=(0, 10), sticky="ew")
 
         for i, donor in enumerate(donors):
             donor_name = donor.get("name", self.tr("Unknown Donor"))
-            try:
-                donated_amount = float(donor.get("donated_amount", 0))
-            except (ValueError, TypeError):
-                donated_amount = 0.0
-
-            # Determine styling based on rank
-            font_size = 14
-            font_weight = "normal"
-            name_color = "white"
-            amount_color = "#FFC107"
-            row_bg_color = "transparent"
 
             # Select icon and colors
-            if i == 0:
-                icon_key = "gold"
-                font_size = 18
-                font_weight = "bold"
-                name_color = "#FFD700"
-                amount_color = "#FFD700"
-                row_bg_color = "#3a3a2a"
-            elif i == 1:
-                icon_key = "silver"
-                font_size = 16
-                font_weight = "bold"
-                name_color = "#C0C0C0"
-                amount_color = "#C0C0C0"
-                row_bg_color = "#303030"
-            elif i == 2:
-                icon_key = "bronze"
-                font_size = 15
-                font_weight = "bold"
-                name_color = "#CD7F32"
-                amount_color = "#CD7F32"
-                row_bg_color = "#2a2a2a"
-            else:
-                icon_key = "default"
-                name_color = "#B0B0B0"
-                amount_color = "#B0B0B0"
+            icon_key = "default"
+            font_size = 14
+            font_weight = "normal"
+            name_color = "#E0E0E0"
 
             icon_img = self._donor_icons.get(icon_key)
 
             # Row container
-            donor_row_frame = ctk.CTkFrame(self.donors_frame, fg_color=row_bg_color, corner_radius=8)
-            donor_row_frame.pack(fill="x", pady=4, padx=5)
-            donor_row_frame.grid_columnconfigure(0, weight=0)  # Rank icon
-            donor_row_frame.grid_columnconfigure(1, weight=1)  # Name
-            donor_row_frame.grid_columnconfigure(2, weight=0)  # Amount
+            donor_row_frame = ctk.CTkFrame(self.grid_container, fg_color="transparent", corner_radius=8)
+            donor_row_frame.grid_columnconfigure(0, weight=0)
+            donor_row_frame.grid_columnconfigure(1, weight=1)
+            row = (i // columns) + 1
+            col = i % columns
+            donor_row_frame.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
 
             # Rank label with icon
             rank_label = ctk.CTkLabel(
@@ -240,15 +216,6 @@ class DonorsModal(ctk.CTkToplevel):
             )
             name_label.grid(row=0, column=1, padx=(0, 10), pady=5, sticky="ew")
 
-            # Amount label
-            amount_label = ctk.CTkLabel(
-                donor_row_frame,
-                text=f"${donated_amount:,.2f}",
-                font=ctk.CTkFont(size=font_size, weight="bold"),
-                text_color=amount_color,
-                anchor="e"
-            )
-            amount_label.grid(row=0, column=2, padx=(0, 5), pady=5, sticky="e")
 
     def update_donor_data(self, new_donors):
         self._show_donors(new_donors) # Call _show_donors with new data

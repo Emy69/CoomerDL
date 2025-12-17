@@ -368,7 +368,7 @@ class ImageDownloaderApp(ctk.CTk):
         for widget in self.menu_bar.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 text = widget.cget("text")
-                if text.strip() in ["Archivo", "Ayuda", "Donaciones", "About", "Donors"]:
+                if text.strip() in ["Archivo", "Ayuda", "Donaciones", "About", "Patreons"]:
                     widget.configure(text=self.tr(text.strip()))
 
         # Si los menús están abiertos, recrearlos para actualizar los textos
@@ -449,7 +449,7 @@ class ImageDownloaderApp(ctk.CTk):
         # Botón Donors
         donors_button = ctk.CTkButton(
             self.menu_bar,
-            text=self.tr("Donors"),
+            text=self.tr("Patreons"),
             width=80,
             fg_color="transparent",
             hover_color="gray25",
