@@ -40,7 +40,7 @@ test/
 test.py
 test/parse.py
 app/user_panel.py
-resources/config/cookies.json
 resources/config/download_path/download_folder.json
 CLI/
 resources/config/downloads.db
+resources/config/cookies/*
