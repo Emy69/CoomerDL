@@ -31,7 +31,7 @@ from downloader.jpg5 import Jpg5Downloader
 from app.progress_manager import ProgressManager
 from app.donors import DonorsModal
 
-VERSION = "V0.8.17"
+VERSION = "V0.8.12"
 MAX_LOG_LINES = None
 
 def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -816,19 +816,13 @@ class ImageDownloaderApp(ctk.CTk):
         download_info = self.active_downloader.download_media(site, user, service, query=query, download_all=download_all, initial_offset=initial_offset)
         if download_info:
             self.add_log_message_safe(f"Download info: {download_info}")
-        # Llamar a export_logs al finalizar la descarga
-        self.export_logs()
-        self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
-        self.enable_widgets()  # Asegúrate de habilitar los widgets
+        return download_info
     
     def start_ck_post_download(self, site, service, user, post):
         download_info = self.active_downloader.download_single_post(site, post, service, user)
         if download_info:
             self.add_log_message_safe(f"Download info: {download_info}")
-        # Llamar a export_logs al finalizar la descarga
-        self.export_logs()
-        self.active_downloader = None  # Resetea la active_downloader cuando la descarga termina
-        self.enable_widgets()  # Asegúrate de habilitar los widgets
+        return download_info
 
     def extract_user_id(self, url):
         self.add_log_message_safe(self.tr("Extrayendo ID del usuario del URL: {url}", url=url))
