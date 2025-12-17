@@ -81,7 +81,8 @@ class ImageDownloaderApp(ctk.CTk):
             self.save_language_preference,
             VERSION,
             None,  # Por ahora, no se pasa ningún downloader
-            self.check_for_new_version
+            self.check_for_new_version,
+            on_settings_changed=self.apply_runtime_settings
         )
 
         self.all_logs = []  # Lista para almacenar todos los logs
@@ -225,6 +226,55 @@ class ImageDownloaderApp(ctk.CTk):
         if kwargs:
             translated_text = translated_text.format(**kwargs)
         return translated_text
+    
+    def apply_runtime_settings(self, new_settings: dict):
+        """
+        Se llama cuando se guardan cambios en Settings.
+        Aplica cambios en caliente (sin reiniciar la app).
+        """
+        try:
+            self.settings = new_settings
+
+            # Max downloads (concurrencia)
+            self.max_downloads = int(new_settings.get("max_downloads", 3) or 3)
+
+            # Downloader principal
+            if hasattr(self, "default_downloader") and self.default_downloader:
+                dd = self.default_downloader
+                dd.max_workers = self.max_downloads
+                dd.folder_structure = new_settings.get("folder_structure", "default")
+
+                dd.size_filter_enabled = bool(new_settings.get("size_filter_enabled", False))
+                dd.min_size = float(new_settings.get("min_size_mb", 0) or 0) * 1024 * 1024
+                dd.max_size = float(new_settings.get("max_size_mb", 0) or 0) * 1024 * 1024
+
+                # modo de nombre de archivo (si lo usas)
+                try:
+                    dd.file_naming_mode = int(new_settings.get("file_naming_mode", 0) or 0)
+                except Exception:
+                    pass
+
+                # reintentos por archivo (si tu downloader lo soporta)
+                try:
+                    dd.download_retry_attempts = int(new_settings.get("download_retry_attempts", 3) or 3)
+                except Exception:
+                    pass
+
+            # Si tienes un manager/pool que dependa de max_downloads, actualízalo aquí también
+            # (opcional) si ya existe un método tuyo para refrescar UI/settings
+            if hasattr(self, "refresh_download_settings"):
+                try:
+                    self.refresh_download_settings()
+                except Exception:
+                    pass
+
+            self.add_log_message_safe("Settings applied.")
+        except Exception as e:
+            try:
+                self.add_log_message_safe(f"Error applying settings: {e}")
+            except Exception:
+                pass
+
 
     # Window setup
     def setup_window(self):

@@ -12,7 +12,7 @@ from PIL import Image as PilImage
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
 
-    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version, downloader, check_for_new_version_func):
+    def __init__(self, parent, translate, load_translations_func, update_ui_texts_func, save_language_preference_func, version, downloader, check_for_new_version_func,on_settings_changed=None):
         self.parent = parent
         self.translate = translate
         self.load_translations = load_translations_func
@@ -32,6 +32,7 @@ class SettingsWindow:
 
         self.settings = self.load_settings()
         self.folder_structure_icons = self.load_icons()
+        self.on_settings_changed = on_settings_changed
 
     def load_settings(self):
         if not os.path.exists(self.CONFIG_PATH):
@@ -48,6 +49,8 @@ class SettingsWindow:
         with open(self.CONFIG_PATH, 'w') as file:
             json.dump(self.settings, file, indent=4)
 
+        if callable(self.on_settings_changed):
+            self.on_settings_changed(self.settings)
     def load_icons(self):
         icons = {}
         try:
