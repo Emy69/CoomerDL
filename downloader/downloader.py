@@ -272,7 +272,7 @@ class Downloader:
 
 			api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}/posts"
 			url_query = {"o": offset}
-			if query is not None:
+			if query not in (None, "", 0, "0"):
 				url_query["q"] = query
 			api_url += "?" + urlencode(url_query)
 			if log_fetching:
@@ -280,6 +280,11 @@ class Downloader:
 			try:
 				
 				response = self.session.get(api_url, headers=self.headers)
+    
+				if response.status_code == 400:
+					self.log(self.tr("End of posts at offset {offset}.", offset=offset))
+					break
+
 				response.raise_for_status()
 				try:
 					posts_data = response.json()
