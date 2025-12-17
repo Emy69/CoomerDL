@@ -125,6 +125,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_start_time = None
         self.errors = []
         self.warnings = []
+        self.cookies_path = 'resources/config/cookies/simpcity.json'
+        self.set_cookies()
+
 
         
         # Load all settings with defaults from the settings object
@@ -197,6 +200,13 @@ class ImageDownloaderApp(ctk.CTk):
         for handler in current_process.children(recursive=True):
             handler.kill()
         current_process.kill()
+    
+    def set_cookies(self):
+        if os.path.exists(self.cookies_path):
+            with open(self.cookies_path, 'r') as f:
+                cookies = json.load(f)
+            for cookie in cookies:
+                self.scraper.cookies.set(cookie['name'], cookie['value'])
     
     # Save and load language preferences
     def save_language_preference(self, language_code):

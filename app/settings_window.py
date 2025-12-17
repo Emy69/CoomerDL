@@ -7,6 +7,7 @@ import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk
 from PIL import Image as PilImage
+import requests
 
 
 class SettingsWindow:
@@ -33,6 +34,8 @@ class SettingsWindow:
         self.settings = self.load_settings()
         self.folder_structure_icons = self.load_icons()
         self.on_settings_changed = on_settings_changed
+        self.site_status_labels = {}
+        self.site_textboxes = {} 
 
     def load_settings(self):
         if not os.path.exists(self.CONFIG_PATH):
@@ -76,12 +79,15 @@ class SettingsWindow:
         self.general_tab = self.tabview.add(self.translate("General"))
         self.downloads_tab = self.tabview.add(self.translate("Downloads"))
         self.structure_tab = self.tabview.add(self.translate("Structure"))
-        # New tab for database
         self.db_tab = self.tabview.add(self.translate("Database"))
+        self.cookies_tab = self.tabview.add(self.translate("Cookies"))
+        
+        # New tab for database
         self.render_general_tab(self.general_tab)
         self.render_downloads_tab(self.downloads_tab)
         self.render_structure_tab(self.structure_tab)
         self.render_db_tab(self.db_tab)
+        self.render_cookies_tab(self.cookies_tab)
     
     def render_db_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
@@ -157,6 +163,220 @@ class SettingsWindow:
         
         # Cargar los registros en el Treeview con agrupación por usuario y post
         self.load_db_records()
+        
+    def render_cookies_tab(self, tab):
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_rowconfigure(1, weight=1)
+
+        # Header
+        header_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
+
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="Cookie Management",
+            font=("Helvetica", 18, "bold")
+        )
+        title_label.pack(anchor="w")
+
+        desc_label = ctk.CTkLabel(
+            header_frame,
+            text="Paste or import cookies in JSON format (list of objects with name, value, domain, path). "
+                "They will be stored by site in resources/config/cookies/{sitio}.json",
+            font=("Helvetica", 12),
+            text_color="gray",
+            wraplength=800,
+            justify="left"
+        )
+        desc_label.pack(anchor="w", pady=(5, 0))
+
+        main_frame = ctk.CTkScrollableFrame(tab)
+        main_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
+        main_frame.grid_columnconfigure(0, weight=1)
+
+        sites_config = [
+            {"key": "simpcity", "name": "SimpCity", "color": "#FF6B6B", "icon": "🌐",
+            "description": "Cookies for accessing SimCity"},
+        ]
+
+        def cookie_path_for(site_key: str) -> str:
+            base = "resources/config/cookies"
+            os.makedirs(base, exist_ok=True)
+            return os.path.join(base, f"{site_key}.json")
+
+        for i, cfg in enumerate(sites_config):
+            site_key  = cfg["key"]
+            site_name = cfg["name"]
+            site_color = cfg["color"]
+            site_icon = cfg["icon"]
+            site_desc = cfg["description"]
+
+            # --- Container ---
+            site_container = ctk.CTkFrame(main_frame)
+            site_container.grid(row=i, column=0, sticky="ew", pady=(0, 22), padx=10)
+            site_container.grid_columnconfigure(0, weight=1)
+
+            accent = ctk.CTkFrame(site_container, height=4, fg_color=site_color)
+            accent.grid(row=0, column=0, sticky="ew")
+
+            # Header
+            header = ctk.CTkFrame(site_container, fg_color="transparent")
+            header.grid(row=1, column=0, sticky="ew", padx=15, pady=(10, 6))
+            header.grid_columnconfigure(1, weight=1)
+
+            title = ctk.CTkLabel(header, text=f"{site_icon} {site_name}", font=("Helvetica", 16, "bold"))
+            title.grid(row=0, column=0, sticky="w")
+
+            status_exists = os.path.exists(cookie_path_for(site_key))
+            status_label = ctk.CTkLabel(
+                header,
+                text=("✓ Configuradas" if status_exists else "⚠ Sin configurar"),
+                font=("Helvetica", 11),
+                text_color=("#4CAF50" if status_exists else "#FF9800")
+            )
+            status_label.grid(row=0, column=1, sticky="e")
+            self.site_status_labels[site_key] = status_label
+
+            if site_desc:
+                desc = ctk.CTkLabel(
+                    header, text=site_desc, font=("Helvetica", 11),
+                    text_color="gray", wraplength=600, justify="left"
+                )
+                desc.grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
+                
+            instructions_frame = ctk.CTkFrame(site_container, fg_color=("gray90", "gray20"))
+            instructions_frame.grid(row=2, column=0, sticky="ew", padx=15, pady=(0, 8))
+            instructions = (
+                "📋 How to obtain cookies (JSON format):\n"
+                "1) Open the browser Developer Tools (F12).\n"
+                "2) Go to Application/Storage → Cookies and select the site.\n"
+                "3) Use an extension to export cookies as JSON (e.g., EditThisCookie), or copy the fields manually.\n"
+                "4) Paste the JSON below or import a .json file.\n"
+                "   Expected format: an array of objects with at least name, value, domain, path."
+            )
+            ctk.CTkLabel(instructions_frame, text=instructions, font=("Helvetica", 10),
+                        justify="left", anchor="w").pack(padx=12, pady=8, fill="x")
+
+            # Textbox
+            text_frame = ctk.CTkFrame(site_container, fg_color="transparent")
+            text_frame.grid(row=3, column=0, sticky="ew", padx=15, pady=(2, 6))
+            text_frame.grid_columnconfigure(0, weight=1)
+
+            textbox = ctk.CTkTextbox(text_frame, height=160, wrap="none")
+            textbox.grid(row=0, column=0, sticky="ew")
+
+            pre_path = cookie_path_for(site_key)
+            if os.path.exists(pre_path):
+                try:
+                    with open(pre_path, "r", encoding="utf-8") as f:
+                        textbox.delete("1.0", "end")
+                        textbox.insert("1.0", f.read())
+                except Exception:
+                    pass
+            self.site_textboxes[site_key] = textbox
+
+            buttons = ctk.CTkFrame(site_container, fg_color="transparent")
+            buttons.grid(row=4, column=0, sticky="ew", padx=15, pady=(4, 12))
+            buttons.grid_columnconfigure((0,1,2,3), weight=0)
+            buttons.grid_columnconfigure(4, weight=1)
+
+            def do_import(sk=site_key, tb=textbox):
+                file = filedialog.askopenfilename(
+                    title=f"Import cookies JSON for {sk}",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                )
+                if not file:
+                    return
+                try:
+                    with open(file, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    json.loads(content)  # valida
+                    tb.delete("1.0", "end")
+                    tb.insert("1.0", content)
+                    messagebox.showinfo("OK", f"Cookies loaded into editor for {sk}. Don't forget to Save!")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Invalid JSON: {e}")
+
+            def do_save(sk=site_key, tb=textbox, sl=status_label):
+                content = tb.get("1.0", "end").strip()
+                if not content:
+                    messagebox.showwarning("Empty", "Nothing to save.")
+                    return
+                try:
+                    data = json.loads(content)
+                    if isinstance(data, dict):
+                        data = [data]
+                    if not isinstance(data, list):
+                        raise ValueError("JSON must be an object or an array of objects.")
+                    for idx, c in enumerate(data, start=1):
+                        if not isinstance(c, dict) or "name" not in c or "value" not in c:
+                            raise ValueError(f"Item {idx} is missing 'name' or 'value'.")
+                    save_path = cookie_path_for(sk)
+                    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                    with open(save_path, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    sl.configure(text="✓ Configured", text_color="#4CAF50")
+                    messagebox.showinfo("OK", f"Cookies saved to:\n{save_path}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not save: {e}")
+
+            def do_test(sk=site_key, sl=status_label):
+                urls = {
+                    "simpcity": ["https://www.simpcity.cr/"]
+                }
+                test_path = cookie_path_for(sk)
+                if not os.path.exists(test_path):
+                    messagebox.showwarning("Missing file", "You haven't saved cookies for this site yet.")
+                    return
+                try:
+                    with open(test_path, "r", encoding="utf-8") as f:
+                        cookies = json.load(f)
+                    s = requests.Session()
+                    jar = requests.cookies.RequestsCookieJar()
+                    for c in cookies if isinstance(cookies, list) else [cookies]:
+                        jar.set(c["name"], c["value"], domain=c.get("domain", None), path=c.get("path", "/"))
+                    s.cookies = jar
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                    }
+                    ok_any, codes = False, []
+                    for test_url in urls.get(sk, []):
+                        try:
+                            r = s.get(test_url, headers=headers, timeout=12)
+                            codes.append(r.status_code)
+                            if 200 <= r.status_code < 400:
+                                ok_any = True
+                        except Exception:
+                            codes.append("ERR")
+                    if ok_any:
+                        sl.configure(text="✓ Configured (test OK)", text_color="#4CAF50")
+                        messagebox.showinfo("OK", f"Response from {sk}: {codes}")
+                    else:
+                        sl.configure(text="⚠ Tested (non-OK response)", text_color="#FFC107")
+                        messagebox.showwarning("Heads up", f"Response from {sk}: {codes}\n"
+                            "Cookie format looks fine but the site returned non-OK status codes.\n"
+                            "If content requires login, try a protected URL inside the downloader.")
+                except Exception as e:
+                    sl.configure(text="⚠ Not configured", text_color="#FF9800")
+                    messagebox.showerror("Error", f"Test failed: {e}")
+
+            def do_clear(sk=site_key, tb=textbox, sl=status_label):
+                del_path = cookie_path_for(sk)
+                if os.path.exists(del_path):
+                    try:
+                        os.remove(del_path)
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Could not delete file: {e}")
+                        return
+                tb.delete("1.0", "end")
+                sl.configure(text="⚠ Not configured", text_color="#FF9800")
+                messagebox.showinfo("OK", f"Cookies for {sk} deleted.")
+
+            ctk.CTkButton(buttons, text="Import JSON...", command=do_import).grid(row=0, column=0, padx=(0, 6))
+            ctk.CTkButton(buttons, text="Save",command=do_save).grid(   row=0, column=1, padx=6)
+            ctk.CTkButton(buttons, text="Test",command=do_test).grid(   row=0, column=2, padx=6)
+            ctk.CTkButton(buttons, text="Delete",command=do_clear, fg_color="#E53935", hover_color="#C62828").grid(row=0, column=3, padx=6)
     
     def delete_selected_users(self):
         selected = self.db_tree.selection()

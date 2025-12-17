@@ -6,11 +6,6 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 import cloudscraper
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from concurrent.futures import ThreadPoolExecutor
 
 class SimpCity:
@@ -39,6 +34,8 @@ class SimpCity:
         self.attachments_block_selector = "section[class=message-attachments]"
         self.attachments_selector = "a"
         self.next_page_selector = "a[class*=pageNav-jump--next]"
+        self.cookies_path = "resources/config/cookies/simpcity.json"
+        self.set_cookies()
 
     def log(self, message):
         if self.log_callback:
@@ -46,40 +43,21 @@ class SimpCity:
 
     def sanitize_folder_name(self, name):
         return re.sub(r'[<>:"/\\|?*]', '_', name)
+    
+    def set_cookies(self):
+        if os.path.exists(self.cookies_path):
+            with open(self.cookies_path, "r", encoding="utf-8") as f:
+                cookies = json.load(f)
 
-    def get_cookies_with_selenium(self, url, cookies_file='resources/config/cookies.json'):
-        cookies = None
-        if os.path.exists(cookies_file):
-            with open(cookies_file, 'r') as file:
-                cookies = json.load(file)
+            if isinstance(cookies, dict):
+                cookies = [cookies]
 
-        if not cookies:
-            options = Options()
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            driver = webdriver.Chrome(options=options)
-            driver.get(url)
-
-            self.log(self.tr("Por favor, inicia sesión en el navegador abierto."))
-            WebDriverWait(driver, 300).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '.message-content.js-messageContent'))
-            )
-            cookies = driver.get_cookies()
-            driver.quit()
-
-            with open(cookies_file, 'w') as file:
-                json.dump(cookies, file)
-
-        return cookies
-
-    def set_cookies_in_scraper(self, cookies):
-        for cookie in cookies:
-            self.scraper.cookies.set(cookie['name'], cookie['value'])
+            for c in cookies:
+                if isinstance(c, dict) and "name" in c and "value" in c:
+                    self.scraper.cookies.set(c["name"], c["value"])
 
     def fetch_page(self, url):
         try:
-            cookies = self.get_cookies_with_selenium(url)
-            self.set_cookies_in_scraper(cookies)
             response = self.scraper.get(url)
             if response.status_code == 200:
                 return BeautifulSoup(response.content, 'html.parser')
