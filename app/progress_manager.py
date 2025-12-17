@@ -13,6 +13,7 @@ class ProgressManager:
         self.progress_window = None
         self.no_downloads_label = None
         self.progress_details_frame = None
+        self.auto_show_details = False
         
     def create_progress_window(self):
         if self.progress_window is None or not self.progress_window.winfo_exists():
@@ -51,10 +52,6 @@ class ProgressManager:
             )
             return
         
-        if self.progress_details_frame is None or \
-           not self.progress_details_frame.winfo_exists():
-            self.create_progress_window()
-        
         if total > 0:
             percentage = (downloaded / total) * 100
             remaining = total - downloaded
@@ -63,6 +60,9 @@ class ProgressManager:
                     self.progress_bar.set(downloaded / total)
                     self.progress_percentage.configure(text=f"{percentage:.2f}%")
             else:
+                if self.progress_window is None or not self.progress_window.winfo_exists():
+                    return
+
                 if file_id not in self.progress_bars:
                     if self.no_downloads_label and self.no_downloads_label.winfo_exists():
                         self.no_downloads_label.pack_forget()
