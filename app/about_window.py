@@ -160,13 +160,23 @@ class AboutWindow:
         footer_label.pack(pady=(10, 10), padx=10, anchor="w")
 
         # hilo para cargar datos
-        def fetch_and_update():  # agregado
+        def fetch_and_update():
             cd, td = self.get_github_data()
-            about_window.after(0, lambda: self.date_label.configure(
-                text=f"{self.translate('Release Date')}: {cd}"))
-            about_window.after(0, lambda: self.downloads_label.configure(
-                text=f"{self.translate('Total Downloads')}: {td}"))
-        threading.Thread(target=fetch_and_update, daemon=True).start()  # agregado
+
+            def safe_update():
+                try:
+                    if not about_window.winfo_exists():
+                        return
+                    if self.date_label and self.date_label.winfo_exists():
+                        self.date_label.configure(text=f"{self.translate('Release Date')}: {cd}")
+                    if self.downloads_label and self.downloads_label.winfo_exists():
+                        self.downloads_label.configure(text=f"{self.translate('Total Downloads')}: {td}")
+                except Exception:
+                    pass
+
+            about_window.after(0, safe_update)
+        threading.Thread(target=fetch_and_update, daemon=True).start()
+
 
 
     def center_window(self, window, width, height):
