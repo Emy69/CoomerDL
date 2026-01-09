@@ -1,10 +1,6 @@
 customtkinter
 beautifulsoup4
-urllib3
 requests
 pillow
 psutil
-markdown2
-tkinterweb
 cloudscraper
-selenium
