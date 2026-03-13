@@ -1078,12 +1078,22 @@ class ImageDownloaderApp(ctk.CTk):
     # Update max downloads
     def update_max_downloads(self, max_downloads):
         self.max_downloads = max_downloads
-        if hasattr(self, 'general_downloader'):
-            self.general_downloader.max_workers = max_downloads
-        if hasattr(self, 'erome_downloader'):
-            self.erome_downloader.max_workers = max_downloads
-        if hasattr(self, 'bunkr_downloader'):
-            self.bunkr_downloader.max_workers = max_downloads
+
+        for attr_name in ("general_downloader", "erome_downloader", "bunkr_downloader"):
+            downloader = getattr(self, attr_name, None)
+            if not downloader:
+                continue
+
+            try:
+                if hasattr(downloader, "update_max_downloads"):
+                    downloader.update_max_downloads(max_downloads)
+                elif hasattr(downloader, "set_download_mode"):
+                    current_mode = getattr(downloader, "download_mode", "multi")
+                    downloader.set_download_mode(current_mode, max_downloads)
+                else:
+                    downloader.max_workers = max_downloads
+            except Exception as e:
+                print(f"[update_max_downloads] Error updating {attr_name}: {e}")
 
     def on_hover_enter(self, event):
         self.folder_path.configure(font=("Arial", 13, "underline"))  # Subrayar el texto al pasar el ratón

@@ -30,10 +30,11 @@ class Downloader:
 		}
 		self.media_counter = 0
 		self.session = requests.Session()
-		self.max_workers = max_workers  
+		self.max_workers = max_workers
+		self.per_domain_limit = 2
 		self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
-		self.rate_limit = Semaphore(self.max_workers)  
-		self.domain_locks = defaultdict(lambda: Semaphore(self.max_workers))
+		self.rate_limit = Semaphore(self.max_workers)
+		self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
 		self.domain_last_request = defaultdict(float)  
 		self.rate_limit_interval = rate_limit_interval
 		self.download_mode = "multi"  
@@ -60,7 +61,7 @@ class Downloader:
 		self.post_attachment_counter = defaultdict(int)
 		self.subdomain_cache = {}
 		self.subdomain_locks = defaultdict(threading.Lock)
-		self.stream_read_timeout = stream_read_timeout 
+		self.request_timeout = (10, 120)
 
 		
 		db_folder = os.path.join("resources", "config")
@@ -99,26 +100,27 @@ class Downloader:
 			self.log_callback(self.tr(message) if self.tr else message)
 
 	def set_download_mode(self, mode, max_workers):
-		
 		if mode == 'queue':
-			max_workers = 1  
-		
+			max_workers = 1
+
 		self.download_mode = mode
 		self.max_workers = max_workers
 
-		
 		if self.executor:
 			self.executor.shutdown(wait=True)
 
-		
 		self.executor = ThreadPoolExecutor(max_workers=max_workers)
 		self.rate_limit = Semaphore(max_workers)
 
-		self.log(f"Updated download mode to {mode} with max_workers = {max_workers}")
+		if not hasattr(self, "per_domain_limit"):
+			self.per_domain_limit = 2
+		self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
+
+		self.log(f"Updated download mode to {mode} with max_workers = {max_workers}, per_domain_limit = {self.per_domain_limit}")
 	
 	def set_retry_settings(self, max_retries, retry_interval):
 		self.max_retries = max_retries
-		self.rate_limit_interval = retry_interval 
+		self.retry_interval = retry_interval
 
 	def request_cancel(self):
 		self.cancel_requested.set()
@@ -157,7 +159,7 @@ class Downloader:
 				try:
 					self.domain_last_request[domain] = time.time()
 					
-					response = self.session.get(url, stream=True, headers=headers, timeout=self.stream_read_timeout)
+					response = self.session.get(url, stream=True, headers=headers, timeout=self.request_timeout)
 					sc = response.status_code
 
 					if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
@@ -246,8 +248,7 @@ class Downloader:
 					self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
 
 				try:
-					resp = self.session.get(test_url, headers=self.headers,
-						timeout=self.stream_read_timeout, stream=True)
+					resp = self.session.get(test_url, headers=self.headers, timeout=self.request_timeout, stream=True)
 					if resp.status_code == 200:
 						return test_url
 					else:
@@ -712,13 +713,25 @@ class Downloader:
 		self.log(self.tr("Database cleared."))
 	
 	def update_max_downloads(self, new_max):
-		
-		
+		try:
+			new_max = int(new_max)
+		except (TypeError, ValueError):
+			return
+
+		if new_max < 1:
+			new_max = 1
+
+		self.max_workers = new_max
+
 		if self.executor:
 			self.executor.shutdown(wait=True)
 
-		self.max_workers = new_max
 		self.executor = ThreadPoolExecutor(max_workers=new_max)
 		self.rate_limit = Semaphore(new_max)
 
-		self.log(f"Updated max_workers to {new_max}")
+		# no tocar per_domain_limit aquí
+		if not hasattr(self, "per_domain_limit"):
+			self.per_domain_limit = 2
+		self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
+
+		self.log(f"Updated max_workers to {new_max} (per_domain_limit={self.per_domain_limit})")
