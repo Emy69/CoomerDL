@@ -34,6 +34,9 @@ from downloader.jpg5 import Jpg5Downloader
 from downloader.simpcity import SimpCity
 from app.adapters.downloader_factory import DownloaderFactory
 from app.controllers.main_controller import MainController
+from app.services.update_service import UpdateService
+
+
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -78,6 +81,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.app_state.language = self.settings_service.load_language_preference("en")
         self.app_state.download_folder = self.settings_service.load_download_folder("downloads")
         self.translation_service = TranslationService(language=self.app_state.language)
+        self.update_service = UpdateService(self.tr)
         self.downloader_factory = DownloaderFactory(self)
         self.main_controller = MainController(self)
         # Compatibilidad temporal con código existente
@@ -122,7 +126,9 @@ class ImageDownloaderApp(ctk.CTk):
         self.about_window = AboutWindow(self, self.tr, VERSION)
 
         # GitHub info
-        self.github_stars = self.get_github_stars("emy69", "CoomerDL")
+        self.github_stars = self.update_service.get_github_stars("emy69", "CoomerDL")
+        if self.github_stars == 0:
+            self.add_log_message_safe(self.tr("Offline mode: GitHub stars could not be retrieved."))
         self.github_icon = self.load_github_icon()
 
         # Inicializar UI
@@ -962,79 +968,44 @@ class ImageDownloaderApp(ctk.CTk):
     # -------------------------------------------------------------------------
     # GitHub / updates
     # -------------------------------------------------------------------------
-    def get_github_stars(self, user: str, repo: str, timeout: float = 2.5) -> int:
-        try:
-            url = f"https://api.github.com/repos/{user}/{repo}"
-            headers = {
-                "User-Agent": "CoomerDL",
-                "Accept": "application/vnd.github+json",
-            }
-            r = requests.get(url, headers=headers, timeout=timeout)
-            r.raise_for_status()
-            data = r.json()
-            return int(data.get("stargazers_count", 0))
-        except Exception:
-            self.add_log_message_safe(self.tr("Offline mode: GitHub stars could not be retrieved."))
-            return 0
-
-    def parse_version_string(self, version_str):
-        try:
-            return tuple(int(p) for p in version_str[1:].split("."))
-        except (ValueError, IndexError):
-            return 0, 0, 0
 
     def check_for_new_version(self, startup_check=False):
-        repo_owner = "emy69"
-        repo_name = "CoomerDL"
-        github_api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
-
         try:
-            response = requests.get(github_api_url, timeout=5)
-            response.raise_for_status()
-            latest_release = response.json()
+            result = self.update_service.check_for_new_version(VERSION)
 
-            latest_tag = latest_release.get("tag_name")
-            latest_url = latest_release.get("html_url")
+            latest_tag = result.get("latest_tag")
+            latest_url = result.get("latest_url")
+            update_available = result.get("update_available", False)
 
-            if latest_tag and latest_url:
-                current_version_parsed = self.parse_version_string(VERSION)
-                latest_version_parsed = self.parse_version_string(latest_tag)
+            if latest_url:
+                self.latest_release_url = latest_url
 
-                if latest_version_parsed > current_version_parsed:
-                    self.latest_release_url = latest_url
-                    self.after(0, functools.partial(self.show_update_alert, latest_tag))
-                    if not startup_check:
-                        self.after(
-                            0,
-                            lambda: messagebox.showinfo(
-                                self.tr("Update Available"),
-                                self.tr(
-                                    "A new version ({latest_tag}) is available! Please download it from GitHub.",
-                                    latest_tag=latest_tag
-                                )
+            if update_available and latest_tag:
+                self.after(0, functools.partial(self.show_update_alert, latest_tag))
+
+                if not startup_check:
+                    self.after(
+                        0,
+                        lambda: messagebox.showinfo(
+                            self.tr("Update Available"),
+                            self.tr(
+                                "A new version ({latest_tag}) is available! Please download it from GitHub.",
+                                latest_tag=latest_tag
                             )
                         )
-                else:
-                    if not startup_check:
-                        self.after(
-                            0,
-                            lambda: messagebox.showinfo(
-                                self.tr("No Updates"),
-                                self.tr("You are running the latest version.")
-                            )
-                        )
+                    )
             else:
                 if not startup_check:
                     self.after(
                         0,
-                        lambda: messagebox.showwarning(
-                            self.tr("Update Check Failed"),
-                            self.tr("Could not retrieve latest version information from GitHub.")
+                        lambda: messagebox.showinfo(
+                            self.tr("No Updates"),
+                            self.tr("You are running the latest version.")
                         )
                     )
 
         except requests.exceptions.RequestException as e:
-            if self._is_offline_error(e):
+            if self.update_service.is_offline_error(e):
                 self.add_log_message_safe(self.tr("Offline mode: could not check for updates."))
                 if not startup_check:
                     self.after(
@@ -1093,13 +1064,3 @@ class ImageDownloaderApp(ctk.CTk):
             webbrowser.open(self.latest_release_url)
         else:
             messagebox.showwarning(self.tr("No Release Found"), self.tr("No latest release URL available."))
-
-    def _is_offline_error(self, err: Exception) -> bool:
-        s = str(err)
-        return (
-            isinstance(err, requests.exceptions.ConnectionError)
-            or "NameResolutionError" in s
-            or "getaddrinfo failed" in s
-            or "Failed to establish a new connection" in s
-            or "Max retries exceeded" in s
-        )
