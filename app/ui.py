@@ -36,33 +36,10 @@ from app.adapters.downloader_factory import DownloaderFactory
 from app.controllers.main_controller import MainController
 from app.services.update_service import UpdateService
 from app.services.log_service import LogService
-
+from app.services.url_service import UrlService
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
-
-
-def extract_ck_parameters(url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
-    """
-    Get the service, user and post id from the url if they exist.
-    Returns: service, user, post
-    """
-    match = re.search(r"/(?P<service>[^/?]+)(/user/(?P<user>[^/?]+)(/post/(?P<post>[^/?]+))?)?", url.path)
-    if match:
-        service, user, post = match.group("service", "user", "post")
-        return service, user, post
-    return None, None, None
-
-
-def extract_ck_query(url: ParseResult) -> tuple[Optional[str], int]:
-    """
-    Try to obtain the query and offset from the url if they exist.
-    """
-    query = parse_qs(url.query)
-    q = query.get("q")[0] if query.get("q") and len(query.get("q")) > 0 else "0"
-    o = query.get("o")[0] if query.get("o") and len(query.get("o")) > 0 else "0"
-    return q, int(o) if str(o).isdigit() else 0
-
 
 class ImageDownloaderApp(ctk.CTk):
     def __init__(self):
@@ -83,6 +60,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.translation_service = TranslationService(language=self.app_state.language)
         self.update_service = UpdateService(self.tr)
         self.log_service = LogService()
+        self.url_service = UrlService()
         self.downloader_factory = DownloaderFactory(self)
         self.main_controller = MainController(self)
         # Compatibilidad temporal con código existente
@@ -420,12 +398,6 @@ class ImageDownloaderApp(ctk.CTk):
         self.cancel_button.configure(state="normal")
         self.download_start_time = datetime.datetime.now()
         self.log_service.clear_runtime()
-
-    def extract_ck_parameters(self, parsed_url):
-        return extract_ck_parameters(parsed_url)
-
-    def extract_ck_query(self, parsed_url):
-        return extract_ck_query(parsed_url)
     
     def on_app_close(self):
         if self.is_download_active() and not getattr(self.active_downloader, "cancel_requested", False):

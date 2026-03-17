@@ -1,7 +1,4 @@
-import datetime
-import re
 import threading
-from urllib.parse import urlparse
 
 from app.models.download_request import DownloadRequest
 
@@ -39,23 +36,21 @@ class MainController:
 
         self.app.prepare_download_ui()
 
-        url = request.url
-        parsed_url = urlparse(url)
+        parsed = self.app.url_service.parse_download_url(request.url)
         download_thread = None
 
-        if "erome.com" in url:
+        if parsed.site_type == "erome":
             self.app.add_log_message_safe(self.app.tr("Descargando Erome"))
-            is_profile_download = "/a/" not in url
-            self.app.setup_erome_downloader(is_profile_download=is_profile_download)
+            self.app.setup_erome_downloader(is_profile_download=parsed.is_profile)
             self.app.active_downloader = self.app.erome_downloader
 
-            if "/a/" in url:
+            if parsed.is_album:
                 self.app.add_log_message_safe(self.app.tr("URL del álbum"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
                         self.app.active_downloader.process_album_page,
-                        url,
+                        request.url,
                         request.download_folder,
                         request.download_images,
                         request.download_videos,
@@ -68,7 +63,7 @@ class MainController:
                     target=self.wrapped_download,
                     args=(
                         self.app.active_downloader.process_profile_page,
-                        url,
+                        request.url,
                         request.download_folder,
                         request.download_images,
                         request.download_videos,
@@ -76,33 +71,35 @@ class MainController:
                     daemon=True
                 )
 
-        elif re.search(r"https?://([a-z0-9-]+\.)?bunkr\.[a-z]{2,}", url):
+        elif parsed.site_type == "bunkr":
             self.app.add_log_message_safe(self.app.tr("Descargando Bunkr"))
             self.app.setup_bunkr_downloader()
             self.app.active_downloader = self.app.bunkr_downloader
 
-            if any(sub in url for sub in ["/v/", "/i/", "/f/"]):
+            if parsed.is_post:
                 self.app.add_log_message_safe(self.app.tr("URL del post"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader.descargar_post_bunkr, url),
+                    args=(self.app.bunkr_downloader.descargar_post_bunkr, request.url),
                     daemon=True
                 )
             else:
                 self.app.add_log_message_safe(self.app.tr("URL del perfil"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader.descargar_perfil_bunkr, url),
+                    args=(self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),
                     daemon=True
                 )
 
-        elif parsed_url.netloc in ["coomer.st", "kemono.cr"]:
+        elif parsed.site_type == "coomer_kemono":
             self.app.add_log_message_safe(self.app.tr("Iniciando descarga..."))
             self.app.setup_general_downloader()
             self.app.active_downloader = self.app.general_downloader
 
-            site = f"{parsed_url.netloc}"
-            service, user, post = self.app.extract_ck_parameters(parsed_url)
+            site = f"{parsed.parsed_url.netloc}"
+            service = parsed.service
+            user = parsed.user
+            post = parsed.post
 
             if service is None or user is None:
                 if service is None:
@@ -120,7 +117,7 @@ class MainController:
                 self.app.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site)
             )
 
-            if post is not None:
+            if parsed.is_post:
                 self.app.add_log_message_safe(self.app.tr("Descargando post único..."))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
@@ -128,25 +125,24 @@ class MainController:
                     daemon=True
                 )
             else:
-                query, offset = self.app.extract_ck_query(parsed_url)
                 self.app.add_log_message_safe(self.app.tr("Descargando todo el contenido del usuario..."))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.start_ck_profile_download, site, service, user, query, True, offset),
+                    args=(self.start_ck_profile_download, site, service, user, parsed.query, True, parsed.offset),
                     daemon=True
                 )
 
-        elif "simpcity.cr" in url:
+        elif parsed.site_type == "simpcity":
             self.app.add_log_message_safe(self.app.tr("Descargando SimpCity"))
             self.app.setup_simpcity_downloader()
             self.app.active_downloader = self.app.simpcity_downloader
             download_thread = threading.Thread(
                 target=self.wrapped_download,
-                args=(self.app.active_downloader.download_images_from_simpcity, url),
+                args=(self.app.active_downloader.download_images_from_simpcity, request.url),
                 daemon=True
             )
 
-        elif "jpg5.su" in url:
+        elif parsed.site_type == "jpg5":
             self.app.add_log_message_safe(self.app.tr("Descargando desde Jpg5"))
             self.app.setup_jpg5_downloader()
             download_thread = threading.Thread(
