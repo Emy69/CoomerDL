@@ -35,7 +35,7 @@ from downloader.simpcity import SimpCity
 from app.adapters.downloader_factory import DownloaderFactory
 from app.controllers.main_controller import MainController
 from app.services.update_service import UpdateService
-
+from app.services.log_service import LogService
 
 
 VERSION = "V0.8.12"
@@ -82,16 +82,17 @@ class ImageDownloaderApp(ctk.CTk):
         self.app_state.download_folder = self.settings_service.load_download_folder("downloads")
         self.translation_service = TranslationService(language=self.app_state.language)
         self.update_service = UpdateService(self.tr)
+        self.log_service = LogService()
         self.downloader_factory = DownloaderFactory(self)
         self.main_controller = MainController(self)
         # Compatibilidad temporal con código existente
         self.download_folder = self.app_state.download_folder
 
         # Estado runtime
-        self.errors = []
-        self.warnings = []
-        self.all_logs = []
-        self._log_buffer = []
+        self.errors = self.log_service.errors
+        self.warnings = self.log_service.warnings
+        self.all_logs = self.log_service.all_logs
+        self._log_buffer = self.log_service.buffer
         self.github_stars = 0
         self.image_downloader = None
         self.progress_bars = {}
@@ -418,8 +419,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.download_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
         self.download_start_time = datetime.datetime.now()
-        self.errors = []
-        self.warnings = []
+        self.log_service.clear_runtime()
 
     def extract_ck_parameters(self, parsed_url):
         return extract_ck_parameters(parsed_url)
@@ -754,7 +754,7 @@ class ImageDownloaderApp(ctk.CTk):
     # Descargas
     # -------------------------------------------------------------------------
     def log_error(self, error_message):
-        self.errors.append(error_message)
+        self.log_service.errors.append(error_message)
         self.add_log_message_safe(f"Error: {error_message}")
 
     def start_download(self):
@@ -794,13 +794,7 @@ class ImageDownloaderApp(ctk.CTk):
     # Logs
     # -------------------------------------------------------------------------
     def add_log_message_safe(self, message: str):
-        if not hasattr(self, "all_logs") or self.all_logs is None:
-            self.all_logs = []
-
-        if not hasattr(self, "errors") or self.errors is None:
-            self.errors = []
-
-        self.all_logs.append(message)
+        self.log_service.add(message)
 
         try:
             if hasattr(self, "log_textbox") and self.log_textbox:
@@ -815,21 +809,30 @@ class ImageDownloaderApp(ctk.CTk):
                 if getattr(self, "autoscroll_logs_var", None) and self.autoscroll_logs_var.get():
                     self.log_textbox.see("end")
             else:
-                if not hasattr(self, "_log_buffer") or self._log_buffer is None:
-                    self._log_buffer = []
-                self._log_buffer.append(message)
+                self.log_service.buffer_message(message)
         except Exception:
-            if not hasattr(self, "_log_buffer") or self._log_buffer is None:
-                self._log_buffer = []
-            self._log_buffer.append(message)
+            self.log_service.buffer_message(message)
 
     def flush_log_buffer(self):
-        if not hasattr(self, "_log_buffer") or not self._log_buffer:
+        if not self.log_service.has_buffer():
             return
-        pending = list(self._log_buffer)
-        self._log_buffer.clear()
+
+        pending = self.log_service.pop_buffer()
         for msg in pending:
-            self.add_log_message_safe(msg)
+            try:
+                if hasattr(self, "log_textbox") and self.log_textbox:
+                    self.log_textbox.configure(state="normal")
+                    self.log_textbox.insert("end", msg + "\n")
+
+                    if MAX_LOG_LINES is not None:
+                        self.limit_log_lines()
+
+                    self.log_textbox.configure(state="disabled")
+
+                    if getattr(self, "autoscroll_logs_var", None) and self.autoscroll_logs_var.get():
+                        self.log_textbox.see("end")
+            except Exception:
+                pass
 
     def limit_log_lines(self):
         log_lines = self.log_textbox.get("1.0", "end-1c").split("\n")
@@ -838,47 +841,13 @@ class ImageDownloaderApp(ctk.CTk):
             self.log_textbox.delete("1.0", f"{overflow}.0")
 
     def export_logs(self):
-        log_folder = "resources/config/logs/"
-        Path(log_folder).mkdir(parents=True, exist_ok=True)
-        log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-
         try:
-            if self.active_downloader:
-                total_files = getattr(self.active_downloader, "total_files", 0)
-                completed_files = getattr(self.active_downloader, "completed_files", 0)
-                skipped_files = getattr(self.active_downloader, "skipped_files", [])
-                failed_files = getattr(self.active_downloader, "failed_files", [])
-            else:
-                total_files = 0
-                completed_files = 0
-                skipped_files = []
-                failed_files = []
-
-            total_images = completed_files if self.download_images_check.get() else 0
-            total_videos = completed_files if self.download_videos_check.get() else 0
-            errors = len(self.errors)
-            warnings = len(self.warnings)
-            duration = datetime.datetime.now() - self.download_start_time if self.download_start_time else "N/A"
-
-            skipped_files_summary = "\n".join(skipped_files)
-            failed_files_summary = "\n".join(failed_files)
-
-            summary = (
-                f"Total de archivos descargados: {total_files}\n"
-                f"Total de imágenes descargadas: {total_images}\n"
-                f"Total de videos descargados: {total_videos}\n"
-                f"Errores: {errors}\n"
-                f"Advertencias: {warnings}\n"
-                f"Tiempo total de descarga: {duration}\n\n"
-                f"Archivos saltados:\n{skipped_files_summary}\n\n"
-                f"Archivos fallidos:\n{failed_files_summary}\n\n"
+            log_file_path = self.log_service.export_logs(
+                active_downloader=self.active_downloader,
+                download_images_enabled=bool(self.download_images_check.get()),
+                download_videos_enabled=bool(self.download_videos_check.get()),
+                download_start_time=self.download_start_time,
             )
-
-            with open(log_file_path, "w", encoding="utf-8") as file:
-                file.write(summary)
-                file.write("\n--- LOGS COMPLETOS ---\n")
-                file.write("\n".join(self.all_logs))
-
             self.add_log_message_safe(f"Logs exportados exitosamente a {log_file_path}")
         except Exception as e:
             self.add_log_message_safe(f"No se pudo exportar los logs: {e}")

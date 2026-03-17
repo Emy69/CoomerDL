@@ -1,0 +1,85 @@
+import datetime
+from pathlib import Path
+
+
+class LogService:
+    def __init__(self, log_folder="resources/config/logs/"):
+        self.log_folder = Path(log_folder)
+        self.all_logs = []
+        self.buffer = []
+        self.errors = []
+        self.warnings = []
+
+    def add(self, message: str):
+        self.all_logs.append(message)
+
+    def add_error(self, message: str):
+        self.errors.append(message)
+        self.all_logs.append(f"Error: {message}")
+
+    def add_warning(self, message: str):
+        self.warnings.append(message)
+        self.all_logs.append(f"Warning: {message}")
+
+    def buffer_message(self, message: str):
+        self.buffer.append(message)
+
+    def has_buffer(self) -> bool:
+        return bool(self.buffer)
+
+    def pop_buffer(self):
+        pending = list(self.buffer)
+        self.buffer.clear()
+        return pending
+
+    def clear_runtime(self):
+        self.errors.clear()
+        self.warnings.clear()
+
+    def export_logs(
+        self,
+        active_downloader=None,
+        download_images_enabled=True,
+        download_videos_enabled=True,
+        download_start_time=None,
+    ):
+        self.log_folder.mkdir(parents=True, exist_ok=True)
+        log_file_path = self.log_folder / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
+        total_files = 0
+        completed_files = 0
+        skipped_files = []
+        failed_files = []
+
+        if active_downloader:
+            total_files = getattr(active_downloader, "total_files", 0)
+            completed_files = getattr(active_downloader, "completed_files", 0)
+            skipped_files = getattr(active_downloader, "skipped_files", [])
+            failed_files = getattr(active_downloader, "failed_files", [])
+
+        total_images = completed_files if download_images_enabled else 0
+        total_videos = completed_files if download_videos_enabled else 0
+        errors = len(self.errors)
+        warnings = len(self.warnings)
+        duration = datetime.datetime.now() - download_start_time if download_start_time else "N/A"
+
+        skipped_files_summary = "\n".join(skipped_files)
+        failed_files_summary = "\n".join(failed_files)
+
+        summary = (
+            f"Total de archivos descargados: {total_files}\n"
+            f"Total de imágenes descargadas: {total_images}\n"
+            f"Total de videos descargados: {total_videos}\n"
+            f"Errores: {errors}\n"
+            f"Advertencias: {warnings}\n"
+            f"Tiempo total de descarga: {duration}\n\n"
+            f"Archivos saltados:\n{skipped_files_summary}\n\n"
+            f"Archivos fallidos:\n{failed_files_summary}\n\n"
+        )
+
+        with open(log_file_path, "w", encoding="utf-8") as file:
+            file.write(summary)
+            file.write("\n--- LOGS COMPLETOS ---\n")
+            file.write("\n".join(self.all_logs))
+
+        return str(log_file_path)
