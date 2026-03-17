@@ -33,6 +33,7 @@ from downloader.erome import EromeDownloader
 from downloader.jpg5 import Jpg5Downloader
 from downloader.simpcity import SimpCity
 from app.adapters.downloader_factory import DownloaderFactory
+from app.controllers.main_controller import MainController
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -78,6 +79,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.app_state.download_folder = self.settings_service.load_download_folder("downloads")
         self.translation_service = TranslationService(language=self.app_state.language)
         self.downloader_factory = DownloaderFactory(self)
+        self.main_controller = MainController(self)
         # Compatibilidad temporal con código existente
         self.download_folder = self.app_state.download_folder
 
@@ -403,6 +405,22 @@ class ImageDownloaderApp(ctk.CTk):
     # -------------------------------------------------------------------------
     # Eventos / UI auxiliar
     # -------------------------------------------------------------------------
+    def show_error(self, title, message):
+        messagebox.showerror(title, message)
+
+    def prepare_download_ui(self):
+        self.download_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
+        self.download_start_time = datetime.datetime.now()
+        self.errors = []
+        self.warnings = []
+
+    def extract_ck_parameters(self, parsed_url):
+        return extract_ck_parameters(parsed_url)
+
+    def extract_ck_query(self, parsed_url):
+        return extract_ck_query(parsed_url)
+    
     def on_app_close(self):
         if self.is_download_active() and not getattr(self.active_downloader, "cancel_requested", False):
             messagebox.showwarning(
@@ -733,174 +751,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.errors.append(error_message)
         self.add_log_message_safe(f"Error: {error_message}")
 
-    def wrapped_download(self, download_method, *args):
-        try:
-            download_method(*args)
-        finally:
-            self.active_downloader = None
-            self.enable_widgets()
-            self.export_logs()
-
     def start_download(self):
-        url = self.url_entry.get().strip()
-
-        if not self.download_folder:
-            messagebox.showerror(self.tr("Error"), self.tr("Por favor, selecciona una carpeta de descarga."))
-            return
-
-        if not url:
-            messagebox.showerror(self.tr("Error"), self.tr("Por favor, introduce una URL válida."))
-            return
-
-        self.download_button.configure(state="disabled")
-        self.cancel_button.configure(state="normal")
-        self.download_start_time = datetime.datetime.now()
-        self.errors = []
-        self.warnings = []
-        download_all = True
-
-        parsed_url = urlparse(url)
-
-        if "erome.com" in url:
-            self.add_log_message_safe(self.tr("Descargando Erome"))
-            is_profile_download = "/a/" not in url
-            self.setup_erome_downloader(is_profile_download=is_profile_download)
-            self.active_downloader = self.erome_downloader
-
-            if "/a/" in url:
-                self.add_log_message_safe(self.tr("URL del álbum"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.active_downloader.process_album_page,
-                        url,
-                        self.download_folder,
-                        self.download_images_check.get(),
-                        self.download_videos_check.get(),
-                    ),
-                    daemon=True
-                )
-            else:
-                self.add_log_message_safe(self.tr("URL del perfil"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.active_downloader.process_profile_page,
-                        url,
-                        self.download_folder,
-                        self.download_images_check.get(),
-                        self.download_videos_check.get(),
-                    ),
-                    daemon=True
-                )
-
-        elif re.search(r"https?://([a-z0-9-]+\.)?bunkr\.[a-z]{2,}", url):
-            self.add_log_message_safe(self.tr("Descargando Bunkr"))
-            self.setup_bunkr_downloader()
-            self.active_downloader = self.bunkr_downloader
-
-            if any(sub in url for sub in ["/v/", "/i/", "/f/"]):
-                self.add_log_message_safe(self.tr("URL del post"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.bunkr_downloader.descargar_post_bunkr, url),
-                    daemon=True
-                )
-            else:
-                self.add_log_message_safe(self.tr("URL del perfil"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.bunkr_downloader.descargar_perfil_bunkr, url),
-                    daemon=True
-                )
-
-        elif parsed_url.netloc in ["coomer.st", "kemono.cr"]:
-            self.add_log_message_safe(self.tr("Iniciando descarga..."))
-            self.setup_general_downloader()
-            self.active_downloader = self.general_downloader
-
-            site = f"{parsed_url.netloc}"
-            service, user, post = extract_ck_parameters(parsed_url)
-
-            if service is None or user is None:
-                if service is None:
-                    self.add_log_message_safe(self.tr("No se pudo extraer el servicio."))
-                    messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el servicio."))
-                else:
-                    self.add_log_message_safe(self.tr("No se pudo extraer el ID del usuario."))
-                    messagebox.showerror(self.tr("Error"), self.tr("No se pudo extraer el ID del usuario."))
-
-                self.add_log_message_safe(self.tr("URL no válida"))
-                self.download_button.configure(state="normal")
-                self.cancel_button.configure(state="disabled")
-                return
-
-            self.add_log_message_safe(
-                self.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site)
-            )
-
-            if post is not None:
-                self.add_log_message_safe(self.tr("Descargando post único..."))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.start_ck_post_download, site, service, user, post),
-                    daemon=True
-                )
-            else:
-                query, offset = extract_ck_query(parsed_url)
-                self.add_log_message_safe(self.tr("Descargando todo el contenido del usuario..."))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.start_ck_profile_download, site, service, user, query, download_all, offset),
-                    daemon=True
-                )
-
-        elif "simpcity.cr" in url:
-            self.add_log_message_safe(self.tr("Descargando SimpCity"))
-            self.setup_simpcity_downloader()
-            self.active_downloader = self.simpcity_downloader
-            download_thread = threading.Thread(
-                target=self.wrapped_download,
-                args=(self.active_downloader.download_images_from_simpcity, url),
-                daemon=True
-            )
-
-        elif "jpg5.su" in url:
-            self.add_log_message_safe(self.tr("Descargando desde Jpg5"))
-            self.setup_jpg5_downloader()
-            download_thread = threading.Thread(
-                target=self.wrapped_download,
-                args=(self.active_downloader.descargar_imagenes,),
-                daemon=True
-            )
-
-        else:
-            self.add_log_message_safe(self.tr("URL no válida"))
-            self.download_button.configure(state="normal")
-            self.cancel_button.configure(state="disabled")
-            return
-
-        download_thread.start()
-        self.app_state.current_download_thread = download_thread
-
-    def start_ck_profile_download(self, site, service, user, query, download_all, initial_offset):
-        download_info = self.active_downloader.download_media(
-            site,
-            user,
-            service,
-            query=query,
-            download_all=download_all,
-            initial_offset=initial_offset
-        )
-        if download_info:
-            self.add_log_message_safe(f"Download info: {download_info}")
-        return download_info
-
-    def start_ck_post_download(self, site, service, user, post):
-        download_info = self.active_downloader.download_single_post(site, post, service, user)
-        if download_info:
-            self.add_log_message_safe(f"Download info: {download_info}")
-        return download_info
+        self.main_controller.start_download()
 
     def extract_user_id(self, url):
         self.add_log_message_safe(self.tr("Extrayendo ID del usuario del URL: {url}", url=url))
@@ -926,17 +778,7 @@ class ImageDownloaderApp(ctk.CTk):
             return None
 
     def cancel_download(self):
-        if self.active_downloader:
-            try:
-                self.active_downloader.request_cancel()
-            except Exception:
-                pass
-            self.active_downloader = None
-            self.clear_progress_bars()
-        else:
-            self.add_log_message_safe(self.tr("No hay una descarga en curso para cancelar."))
-
-        self.enable_widgets()
+        self.main_controller.cancel_download()
 
     def clear_progress_bars(self):
         for file_id in list(self.progress_bars.keys()):
