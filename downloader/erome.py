@@ -90,7 +90,7 @@ class EromeDownloader:
         retries = 0
         while retries <= max_retries:
             try:
-                with requests.get(url, headers=self.headers,
+                with self.session.get(url, headers=self.headers,
                                   stream=True, timeout=15) as response:
                     if response.status_code != 200:
                         self.log(self.tr("Error downloading {resource_type}, "
@@ -214,21 +214,53 @@ class EromeDownloader:
                 # --- imágenes ---
                 if download_images:
                     for div in soup.select('div.img'):
-                        img = div.find('img', attrs={'data-src': True})
-                        if img:
-                            abs_img_src = urljoin(page_url, img['data-src'])
-                            if abs_img_src in seen_urls:
-                                continue
-                            seen_urls.add(abs_img_src)
-                            img_name = os.path.join(
-                                folder_path,
-                                self.clean_filename(os.path.basename(abs_img_src))
-                            )
-                            media_urls.append(
-                                (abs_img_src, img_name, 'Image')
-                            )
+                        img = (
+                            div.find('img', attrs={'data-src': True})
+                            or div.find('img', attrs={'src': True})
+                        )
+                        if not img:
+                            continue
+
+                        raw_src = img.get('data-src') or img.get('src')
+                        if not raw_src:
+                            continue
+
+                        abs_img_src = urljoin(page_url, raw_src)
+                        lower_src = abs_img_src.lower()
+
+                        if lower_src.startswith("data:"):
+                            continue
+                        if any(x in lower_src for x in [
+                            "/avatar/", "/users/", "/profile/",
+                            "/static/", "/assets/", "/images/"
+                        ]):
+                            continue
+                        if any(x in lower_src for x in [
+                            "bg.jpg", "background", "avatar", "cover",
+                            "logo", "icon", "banner", "profile"
+                        ]):
+                            continue
+
+                        if abs_img_src in seen_urls:
+                            continue
+                        seen_urls.add(abs_img_src)
+
+                        filename = os.path.basename(abs_img_src.split("?")[0])
+                        if not filename:
+                            filename = f"image_{uuid.uuid4().hex[:8]}.jpg"
+
+                        img_name = os.path.join(
+                            folder_path,
+                            self.clean_filename(filename)
+                        )
+                        media_urls.append((abs_img_src, img_name, 'Image'))
 
                 self.total_files += len(media_urls)
+                self.log(self.tr("Erome media found: {count}", count=len(media_urls)))
+                image_count = sum(1 for _, _, t in media_urls if t == "Image")
+                video_count = sum(1 for _, _, t in media_urls if t == "Video")
+                self.log(self.tr("Images found: {count}", count=image_count))
+                self.log(self.tr("Videos found: {count}", count=video_count))
                 futures = [self.executor.submit(self.download_file, url, file_path, resource_type, str(uuid.uuid4())) for url, file_path, resource_type in media_urls]
                 for future in as_completed(futures):
                     if self.cancel_requested:
