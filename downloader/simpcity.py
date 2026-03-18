@@ -4,7 +4,7 @@ import re
 import queue
 from pathlib import Path
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import cloudscraper
 from concurrent.futures import ThreadPoolExecutor
 
@@ -129,7 +129,8 @@ class SimpCity:
         if next_page:
             next_page_url = next_page.get('href')
             if next_page_url:
-                self.process_page(self.base_url + next_page_url)
+                resolved_next_url = urljoin(url, next_page_url)
+                self.process_page(resolved_next_url)
 
     def download_images_from_simpcity(self, url):
         self.log(self.tr(f"Procesando hilo: {url}"))
