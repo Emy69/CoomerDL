@@ -9,12 +9,12 @@ from app.views.tkinter.progress.progress_utils import (
 
 
 class ProgressRow:
-    def __init__(self, parent, icons, file_path):
+    def __init__(self, parent, icons, progress_item):
         self.parent = parent
         self.icons = icons
-        self.file_path = file_path
+        self.progress_item = progress_item
 
-        icon_key = get_file_icon_key(file_path)
+        icon_key = get_file_icon_key(progress_item.file_path)
         icon = self.icons.get(icon_key, self.icons.get("default"))
 
         self.frame = ctk.CTkFrame(parent)
@@ -28,7 +28,7 @@ class ProgressRow:
 
         self.progress_label = ctk.CTkLabel(
             self.icon_and_text_frame,
-            text=shorten_filename(file_path),
+            text=shorten_filename(progress_item.file_path),
             anchor="w"
         )
         self.progress_label.pack(side="left", padx=5)
@@ -42,7 +42,13 @@ class ProgressRow:
         self.eta_label = ctk.CTkLabel(self.frame, text="ETA: N/A")
         self.eta_label.pack(side="right", padx=5)
 
-    def update(self, downloaded: int, total: int, eta=None):
+    def update(self, progress_item):
+        self.progress_item = progress_item
+
+        downloaded = progress_item.downloaded
+        total = progress_item.total
+        eta = progress_item.eta
+
         if total > 0:
             self.progress_bar.set(downloaded / total)
         else:
