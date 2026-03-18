@@ -1,12 +1,11 @@
-import customtkinter as ctk
-
+from app.models.progress_item import ProgressItem
+from app.services.progress_store import ProgressStore, ProgressEntry
+from app.services.progress_logic import ProgressLogic
 from app.views.tkinter.progress.progress_row import ProgressRow
 from app.views.tkinter.progress.progress_window import ProgressWindow
 from app.views.tkinter.progress.progress_utils import format_eta, format_speed
 from app.views.tkinter.progress.footer_status import FooterStatusController
-from app.services.progress_store import ProgressStore, ProgressEntry
-from app.services.progress_logic import ProgressLogic
-from app.models.progress_item import ProgressItem
+
 
 class ProgressManager:
     def __init__(self, root, icons, footer_speed_label, footer_eta_label, progress_bar, progress_percentage):
@@ -59,7 +58,7 @@ class ProgressManager:
     def _update_file_progress(self, downloaded, total, file_id, file_path, eta):
         self.create_progress_window()
 
-        progress_item = ProgressItem(
+        progress_item = self._build_progress_item(
             file_id=file_id,
             file_path=file_path,
             downloaded=downloaded,
@@ -68,26 +67,46 @@ class ProgressManager:
         )
 
         if not self.progress_logic.should_update_row(progress_item.total):
-            row = self.progress_store.get_row(file_id)
-            if row:
-                self.progress_store.set_item(file_id, progress_item)
-                row.update(progress_item)
+            self._update_existing_row_if_any(progress_item)
             return
 
-        if not self.progress_store.has(file_id):
-            self.progress_window.hide_empty_message()
-            row = ProgressRow(self.progress_window.details_frame, self.icons, progress_item)
-            entry = ProgressEntry(item=progress_item, row=row)
-            self.progress_store.set(file_id, entry)
-        else:
-            self.progress_store.set_item(file_id, progress_item)
+        self._ensure_progress_entry(progress_item)
+        self._update_row(progress_item)
+        self._remove_if_completed(progress_item)
 
-        row = self.progress_store.get_row(file_id)
+    def _build_progress_item(self, file_id, file_path, downloaded, total, eta):
+        return ProgressItem(
+            file_id=file_id,
+            file_path=file_path,
+            downloaded=downloaded,
+            total=total,
+            eta=eta
+        )
+
+    def _update_existing_row_if_any(self, progress_item: ProgressItem):
+        row = self.progress_store.get_row(progress_item.file_id)
+        if row:
+            self.progress_store.set_item(progress_item.file_id, progress_item)
+            row.update(progress_item)
+
+    def _ensure_progress_entry(self, progress_item: ProgressItem):
+        if self.progress_store.has(progress_item.file_id):
+            self.progress_store.set_item(progress_item.file_id, progress_item)
+            return
+
+        self.progress_window.hide_empty_message()
+        row = ProgressRow(self.progress_window.details_frame, self.icons, progress_item)
+        entry = ProgressEntry(item=progress_item, row=row)
+        self.progress_store.set(progress_item.file_id, entry)
+
+    def _update_row(self, progress_item: ProgressItem):
+        row = self.progress_store.get_row(progress_item.file_id)
         if row:
             row.update(progress_item)
 
+    def _remove_if_completed(self, progress_item: ProgressItem):
         if self.progress_logic.is_completed(progress_item.downloaded, progress_item.total):
-            self.remove_progress_bar(file_id)
+            self.remove_progress_bar(progress_item.file_id)
 
     def remove_progress_bar(self, file_id):
         row = self.progress_store.get_row(file_id)
@@ -108,6 +127,9 @@ class ProgressManager:
             percentage = (completed_files / total_files) * 100
             self.progress_bar.set(completed_files / total_files)
             self.progress_percentage.configure(text=f"{percentage:.2f}%")
+        elif self.progress_bar.winfo_exists():
+            self.progress_bar.set(0)
+            self.progress_percentage.configure(text="0%")
 
     def toggle_progress_details(self):
         self.create_progress_window()
@@ -118,3 +140,7 @@ class ProgressManager:
 
     def center_progress_details_frame(self):
         self.progress_window.center()
+
+    def clear_progress_bars(self):
+        for file_id in self.progress_store.keys():
+            self.remove_progress_bar(file_id)
