@@ -11,6 +11,7 @@ from PIL import Image as PilImage
 from tkinter import filedialog, messagebox, ttk
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
+from app.services.database_settings_service import DatabaseSettingsService
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
@@ -38,6 +39,7 @@ class SettingsWindow:
             on_settings_changed=on_settings_changed
         )
         self.download_settings_service = DownloadSettingsService()
+        self.database_settings_service = DatabaseSettingsService()
         self.settings = self.settings_service.load_settings()
         self.folder_structure_icons = self.load_icons()
         self.site_status_labels = {}
@@ -406,106 +408,81 @@ class SettingsWindow:
             return
 
         try:
-            conn = sqlite3.connect(self.downloader.db_path)
-            cursor = conn.cursor()
-            for uid in user_ids:
-                cursor.execute("DELETE FROM downloads WHERE user_id = ?", (uid,))
-            conn.commit()
-            conn.close()
-
+            self.database_settings_service.delete_users(self.downloader.db_path, user_ids)
             messagebox.showinfo(
                 self.translate("Success"),
                 self.translate("Selected user(s) and their records were deleted.")
             )
             self.load_db_records()
-
         except Exception as e:
             messagebox.showerror(
                 self.translate("Error"),
                 self.translate(f"Error deleting user(s): {e}")
-                )
+            )
 
 
     def load_db_records(self):
-        """Consulta la base de datos y carga los registros en el Treeview agrupados por usuario y, opcionalmente, por post."""
         db_path = self.downloader.db_path
-        if not os.path.exists(db_path):
-            tk.messagebox.showwarning(self.translate("Warning"), self.translate("Database not found."))
+
+        if not self.database_settings_service.database_exists(db_path):
+            tk.messagebox.showwarning(
+                self.translate("Warning"),
+                self.translate("Database not found.")
+            )
             return
 
         try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, media_url, file_path, file_size, user_id, post_id, downloaded_at FROM downloads")
-            rows = cursor.fetchall()
-            conn.close()
+            rows = self.database_settings_service.fetch_download_rows(db_path)
         except Exception as e:
-            tk.messagebox.showerror(self.translate("Error"), self.translate("Error loading database: {e}", e=e))
+            tk.messagebox.showerror(
+                self.translate("Error"),
+                self.translate("Error loading database: {e}", e=e)
+            )
             return
 
-        # Limpiar el Treeview
         for child in self.db_tree.get_children():
             self.db_tree.delete(child)
 
-        # Función auxiliar para determinar el tipo de archivo según la extensión
-        def get_file_type(file_path):
-            ext = os.path.splitext(file_path)[1].lower()
-            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']:
-                return self.translate("Image")
-            elif ext in ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v']:
-                return self.translate("Video")
-            elif ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
-                return self.translate("Document")
-            elif ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
-                return self.translate("Compressed")
-            else:
-                return self.translate("Other")
+        payload = self.database_settings_service.build_tree_payload(rows)
 
-        # Función para formatear el tamaño
-        def format_size(size):
-            if size < 1024:
-                return f"{size} B"
-            elif size < 1024**2:
-                return f"{size/1024:.2f} KB"
-            else:
-                return f"{size/1024**2:.2f} MB"
-
-        # Agrupar registros por usuario
-        usuarios = {}
-        for rec in rows:
-            rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
-            usuarios.setdefault(user_id, []).append(rec)
-
-        # Insertar cada usuario como nodo padre en el Treeview
-        for user, registros in usuarios.items():
+        for user_entry in payload:
+            user = user_entry["user"]
             user_node = self.db_tree.insert("", "end", text=user, open=False)
-            # Dentro de cada usuario, agrupar los registros que tienen post_id y los que no
-            posts = {}
-            sin_post = []
-            for rec in registros:
-                rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
-                if post_id:
-                    posts.setdefault(post_id, []).append(rec)
-                else:
-                    sin_post.append(rec)
-            # Insertar nodos para cada post
-            for post, recs in posts.items():
+
+            for post, items in user_entry["posts"].items():
                 post_node = self.db_tree.insert(user_node, "end", text=post, open=False)
-                for rec in recs:
-                    rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
-                    file_name = os.path.basename(file_path)
-                    file_type = get_file_type(file_path)
-                    size_str = format_size(file_size)
-                    self.db_tree.insert(post_node, "end", values=(rec_id, file_name, file_type, size_str, downloaded_at))
-            # Insertar los registros sin post en un nodo especial
-            if sin_post:
-                sin_post_node = self.db_tree.insert(user_node, "end", text=self.translate("No Post"), open=False)
-                for rec in sin_post:
-                    rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
-                    file_name = os.path.basename(file_path)
-                    file_type = get_file_type(file_path)
-                    size_str = format_size(file_size)
-                    self.db_tree.insert(sin_post_node, "end", values=(rec_id, file_name, file_type, size_str, downloaded_at))
+                for item in items:
+                    self.db_tree.insert(
+                        post_node,
+                        "end",
+                        values=(
+                            item["id"],
+                            item["file_name"],
+                            self.translate(item["file_type"]),
+                            item["size_str"],
+                            item["downloaded_at"],
+                        )
+                    )
+
+            if user_entry["no_post"]:
+                no_post_node = self.db_tree.insert(
+                    user_node,
+                    "end",
+                    text=self.translate("No Post"),
+                    open=False
+                )
+                for item in user_entry["no_post"]:
+                    self.db_tree.insert(
+                        no_post_node,
+                        "end",
+                        values=(
+                            item["id"],
+                            item["file_name"],
+                            self.translate(item["file_type"]),
+                            item["size_str"],
+                            item["downloaded_at"],
+                        )
+                    )
 
     def render_general_tab(self, tab):
         tab.grid_columnconfigure(0, weight=1)
@@ -744,19 +721,34 @@ class SettingsWindow:
     
     def export_db(self):
         db_path = self.downloader.db_path
-        if os.path.exists(db_path):
-            export_path = filedialog.asksaveasfilename(defaultextension=".db", 
-                                                       filetypes=[("SQLite DB", "*.db")],
-                                                       title=self.translate("Export Database"))
-            if export_path:
-                try:
-                    import shutil
-                    shutil.copy(db_path, export_path)
-                    messagebox.showinfo(self.translate("Success"), self.translate("The database was exported successfully."))
-                except Exception as e:
-                    messagebox.showerror(self.translate("Error"), self.translate(f"Error exporting database: {e}"))
-        else:
-            messagebox.showwarning(self.translate("Warning"), self.translate("Database not found."))
+
+        if not self.database_settings_service.database_exists(db_path):
+            messagebox.showwarning(
+                self.translate("Warning"),
+                self.translate("Database not found.")
+            )
+            return
+
+        export_path = filedialog.asksaveasfilename(
+            defaultextension=".db",
+            filetypes=[("SQLite DB", "*.db")],
+            title=self.translate("Export Database")
+        )
+
+        if not export_path:
+            return
+
+        try:
+            self.database_settings_service.export_database(db_path, export_path)
+            messagebox.showinfo(
+                self.translate("Success"),
+                self.translate("The database was exported successfully.")
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Error exporting database: {e}")
+            )
 
     def clear_db(self):
         confirm = messagebox.askyesno(self.translate("Confirm"), 
