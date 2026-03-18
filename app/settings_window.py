@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
 from app.services.database_settings_service import DatabaseSettingsService
+from app.services.cookies_settings_service import CookiesSettingsService
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
@@ -40,10 +41,11 @@ class SettingsWindow:
         )
         self.download_settings_service = DownloadSettingsService()
         self.database_settings_service = DatabaseSettingsService()
+        self.cookies_settings_service = CookiesSettingsService("resources/config/cookies.json")
         self.settings = self.settings_service.load_settings()
         self.folder_structure_icons = self.load_icons()
         self.site_status_labels = {}
-        self.site_textboxes = {} 
+        self.site_textboxes = {}
 
     def load_settings(self):
         return self.settings_service.load_settings()
@@ -856,3 +858,88 @@ class SettingsWindow:
 
     def center_window(self, window, width, height):
         self.settings_service.center_window(window, width, height)
+        
+    def load_cookies_text(self):
+        return self.cookies_settings_service.load_cookies_text()
+
+    def save_cookies_text(self, cookies_text: str):
+        return self.cookies_settings_service.save_cookies_text(cookies_text)
+
+    def clear_cookies_file(self):
+        self.cookies_settings_service.clear_cookies()
+
+    def import_cookies_file_text(self, source_path: str):
+        return self.cookies_settings_service.import_cookies_file(source_path)
+    
+    
+    def save_cookies_from_textbox(self, cookies_textbox):
+        cookies_text = cookies_textbox.get("1.0", "end").strip()
+
+        try:
+            self.save_cookies_text(cookies_text)
+            messagebox.showinfo(
+                self.translate("Success"),
+                self.translate("Cookies were saved successfully.")
+            )
+        except json.JSONDecodeError:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate("Invalid JSON format for cookies.")
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Error saving cookies: {e}")
+            )
+
+    def populate_cookies_textbox(self, cookies_textbox):
+        cookies_textbox.delete("1.0", "end")
+        cookies_textbox.insert("1.0", self.load_cookies_text())
+        
+    def import_cookies_into_textbox(self, cookies_textbox):
+        file_path = filedialog.askopenfilename(
+            title=self.translate("Import Cookies"),
+            filetypes=[("JSON Files", "*.json"), ("Text Files", "*.txt"), ("All Files", "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            content = self.import_cookies_file_text(file_path)
+            cookies_textbox.delete("1.0", "end")
+            cookies_textbox.insert("1.0", content)
+            messagebox.showinfo(
+                self.translate("Success"),
+                self.translate("Cookies were imported successfully.")
+            )
+        except json.JSONDecodeError:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate("The selected file does not contain valid JSON.")
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Error importing cookies: {e}")
+            )
+    
+    def clear_cookies(self, cookies_textbox):
+        confirm = messagebox.askyesno(
+            self.translate("Confirm"),
+            self.translate("Are you sure you want to clear the saved cookies?")
+        )
+        if not confirm:
+            return
+
+        try:
+            self.clear_cookies_file()
+            cookies_textbox.delete("1.0", "end")
+            messagebox.showinfo(
+                self.translate("Success"),
+                self.translate("Cookies were cleared successfully.")
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.translate("Error"),
+                self.translate(f"Error clearing cookies: {e}")
+            )
