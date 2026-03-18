@@ -41,6 +41,9 @@ from app.views.tkinter.components.menu_bar import MenuBarBuilder
 from app.views.tkinter.components.download_panel import DownloadPanelBuilder
 from app.views.tkinter.components.log_panel import LogPanelBuilder
 from app.views.tkinter.components.footer import FooterBuilder
+from app.views.tkinter.components.update_banner import UpdateBannerBuilder
+from app.views.tkinter.components.menu_helpers import MenuHelpers
+from app.views.tkinter.components.context_menu import ContextMenuHelper
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -67,6 +70,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.url_service = UrlService()
         self.downloader_factory = DownloaderFactory(self)
         self.main_controller = MainController(self)
+        self.menu_helpers = MenuHelpers(self)
+        self.context_menu_helper = ContextMenuHelper(self)
         # Compatibilidad temporal con código existente
         self.download_folder = self.app_state.download_folder
 
@@ -227,28 +232,7 @@ class ImageDownloaderApp(ctk.CTk):
     # -------------------------------------------------------------------------
     def initialize_ui(self):
         MenuBarBuilder(self).build()
-
-        self.update_alert_frame = ctk.CTkFrame(self, fg_color="#4CAF50", corner_radius=0)
-        self.update_alert_frame.pack(side="top", fill="x")
-        self.update_alert_frame.pack_forget()
-
-        self.update_alert_label = ctk.CTkLabel(
-            self.update_alert_frame,
-            text="",
-            text_color="white",
-            font=("Arial", 12, "bold")
-        )
-        self.update_alert_label.pack(side="left", padx=10, pady=5)
-
-        self.update_download_button = ctk.CTkButton(
-            self.update_alert_frame,
-            text=self.tr("Download Now"),
-            command=self.open_latest_release,
-            fg_color="#388E3C",
-            hover_color="#2E7D32"
-        )
-        self.update_download_button.pack(side="right", padx=10, pady=5)
-
+        UpdateBannerBuilder(self).build()
         DownloadPanelBuilder(self).build()
         LogPanelBuilder(self).build()
         FooterBuilder(self).build()
@@ -352,75 +336,24 @@ class ImageDownloaderApp(ctk.CTk):
             messagebox.showerror(self.tr("Error"), self.tr("La carpeta no existe o no es válida."))
 
     def on_click(self, event):
-        widgets_to_ignore = [self.menu_bar]
-
-        for frame in [self.archivo_menu_frame, self.ayuda_menu_frame, self.donaciones_menu_frame]:
-            if frame and frame.winfo_exists():
-                widgets_to_ignore.append(frame)
-                widgets_to_ignore.extend(self.get_all_children(frame))
-
-        if event.widget not in widgets_to_ignore:
-            self.close_all_menus()
-
-    def get_all_children(self, widget):
-        children = widget.winfo_children()
-        all_children = list(children)
-        for child in children:
-            all_children.extend(self.get_all_children(child))
-        return all_children
+        self.menu_helpers.on_click(event)
 
     def show_donors_modal(self):
         donors_modal = DonorsModal(self, self.tr)
         donors_modal.focus_set()
 
     def toggle_archivo_menu(self):
-        if self.archivo_menu_frame and self.archivo_menu_frame.winfo_exists():
-            self.archivo_menu_frame.destroy()
-        else:
-            self.close_all_menus()
-            self.archivo_menu_frame = self.create_menu_frame(
-                [
-                    (self.tr("Configuraciones"), self.settings_window.open_settings),
-                    ("separator", None),
-                    (self.tr("Salir"), self.quit),
-                ],
-                x=0
-            )
+        self.menu_helpers.toggle_archivo_menu()
 
     def create_menu_frame(self, options, x):
-        menu_frame = ctk.CTkFrame(self, corner_radius=5, fg_color="gray25", border_color="black", border_width=1)
-        menu_frame.place(x=x, y=30)
-        menu_frame.configure(border_width=1, border_color="black")
-        menu_frame.bind("<Button-1>", lambda e: "break")
-
-        for option in options:
-            if option[0] == "separator":
-                separator = ctk.CTkFrame(menu_frame, height=1, fg_color="gray50")
-                separator.pack(fill="x", padx=5, pady=5)
-                separator.bind("<Button-1>", lambda e: "break")
-            elif option[1] is None:
-                label = ctk.CTkLabel(menu_frame, text=option[0], anchor="w", fg_color="gray30")
-                label.pack(fill="x", padx=5, pady=2)
-                label.bind("<Button-1>", lambda e: "break")
-            else:
-                btn = ctk.CTkButton(
-                    menu_frame,
-                    text=option[0],
-                    fg_color="transparent",
-                    hover_color="gray35",
-                    anchor="w",
-                    text_color="white",
-                    command=lambda cmd=option[1]: cmd()
-                )
-                btn.pack(fill="x", padx=5, pady=2)
-                btn.bind("<Button-1>", lambda e: "break")
-
-        return menu_frame
+        return self.menu_helpers.create_menu_frame(options, x)
 
     def close_all_menus(self):
-        for menu_frame in [self.archivo_menu_frame, self.ayuda_menu_frame, self.donaciones_menu_frame]:
-            if menu_frame and menu_frame.winfo_exists():
-                menu_frame.destroy()
+        self.menu_helpers.close_all_menus()
+        
+    def get_all_children(self, widget):
+        return self.menu_helpers.get_all_children(widget)
+
 
     # -------------------------------------------------------------------------
     # Imágenes / iconos
@@ -606,45 +539,16 @@ class ImageDownloaderApp(ctk.CTk):
     # Clipboard
     # -------------------------------------------------------------------------
     def copy_to_clipboard(self):
-        try:
-            selected_text = self.url_entry.selection_get()
-            if selected_text:
-                self.clipboard_clear()
-                self.clipboard_append(selected_text)
-            else:
-                self.add_log_message_safe(self.tr("No hay texto seleccionado para copiar."))
-        except tk.TclError:
-            self.add_log_message_safe(self.tr("No hay texto seleccionado para copiar."))
+        self.context_menu_helper.copy_to_clipboard()
 
     def paste_from_clipboard(self):
-        try:
-            clipboard_text = self.clipboard_get()
-            if clipboard_text:
-                try:
-                    self.url_entry.delete("sel.first", "sel.last")
-                except tk.TclError:
-                    pass
-                self.url_entry.insert(tk.INSERT, clipboard_text)
-            else:
-                self.add_log_message_safe(self.tr("No hay texto en el portapapeles para pegar."))
-        except tk.TclError as e:
-            self.add_log_message_safe(f"{self.tr('Error al pegar desde el portapapeles')}: {e}")
+        self.context_menu_helper.paste_from_clipboard()
 
     def cut_to_clipboard(self):
-        try:
-            selected_text = self.url_entry.selection_get()
-            if selected_text:
-                self.clipboard_clear()
-                self.clipboard_append(selected_text)
-                self.url_entry.delete("sel.first", "sel.last")
-            else:
-                self.add_log_message_safe(self.tr("No hay texto seleccionado para cortar."))
-        except tk.TclError:
-            self.add_log_message_safe(self.tr("No hay texto seleccionado para cortar."))
+        self.context_menu_helper.cut_to_clipboard()
 
     def show_context_menu(self, event):
-        self.context_menu.tk_popup(event.x_root, event.y_root)
-        self.context_menu.grab_release()
+        self.context_menu_helper.show_context_menu(event)
 
     # -------------------------------------------------------------------------
     # Queue / widgets
