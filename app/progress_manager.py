@@ -4,7 +4,7 @@ from app.views.tkinter.progress.progress_row import ProgressRow
 from app.views.tkinter.progress.progress_window import ProgressWindow
 from app.views.tkinter.progress.progress_utils import format_eta, format_speed
 from app.views.tkinter.progress.footer_status import FooterStatusController
-from app.services.progress_store import ProgressStore
+from app.services.progress_store import ProgressStore, ProgressEntry
 from app.services.progress_logic import ProgressLogic
 from app.models.progress_item import ProgressItem
 
@@ -68,24 +68,29 @@ class ProgressManager:
         )
 
         if not self.progress_logic.should_update_row(progress_item.total):
-            row = self.progress_store.get(file_id)
+            row = self.progress_store.get_row(file_id)
             if row:
+                self.progress_store.set_item(file_id, progress_item)
                 row.update(progress_item)
             return
 
         if not self.progress_store.has(file_id):
             self.progress_window.hide_empty_message()
             row = ProgressRow(self.progress_window.details_frame, self.icons, progress_item)
-            self.progress_store.set(file_id, row)
+            entry = ProgressEntry(item=progress_item, row=row)
+            self.progress_store.set(file_id, entry)
+        else:
+            self.progress_store.set_item(file_id, progress_item)
 
-        row = self.progress_store.get(file_id)
-        row.update(progress_item)
+        row = self.progress_store.get_row(file_id)
+        if row:
+            row.update(progress_item)
 
         if self.progress_logic.is_completed(progress_item.downloaded, progress_item.total):
             self.remove_progress_bar(file_id)
 
     def remove_progress_bar(self, file_id):
-        row = self.progress_store.get(file_id)
+        row = self.progress_store.get_row(file_id)
         if not row:
             return
 
