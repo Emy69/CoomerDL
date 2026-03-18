@@ -1,4 +1,4 @@
-from app.ui import ImageDownloaderApp
+from app.views.tkinter.main_window import ImageDownloaderApp
 
 def main():
     app = ImageDownloaderApp()
