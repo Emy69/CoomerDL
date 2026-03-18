@@ -44,6 +44,11 @@ from app.views.tkinter.components.footer import FooterBuilder
 from app.views.tkinter.components.update_banner import UpdateBannerBuilder
 from app.views.tkinter.components.menu_helpers import MenuHelpers
 from app.views.tkinter.components.context_menu import ContextMenuHelper
+from app.views.tkinter.components.progress_section import ProgressSectionHelper
+from app.views.tkinter.components.ui_helpers import UIHelpers
+
+
+
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -72,6 +77,8 @@ class ImageDownloaderApp(ctk.CTk):
         self.main_controller = MainController(self)
         self.menu_helpers = MenuHelpers(self)
         self.context_menu_helper = ContextMenuHelper(self)
+        self.progress_section = ProgressSectionHelper(self)
+        self.ui_helpers = UIHelpers(self)
         # Compatibilidad temporal con código existente
         self.download_folder = self.app_state.download_folder
 
@@ -325,15 +332,7 @@ class ImageDownloaderApp(ctk.CTk):
             self.add_log_message_safe(f"Error applying settings: {e}")
 
     def open_download_folder(self, event=None):
-        if self.download_folder and os.path.exists(self.download_folder):
-            if sys.platform == "win32":
-                os.startfile(self.download_folder)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", self.download_folder])
-            else:
-                subprocess.Popen(["xdg-open", self.download_folder])
-        else:
-            messagebox.showerror(self.tr("Error"), self.tr("La carpeta no existe o no es válida."))
+        self.ui_helpers.open_download_folder(event)
 
     def on_click(self, event):
         self.menu_helpers.on_click(event)
@@ -419,19 +418,21 @@ class ImageDownloaderApp(ctk.CTk):
     # Progreso
     # -------------------------------------------------------------------------
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
-        self.progress_manager.update_progress(downloaded, total, file_id, file_path, speed, eta, status=status)
+        self.progress_section.update_progress(
+            downloaded, total, file_id, file_path, speed, eta, status=status
+        )
 
     def remove_progress_bar(self, file_id):
-        self.progress_manager.remove_progress_bar(file_id)
+        self.progress_section.remove_progress_bar(file_id)
 
     def update_global_progress(self, completed_files, total_files):
-        self.progress_manager.update_global_progress(completed_files, total_files)
+        self.progress_section.update_global_progress(completed_files, total_files)
 
     def toggle_progress_details(self):
-        self.progress_manager.toggle_progress_details()
+        self.progress_section.toggle_progress_details()
 
     def center_progress_details_frame(self):
-        self.progress_manager.center_progress_details_frame()
+        self.progress_section.center_progress_details_frame()
 
     # -------------------------------------------------------------------------
     # Descargas
@@ -470,8 +471,7 @@ class ImageDownloaderApp(ctk.CTk):
         self.main_controller.cancel_download()
 
     def clear_progress_bars(self):
-        for file_id in list(self.progress_bars.keys()):
-            self.remove_progress_bar(file_id)
+        self.progress_section.clear_progress_bars()
 
     # -------------------------------------------------------------------------
     # Logs
@@ -582,11 +582,11 @@ class ImageDownloaderApp(ctk.CTk):
             except Exception as e:
                 print(f"[update_max_downloads] Error updating {attr_name}: {e}")
 
-    def on_hover_enter(self, event):
-        self.folder_path.configure(font=("Arial", 13, "underline"))
+    def on_hover_enter(self, event=None):
+        self.ui_helpers.on_hover_enter(event)
 
-    def on_hover_leave(self, event):
-        self.folder_path.configure(font=("Arial", 13))
+    def on_hover_leave(self, event=None):
+        self.ui_helpers.on_hover_leave(event)
 
     # -------------------------------------------------------------------------
     # GitHub / updates
