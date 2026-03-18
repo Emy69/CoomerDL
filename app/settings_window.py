@@ -10,6 +10,7 @@ from PIL import Image, ImageTk
 from PIL import Image as PilImage
 from tkinter import filedialog, messagebox, ttk
 from app.services.settings_window_service import SettingsWindowService
+from app.services.download_settings_service import DownloadSettingsService
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
@@ -36,6 +37,7 @@ class SettingsWindow:
             config_path=self.CONFIG_PATH,
             on_settings_changed=on_settings_changed
         )
+        self.download_settings_service = DownloadSettingsService()
         self.settings = self.settings_service.load_settings()
         self.folder_structure_icons = self.load_icons()
         self.site_status_labels = {}
@@ -650,14 +652,8 @@ class SettingsWindow:
         naming_label = ctk.CTkLabel(downloads_frame, text=self.translate("File Naming Mode"))
         naming_label.grid(row=6, column=0, pady=5, sticky="w")
 
-        naming_options = [
-            "Use File ID (default)",
-            "Use Sanitized Post Name",
-            "Post Name + Post ID Suffix",
-            "Post Date/Time + Post Name"
-        ]
+        naming_options = self.download_settings_service.get_naming_options()
 
-        # 1) Crear PRIMERO el combobox
         file_naming_combobox = ctk.CTkComboBox(
             downloads_frame,
             values=naming_options,
@@ -665,22 +661,10 @@ class SettingsWindow:
             width=200
         )
 
-        # 2) Recuperar el valor desde settings (puede ser int o str). 
-        #    Si es int (0,1,2,3) mapeamos a la cadena; si es str, la usamos tal cual.
-        naming_mode = self.settings.get('file_naming_mode', 0)
-        if isinstance(naming_mode, int):
-            # Asegurarnos de no pasarnos de índice
-            if 0 <= naming_mode < len(naming_options):
-                file_naming_combobox.set(naming_options[naming_mode])
-            else:
-                file_naming_combobox.set(naming_options[0])
-        else:
-            # Aquí asumes que es una cadena. Si no, fallback a la primera
-            if naming_mode in naming_options:
-                file_naming_combobox.set(naming_mode)
-            else:
-                file_naming_combobox.set(naming_options[0])
-
+        current_naming_label = self.download_settings_service.get_naming_label_from_setting(
+            self.settings.get("file_naming_mode", 0)
+        )
+        file_naming_combobox.set(current_naming_label)
         file_naming_combobox.grid(row=6, column=1, pady=5, padx=(10, 0), sticky="w")
 
 
@@ -784,41 +768,29 @@ class SettingsWindow:
             except Exception as e:
                 messagebox.showerror(self.translate("Error"), self.translate(f"Error clearing database: {e}"))
 
-    def apply_download_settings(self,max_downloads_combobox,folder_structure_combobox,retry_combobox,retry_interval_entry,file_naming_combobox):
+    def apply_download_settings(
+        self,
+        max_downloads_combobox,
+        folder_structure_combobox,
+        retry_combobox,
+        retry_interval_entry,
+        file_naming_combobox,
+    ):
         try:
+            parsed_values = self.download_settings_service.parse_form_values(
+                max_downloads_value=max_downloads_combobox.get(),
+                folder_structure_value=folder_structure_combobox.get(),
+                max_retries_value=retry_combobox.get(),
+                retry_interval_value=retry_interval_entry.get(),
+                file_naming_mode_label=file_naming_combobox.get(),
+            )
 
-            max_downloads = int(max_downloads_combobox.get())
-            folder_structure = folder_structure_combobox.get()
-            max_retries = int(retry_combobox.get())
-            retry_interval = float(retry_interval_entry.get())
-
-            file_naming_mode_str = file_naming_combobox.get()
-
-            mapping = {
-                "Use File ID (default)": 0,
-                "Use Sanitized Post Name": 1,
-                "Post Name + Post ID Suffix": 2,
-                "Post Date/Time + Post Name": 3
-            }
-            numeric_mode = mapping.get(file_naming_mode_str, 0)
-            self.downloader.file_naming_mode = numeric_mode
-
-            self.settings['max_downloads'] = max_downloads
-            self.settings['folder_structure'] = folder_structure
-            self.settings['max_retries'] = max_retries
-            self.settings['retry_interval'] = retry_interval
-            self.settings['file_naming_mode'] = numeric_mode
-
+            self.settings = self.download_settings_service.apply_to_settings(
+                self.settings,
+                parsed_values
+            )
             self.save_settings()
-
-            if self.downloader:
-                self.downloader.update_max_downloads(max_downloads)
-
-                self.downloader.max_retries = max_retries
-                self.downloader.retry_interval = retry_interval
-
-                self.downloader.file_naming_mode = numeric_mode
-
+            self.download_settings_service.apply_to_downloader(self.downloader, parsed_values)
 
             messagebox.showinfo(
                 self.translate("Éxito"),
