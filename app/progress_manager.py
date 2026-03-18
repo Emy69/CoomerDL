@@ -3,7 +3,7 @@ import customtkinter as ctk
 from app.views.tkinter.progress.progress_row import ProgressRow
 from app.views.tkinter.progress.progress_window import ProgressWindow
 from app.views.tkinter.progress.progress_utils import format_eta, format_speed
-
+from app.views.tkinter.progress.footer_status import FooterStatusController
 
 class ProgressManager:
     def __init__(self, root, icons, footer_speed_label, footer_eta_label, progress_bar, progress_percentage):
@@ -11,6 +11,10 @@ class ProgressManager:
         self.icons = icons
         self.footer_speed_label = footer_speed_label
         self.footer_eta_label = footer_eta_label
+        self.footer_status = FooterStatusController(
+            speed_label=self.footer_speed_label,
+            eta_label=self.footer_eta_label
+        )
         self.progress_bar = progress_bar
         self.progress_percentage = progress_percentage
 
@@ -25,10 +29,7 @@ class ProgressManager:
 
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
         if status is not None:
-            original = self.footer_eta_label.cget("text")
-            base_eta = original.split(" | ")[0]
-            self.footer_eta_label.configure(text=f"{base_eta} | STATUS:{status}")
-            self.footer_eta_label.after(5000, lambda: self.footer_eta_label.configure(text=base_eta))
+            self.footer_status.set_status(str(status))
             return
 
         if file_id is None:
@@ -37,10 +38,10 @@ class ProgressManager:
             self._update_file_progress(downloaded, total, file_id, file_path, eta)
 
         if speed is not None:
-            self.footer_speed_label.configure(text=format_speed(speed))
+            self.footer_status.set_speed(format_speed(speed))
 
         if eta is not None:
-            self.footer_eta_label.configure(text=format_eta(eta))
+            self.footer_status.set_eta(format_eta(eta))
 
     def _update_global_bar(self, downloaded, total):
         if total > 0 and self.progress_bar.winfo_exists():
@@ -84,8 +85,7 @@ class ProgressManager:
 
         if not self.progress_bars:
             self.progress_window.show_empty_message()
-            self.footer_speed_label.configure(text="Speed: 0 KB/s")
-            self.footer_eta_label.configure(text="ETA: N/A")
+            self.footer_status.reset()
 
     def update_global_progress(self, completed_files, total_files):
         if total_files > 0 and self.progress_bar.winfo_exists():
