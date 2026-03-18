@@ -5,6 +5,7 @@ from app.views.tkinter.progress.progress_window import ProgressWindow
 from app.views.tkinter.progress.progress_utils import format_eta, format_speed
 from app.views.tkinter.progress.footer_status import FooterStatusController
 from app.services.progress_store import ProgressStore
+from app.services.progress_logic import ProgressLogic
 
 class ProgressManager:
     def __init__(self, root, icons, footer_speed_label, footer_eta_label, progress_bar, progress_percentage):
@@ -20,6 +21,7 @@ class ProgressManager:
         self.progress_percentage = progress_percentage
 
         self.progress_store = ProgressStore()
+        self.progress_logic = ProgressLogic()
         self.progress_window = ProgressWindow(root)
 
     def create_progress_window(self):
@@ -56,7 +58,7 @@ class ProgressManager:
     def _update_file_progress(self, downloaded, total, file_id, file_path, eta):
         self.create_progress_window()
 
-        if total <= 0:
+        if not self.progress_logic.should_update_row(total):
             row = self.progress_store.get(file_id)
             if row:
                 row.update(0, 0, None)
@@ -70,7 +72,7 @@ class ProgressManager:
         row = self.progress_store.get(file_id)
         row.update(downloaded, total, eta)
 
-        if downloaded >= total:
+        if self.progress_logic.is_completed(downloaded, total):
             self.remove_progress_bar(file_id)
 
     def remove_progress_bar(self, file_id):
@@ -83,7 +85,7 @@ class ProgressManager:
     def _finalize_remove(self, file_id):
         self.progress_store.remove(file_id)
 
-        if self.progress_store.is_empty():
+        if self.progress_logic.should_reset_footer(self.progress_store.is_empty()):
             self.progress_window.show_empty_message()
             self.footer_status.reset()
 
