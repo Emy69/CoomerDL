@@ -1,5 +1,9 @@
 import customtkinter as ctk
-import os
+
+from app.views.tkinter.progress.progress_row import ProgressRow
+from app.views.tkinter.progress.progress_window import ProgressWindow
+from app.views.tkinter.progress.progress_utils import format_eta, format_speed
+
 
 class ProgressManager:
     def __init__(self, root, icons, footer_speed_label, footer_eta_label, progress_bar, progress_percentage):
@@ -9,184 +13,92 @@ class ProgressManager:
         self.footer_eta_label = footer_eta_label
         self.progress_bar = progress_bar
         self.progress_percentage = progress_percentage
+
         self.progress_bars = {}
-        self.progress_window = None
-        self.no_downloads_label = None
-        self.progress_details_frame = None
-        self.auto_show_details = False
-        
+        self.progress_window = ProgressWindow(root)
+
     def create_progress_window(self):
-        if self.progress_window is None or not self.progress_window.winfo_exists():
-            self.progress_window = ctk.CTkToplevel(self.root)
-            self.progress_window.title("Detalles de Descarga")
-            self.progress_window.geometry("600x500")
-            self.progress_window.resizable(True, True)
-            self.progress_window.protocol("WM_DELETE_WINDOW", self.close_progress_window)
-
-            self.progress_details_frame = ctk.CTkFrame(self.progress_window)
-            self.progress_details_frame.pack(fill='both', expand=True, padx=10, pady=10)
-
-            # Crear el mensaje de "No hay descargas"
-            self.no_downloads_label = ctk.CTkLabel(self.progress_details_frame, text="No hay descargas en cola", font=("Arial", 14))
-            self.no_downloads_label.pack(pady=20)
-
-            # Hacer que la ventana aparezca al frente
-            self.progress_window.transient(self.root)
-            self.progress_window.grab_set()
+        self.progress_window.ensure_created()
 
     def close_progress_window(self):
-        if self.progress_window is not None and self.progress_window.winfo_exists():
-            self.progress_window.grab_release()
-            self.progress_window.withdraw()
+        self.progress_window.close()
 
-    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status: str | None = None):
+    def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
         if status is not None:
             original = self.footer_eta_label.cget("text")
             base_eta = original.split(" | ")[0]
             self.footer_eta_label.configure(text=f"{base_eta} | STATUS:{status}")
-
-            # Oculta el estado tras 5 s
-            self.footer_eta_label.after(
-                5000,
-                lambda: self.footer_eta_label.configure(text=base_eta)
-            )
+            self.footer_eta_label.after(5000, lambda: self.footer_eta_label.configure(text=base_eta))
             return
-        
-        if total > 0:
-            percentage = (downloaded / total) * 100
-            remaining = total - downloaded
-            if file_id is None:
-                if self.progress_bar.winfo_exists():
-                    self.progress_bar.set(downloaded / total)
-                    self.progress_percentage.configure(text=f"{percentage:.2f}%")
-            else:
-                if self.progress_window is None or not self.progress_window.winfo_exists():
-                    return
 
-                if file_id not in self.progress_bars:
-                    if self.no_downloads_label and self.no_downloads_label.winfo_exists():
-                        self.no_downloads_label.pack_forget()
-
-                    file_name = os.path.basename(file_path)
-                    file_extension = os.path.splitext(file_path)[1].lower()
-
-                    # Determinar el icono
-                    if file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-                        icon = self.icons['image']
-                    elif file_extension in ['.mp4', '.avi', '.mkv']:
-                        icon = self.icons['video']
-                    elif file_extension in ['.zip', '.rar']:
-                        icon = self.icons['zip']
-                    else:
-                        icon = self.icons['default']
-
-                    progress_bar_frame = ctk.CTkFrame(self.progress_details_frame)
-                    progress_bar_frame.pack(fill='x', padx=5, pady=5)
-
-                    # Crear un contenedor para el icono y el texto
-                    icon_and_text_frame = ctk.CTkFrame(progress_bar_frame)
-                    icon_and_text_frame.pack(side='left', padx=5)
-
-                    # Crear el icono con ctk.CTkLabel
-                    icon_label = ctk.CTkLabel(icon_and_text_frame, image=icon, text="")
-                    icon_label.pack(side='left')
-
-                    # Limitar el texto y mostrar puntos suspensivos si excede el límite
-                    max_text_length = 30
-                    if len(file_name) > max_text_length:
-                        displayed_file_name = file_name[:max_text_length] + '...'
-                    else:
-                        displayed_file_name = file_name
-
-                    progress_label = ctk.CTkLabel(icon_and_text_frame, text=displayed_file_name, anchor='w')
-                    progress_label.pack(side='left', padx=5)
-
-                    # Crear barra de progreso y etiquetas de porcentaje y ETA
-                    progress_bar = ctk.CTkProgressBar(progress_bar_frame)
-                    progress_bar.pack(fill='x', padx=5, pady=5)
-
-                    # Mostrar porcentaje y megabytes restantes
-                    percentage_label = ctk.CTkLabel(progress_bar_frame, text=f"{percentage:.2f}% ({downloaded / 1048576:.2f} MB / {total / 1048576:.2f} MB)")
-                    percentage_label.pack(side='left', padx=5)
-
-                    eta_label = ctk.CTkLabel(progress_bar_frame, text=f"ETA: N/A")
-                    eta_label.pack(side='right', padx=5)
-
-                    self.progress_bars[file_id] = (progress_bar, percentage_label, eta_label, progress_bar_frame)
-
-                if file_id in self.progress_bars and self.progress_bars[file_id][0].winfo_exists():
-                    self.progress_bars[file_id][0].set(downloaded / total)
-                    self.progress_bars[file_id][1].configure(text=f"{percentage:.2f}% ({downloaded / 1048576:.2f} MB / {total / 1048576:.2f} MB)")
-                    if eta is not None:
-                        eta_text = f"ETA: {int(eta // 60)}m {int(eta % 60)}s"
-                        self.progress_bars[file_id][2].configure(text=eta_text)
-
-                    # Eliminar el frame si la descarga está completa
-                    if downloaded >= total:
-                        self.remove_progress_bar(file_id)
-
+        if file_id is None:
+            self._update_global_bar(downloaded, total)
         else:
-            if file_id is None:
-                if self.progress_bar.winfo_exists():
-                    self.progress_bar.set(0)
-                    self.progress_percentage.configure(text="0%")
-            else:
-                if file_id in self.progress_bars and self.progress_bars[file_id][0].winfo_exists():
-                    self.progress_bars[file_id][0].set(0)
-                    self.progress_bars[file_id][1].configure(text="0%")
-                    self.progress_bars[file_id][2].configure(text="ETA: N/A")
+            self._update_file_progress(downloaded, total, file_id, file_path, eta)
 
-        # Actualizar velocidad en el footer (si corresponde)
         if speed is not None:
-            if speed < 1_048_576:
-                speed_text = f"Speed: {speed / 1024:.2f} KB/s"
-            else:
-                speed_text = f"Speed: {speed / 1_048_576:.2f} MB/s"
-            self.footer_speed_label.configure(text=speed_text)
+            self.footer_speed_label.configure(text=format_speed(speed))
 
         if eta is not None:
-            mins, secs = divmod(int(eta), 60)
-            self.footer_eta_label.configure(text=f"ETA: {mins}m {secs}s")
+            self.footer_eta_label.configure(text=format_eta(eta))
+
+    def _update_global_bar(self, downloaded, total):
+        if total > 0 and self.progress_bar.winfo_exists():
+            percentage = (downloaded / total) * 100
+            self.progress_bar.set(downloaded / total)
+            self.progress_percentage.configure(text=f"{percentage:.2f}%")
+        elif self.progress_bar.winfo_exists():
+            self.progress_bar.set(0)
+            self.progress_percentage.configure(text="0%")
+
+    def _update_file_progress(self, downloaded, total, file_id, file_path, eta):
+        self.create_progress_window()
+
+        if total <= 0:
+            row = self.progress_bars.get(file_id)
+            if row:
+                row.update(0, 0, None)
+            return
+
+        if file_id not in self.progress_bars:
+            self.progress_window.hide_empty_message()
+            row = ProgressRow(self.progress_window.details_frame, self.icons, file_path)
+            self.progress_bars[file_id] = row
+
+        row = self.progress_bars[file_id]
+        row.update(downloaded, total, eta)
+
+        if downloaded >= total:
+            self.remove_progress_bar(file_id)
 
     def remove_progress_bar(self, file_id):
-        if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
-            # Programar la eliminación del frame después de 2 segundos
-            self.progress_bars[file_id][3].after(2000, lambda: self._forget_and_delete(file_id))
+        row = self.progress_bars.get(file_id)
+        if not row:
+            return
 
-    def _forget_and_delete(self, file_id):
-        if file_id in self.progress_bars and self.progress_bars[file_id][3].winfo_exists():
-            self.progress_bars[file_id][3].pack_forget()
+        row.destroy_later(callback=lambda: self._finalize_remove(file_id))
+
+    def _finalize_remove(self, file_id):
+        if file_id in self.progress_bars:
             del self.progress_bars[file_id]
 
-        # Si ya no quedan descargas, mostrar mensaje y restablecer el footer
         if not self.progress_bars:
-            self.no_downloads_label.pack(pady=20)
-            # Restablecer valores por defecto en el footer
+            self.progress_window.show_empty_message()
             self.footer_speed_label.configure(text="Speed: 0 KB/s")
             self.footer_eta_label.configure(text="ETA: N/A")
 
     def update_global_progress(self, completed_files, total_files):
-        if total_files > 0:
+        if total_files > 0 and self.progress_bar.winfo_exists():
             percentage = (completed_files / total_files) * 100
-            if self.progress_bar.winfo_exists():
-                self.progress_bar.set(completed_files / total_files)
-                self.progress_percentage.configure(text=f"{percentage:.2f}%")
+            self.progress_bar.set(completed_files / total_files)
+            self.progress_percentage.configure(text=f"{percentage:.2f}%")
 
     def toggle_progress_details(self):
         self.create_progress_window()
-        if self.progress_window.winfo_viewable():
+        if self.progress_window.is_visible():
             self.close_progress_window()
         else:
-            self.center_progress_details_frame()
-            self.progress_window.deiconify()
-            self.progress_window.lift()
+            self.progress_window.show()
 
     def center_progress_details_frame(self):
-        if self.progress_window is not None and self.progress_window.winfo_exists():
-            self.progress_window.update_idletasks()
-            width = self.progress_window.winfo_width()
-            height = self.progress_window.winfo_height()
-            x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.root.winfo_screenheight() // 2) - (height // 2)
-            self.progress_window.geometry(f"{width}x{height}+{x}+{y}")
-        self.progress_window.minsize(width, height)
+        self.progress_window.center()
