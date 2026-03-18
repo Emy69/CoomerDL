@@ -4,6 +4,7 @@ from app.views.tkinter.progress.progress_row import ProgressRow
 from app.views.tkinter.progress.progress_window import ProgressWindow
 from app.views.tkinter.progress.progress_utils import format_eta, format_speed
 from app.views.tkinter.progress.footer_status import FooterStatusController
+from app.services.progress_store import ProgressStore
 
 class ProgressManager:
     def __init__(self, root, icons, footer_speed_label, footer_eta_label, progress_bar, progress_percentage):
@@ -18,7 +19,7 @@ class ProgressManager:
         self.progress_bar = progress_bar
         self.progress_percentage = progress_percentage
 
-        self.progress_bars = {}
+        self.progress_store = ProgressStore()
         self.progress_window = ProgressWindow(root)
 
     def create_progress_window(self):
@@ -56,34 +57,33 @@ class ProgressManager:
         self.create_progress_window()
 
         if total <= 0:
-            row = self.progress_bars.get(file_id)
+            row = self.progress_store.get(file_id)
             if row:
                 row.update(0, 0, None)
             return
 
-        if file_id not in self.progress_bars:
+        if not self.progress_store.has(file_id):
             self.progress_window.hide_empty_message()
             row = ProgressRow(self.progress_window.details_frame, self.icons, file_path)
-            self.progress_bars[file_id] = row
+            self.progress_store.set(file_id, row)
 
-        row = self.progress_bars[file_id]
+        row = self.progress_store.get(file_id)
         row.update(downloaded, total, eta)
 
         if downloaded >= total:
             self.remove_progress_bar(file_id)
 
     def remove_progress_bar(self, file_id):
-        row = self.progress_bars.get(file_id)
+        row = self.progress_store.get(file_id)
         if not row:
             return
 
         row.destroy_later(callback=lambda: self._finalize_remove(file_id))
 
     def _finalize_remove(self, file_id):
-        if file_id in self.progress_bars:
-            del self.progress_bars[file_id]
+        self.progress_store.remove(file_id)
 
-        if not self.progress_bars:
+        if self.progress_store.is_empty():
             self.progress_window.show_empty_message()
             self.footer_status.reset()
 

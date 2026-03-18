@@ -20,5 +20,5 @@ class ProgressSectionHelper:
         self.app.progress_manager.center_progress_details_frame()
 
     def clear_progress_bars(self):
-        for file_id in list(self.app.progress_bars.keys()):
+        for file_id in self.app.progress_manager.progress_store.keys():
             self.remove_progress_bar(file_id)
