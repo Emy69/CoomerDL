@@ -37,6 +37,10 @@ from app.controllers.main_controller import MainController
 from app.services.update_service import UpdateService
 from app.services.log_service import LogService
 from app.services.url_service import UrlService
+from app.views.tkinter.components.menu_bar import MenuBarBuilder
+from app.views.tkinter.components.download_panel import DownloadPanelBuilder
+from app.views.tkinter.components.log_panel import LogPanelBuilder
+from app.views.tkinter.components.footer import FooterBuilder
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -222,10 +226,7 @@ class ImageDownloaderApp(ctk.CTk):
     # UI
     # -------------------------------------------------------------------------
     def initialize_ui(self):
-        self.menu_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
-        self.menu_bar.pack(side="top", fill="x")
-
-        self.create_custom_menubar()
+        MenuBarBuilder(self).build()
 
         self.update_alert_frame = ctk.CTkFrame(self, fg_color="#4CAF50", corner_radius=0)
         self.update_alert_frame.pack(side="top", fill="x")
@@ -248,122 +249,9 @@ class ImageDownloaderApp(ctk.CTk):
         )
         self.update_download_button.pack(side="right", padx=10, pady=5)
 
-        self.input_frame = ctk.CTkFrame(self)
-        self.input_frame.pack(fill="x", padx=20, pady=20)
-        self.input_frame.grid_columnconfigure(0, weight=1)
-        self.input_frame.grid_rowconfigure(1, weight=1)
-
-        self.url_label = ctk.CTkLabel(self.input_frame, text=self.tr("URL de la página web:"))
-        self.url_label.grid(row=0, column=0, sticky="w")
-
-        self.url_entry = ctk.CTkEntry(self.input_frame)
-        self.url_entry.grid(row=1, column=0, sticky="ew", padx=(0, 5))
-
-        self.browse_button = ctk.CTkButton(
-            self.input_frame,
-            text=self.tr("Seleccionar Carpeta"),
-            command=self.select_folder
-        )
-        self.browse_button.grid(row=1, column=1, sticky="e")
-
-        self.folder_path = ctk.CTkLabel(
-            self.input_frame,
-            text=self.download_folder or "",
-            cursor="hand2",
-            font=("Arial", 13)
-        )
-        self.folder_path.grid(row=2, column=0, columnspan=2, sticky="w")
-        self.folder_path.bind("<Button-1>", self.open_download_folder)
-        self.folder_path.bind("<Enter>", self.on_hover_enter)
-        self.folder_path.bind("<Leave>", self.on_hover_leave)
-
-        self.options_frame = ctk.CTkFrame(self)
-        self.options_frame.pack(pady=10, fill="x", padx=20)
-
-        self.download_images_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Imágenes"))
-        self.download_images_check.pack(side="left", padx=10)
-        self.download_images_check.select()
-
-        self.download_videos_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Vídeos"))
-        self.download_videos_check.pack(side="left", padx=10)
-        self.download_videos_check.select()
-
-        self.download_compressed_check = ctk.CTkCheckBox(self.options_frame, text=self.tr("Descargar Comprimidos"))
-        self.download_compressed_check.pack(side="left", padx=10)
-        self.download_compressed_check.select()
-
-        self.action_frame = ctk.CTkFrame(self)
-        self.action_frame.pack(pady=10, fill="x", padx=20)
-
-        self.download_button = ctk.CTkButton(
-            self.action_frame,
-            text=self.tr("Descargar"),
-            command=self.start_download
-        )
-        self.download_button.pack(side="left", padx=10)
-
-        self.cancel_button = ctk.CTkButton(
-            self.action_frame,
-            text=self.tr("Cancelar Descarga"),
-            state="disabled",
-            command=self.cancel_download
-        )
-        self.cancel_button.pack(side="left", padx=10)
-
-        self.autoscroll_logs_checkbox = ctk.CTkCheckBox(
-            self.action_frame,
-            text=self.tr("Auto-scroll logs"),
-            variable=self.autoscroll_logs_var
-        )
-        self.autoscroll_logs_checkbox.pack(side="right")
-
-        self.progress_label = ctk.CTkLabel(self.action_frame, text="")
-        self.progress_label.pack(side="left", padx=10)
-
-        self.log_textbox = ctk.CTkTextbox(self, width=590, height=200)
-        self.log_textbox.pack(pady=(10, 0), padx=20, fill="both", expand=True)
-        self.log_textbox.configure(state="disabled")
-
-        self.progress_frame = ctk.CTkFrame(self)
-        self.progress_frame.pack(pady=(0, 10), fill="x", padx=20)
-
-        self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
-        self.progress_bar.pack(side="left", fill="x", expand=True, padx=(0, 10))
-
-        self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="0%")
-        self.progress_percentage.pack(side="left")
-
-        self.download_icon = self.load_and_resize_image("resources/img/iconos/ui/download_icon.png", (24, 24))
-        self.toggle_details_button = ctk.CTkLabel(
-            self.progress_frame,
-            image=self.download_icon,
-            text="",
-            cursor="hand2"
-        )
-        self.toggle_details_button.pack(side="left", padx=(5, 0))
-        self.toggle_details_button.bind("<Button-1>", lambda e: self.toggle_progress_details())
-        self.toggle_details_button.bind("<Enter>", lambda e: self.toggle_details_button.configure(fg_color="gray25"))
-        self.toggle_details_button.bind("<Leave>", lambda e: self.toggle_details_button.configure(fg_color="transparent"))
-
-        self.progress_details_frame = ctk.CTkFrame(self)
-        self.progress_details_frame.place_forget()
-
-        self.context_menu = tk.Menu(self.url_entry, tearoff=0)
-        self.context_menu.add_command(label=self.tr("Copiar"), command=self.copy_to_clipboard)
-        self.context_menu.add_command(label=self.tr("Pegar"), command=self.paste_from_clipboard)
-        self.context_menu.add_command(label=self.tr("Cortar"), command=self.cut_to_clipboard)
-
-        self.url_entry.bind("<Button-3>", self.show_context_menu)
-        self.bind("<Button-1>", self.on_click)
-
-        footer = ctk.CTkFrame(self, height=30, corner_radius=0)
-        footer.pack(side="bottom", fill="x")
-
-        self.footer_eta_label = ctk.CTkLabel(footer, text="ETA: N/A", font=("Arial", 11))
-        self.footer_eta_label.pack(side="left", padx=20)
-
-        self.footer_speed_label = ctk.CTkLabel(footer, text="Speed: 0 KB/s", font=("Arial", 11))
-        self.footer_speed_label.pack(side="right", padx=20)
+        DownloadPanelBuilder(self).build()
+        LogPanelBuilder(self).build()
+        FooterBuilder(self).build()
 
     def update_ui_texts(self):
         for widget in self.menu_bar.winfo_children():
@@ -480,116 +368,6 @@ class ImageDownloaderApp(ctk.CTk):
         for child in children:
             all_children.extend(self.get_all_children(child))
         return all_children
-
-    def create_custom_menubar(self):
-        archivo_button = ctk.CTkButton(
-            self.menu_bar,
-            text=self.tr("Archivo"),
-            width=80,
-            fg_color="transparent",
-            hover_color="gray25",
-            command=self.toggle_archivo_menu
-        )
-        archivo_button.pack(side="left")
-        archivo_button.bind("<Button-1>", lambda e: "break")
-
-        about_button = ctk.CTkButton(
-            self.menu_bar,
-            text=self.tr("About"),
-            width=80,
-            fg_color="transparent",
-            hover_color="gray25",
-            command=self.about_window.show_about
-        )
-        about_button.pack(side="left")
-        about_button.bind("<Button-1>", lambda e: "break")
-
-        donors_button = ctk.CTkButton(
-            self.menu_bar,
-            text=self.tr("Patreons"),
-            width=80,
-            fg_color="transparent",
-            hover_color="gray25",
-            command=self.show_donors_modal
-        )
-        donors_button.pack(side="left")
-        donors_button.bind("<Button-1>", lambda e: "break")
-
-        self.archivo_menu_frame = None
-        self.ayuda_menu_frame = None
-        self.donaciones_menu_frame = None
-
-        def on_enter(event, frame):
-            frame.configure(fg_color="gray25")
-
-        def on_leave(event, frame):
-            frame.configure(fg_color="transparent")
-
-        if self.github_icon:
-            resized_github_icon = self.github_icon.resize((16, 16), Image.Resampling.LANCZOS)
-            resized_github_icon = ctk.CTkImage(resized_github_icon)
-
-            github_frame = ctk.CTkFrame(self.menu_bar, cursor="hand2", fg_color="transparent", corner_radius=5)
-            github_frame.pack(side="right", padx=5)
-
-            github_label = ctk.CTkLabel(
-                github_frame,
-                image=resized_github_icon,
-                text=f" Star {self.github_stars}",
-                compound="left",
-                font=("Arial", 12)
-            )
-            github_label.pack(padx=5, pady=5)
-
-            github_frame.bind("<Enter>", lambda e: on_enter(e, github_frame))
-            github_frame.bind("<Leave>", lambda e: on_leave(e, github_frame))
-            github_label.bind("<Enter>", lambda e: on_enter(e, github_frame))
-            github_label.bind("<Leave>", lambda e: on_leave(e, github_frame))
-            github_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/emy69/CoomerDL"))
-
-        self.discord_icon = self.load_discord_icon()
-        if self.discord_icon:
-            resized_discord_icon = self.discord_icon.resize((16, 16), Image.Resampling.LANCZOS)
-            resized_discord_icon = ctk.CTkImage(resized_discord_icon)
-
-            discord_frame = ctk.CTkFrame(self.menu_bar, cursor="hand2", fg_color="transparent", corner_radius=5)
-            discord_frame.pack(side="right", padx=5)
-
-            discord_label = ctk.CTkLabel(
-                discord_frame,
-                image=resized_discord_icon,
-                text="Discord",
-                compound="left"
-            )
-            discord_label.pack(padx=5, pady=5)
-
-            discord_frame.bind("<Enter>", lambda e: on_enter(e, discord_frame))
-            discord_frame.bind("<Leave>", lambda e: on_leave(e, discord_frame))
-            discord_label.bind("<Enter>", lambda e: on_enter(e, discord_frame))
-            discord_label.bind("<Leave>", lambda e: on_leave(e, discord_frame))
-            discord_label.bind("<Button-1>", lambda e: webbrowser.open("https://discord.gg/ku8gSPsesh"))
-
-        self.new_icon = self.load_patreon_icon()
-        if self.new_icon:
-            resized_new_icon = self.new_icon.resize((16, 16), Image.Resampling.LANCZOS)
-            resized_new_icon = ctk.CTkImage(resized_new_icon)
-
-            new_icon_frame = ctk.CTkFrame(self.menu_bar, cursor="hand2", fg_color="transparent", corner_radius=5)
-            new_icon_frame.pack(side="right", padx=5)
-
-            new_icon_label = ctk.CTkLabel(
-                new_icon_frame,
-                image=resized_new_icon,
-                text="Patreon",
-                compound="left"
-            )
-            new_icon_label.pack(padx=5, pady=5)
-
-            new_icon_frame.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
-            new_icon_frame.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
-            new_icon_label.bind("<Enter>", lambda e: on_enter(e, new_icon_frame))
-            new_icon_label.bind("<Leave>", lambda e: on_leave(e, new_icon_frame))
-            new_icon_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.patreon.com/Emy69"))
 
     def show_donors_modal(self):
         donors_modal = DonorsModal(self, self.tr)
