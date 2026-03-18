@@ -2,13 +2,14 @@ import json
 import os
 import sqlite3
 import threading
-from tkinter import filedialog, messagebox, ttk
+import requests
 import customtkinter as ctk
 import tkinter as tk
+import requests
 from PIL import Image, ImageTk
 from PIL import Image as PilImage
-import requests
-
+from tkinter import filedialog, messagebox, ttk
+from app.services.settings_window_service import SettingsWindowService
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
@@ -31,29 +32,21 @@ class SettingsWindow:
             "Русский": "ru"
         }
 
-        self.settings = self.load_settings()
+        self.settings_service = SettingsWindowService(
+            config_path=self.CONFIG_PATH,
+            on_settings_changed=on_settings_changed
+        )
+        self.settings = self.settings_service.load_settings()
         self.folder_structure_icons = self.load_icons()
-        self.on_settings_changed = on_settings_changed
         self.site_status_labels = {}
         self.site_textboxes = {} 
 
     def load_settings(self):
-        if not os.path.exists(self.CONFIG_PATH):
-            return {'max_downloads': 3, 'folder_structure': 'default', 'language': 'en', 'theme': 'System'}
-
-        try:
-            with open(self.CONFIG_PATH, 'r') as file:
-                return json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {'max_downloads': 3, 'folder_structure': 'default', 'language': 'en', 'theme': 'System'}
+        return self.settings_service.load_settings()
 
     def save_settings(self):
-        os.makedirs(os.path.dirname(self.CONFIG_PATH), exist_ok=True)
-        with open(self.CONFIG_PATH, 'w') as file:
-            json.dump(self.settings, file, indent=4)
-
-        if callable(self.on_settings_changed):
-            self.on_settings_changed(self.settings)
+        self.settings_service.save_settings(self.settings)
+        
     def load_icons(self):
         icons = {}
         try:
@@ -837,20 +830,21 @@ class SettingsWindow:
                 self.translate("Error"),
                 self.translate("Por favor, ingresa valores numéricos válidos.")
             )
-
-
-
+            
     def apply_language_settings(self, selected_language_name):
-        if selected_language_name in self.languages:
-            selected_language_code = self.languages[selected_language_name]
-            self.settings['language'] = selected_language_code
-            self.save_settings()
-            self.save_language_preference(selected_language_code)
-            self.load_translations(selected_language_code)
-            self.update_ui_texts()
-            messagebox.showinfo(self.translate("Success"), self.translate("The language was applied successfully."))
+        success, message = self.settings_service.apply_language_settings(
+            settings=self.settings,
+            selected_language_name=selected_language_name,
+            languages=self.languages,
+            save_language_preference_func=self.save_language_preference,
+            load_translations_func=self.load_translations,
+            update_ui_texts_func=self.update_ui_texts,
+        )
+
+        if success:
+            messagebox.showinfo(self.translate("Success"), self.translate(message))
         else:
-            messagebox.showwarning(self.translate("Warning"), self.translate("Please select a language."))
+            messagebox.showwarning(self.translate("Warning"), self.translate(message))
 
     def update_treeview(self):
         """Update the TreeViews to display the folder structure."""
@@ -878,28 +872,23 @@ class SettingsWindow:
             widget.destroy()
 
     def get_language_name(self, lang_code):
-        for name, code in self.languages.items():
-            if code == lang_code:
-                return name
-        return "English"
+        return self.settings_service.get_language_name(self.languages, lang_code)
 
     def change_theme_in_thread(self, theme_name):
-        threading.Thread(target=self.apply_theme, args=(theme_name,)).start()
+        def on_done(result):
+            success, message = result
+            if success:
+                self.parent.after(
+                    0,
+                    lambda: messagebox.showinfo(self.translate("Success"), self.translate(message))
+                )
+
+        self.settings_service.change_theme_in_thread(self.settings, theme_name, callback=on_done)
 
     def apply_theme(self, theme_name):
-        if theme_name.lower() == "light":
-            ctk.set_appearance_mode("light")
-        elif theme_name.lower() == "dark":
-            ctk.set_appearance_mode("dark")
-        else:
-            ctk.set_appearance_mode("system")
-        self.settings['theme'] = theme_name
-        self.save_settings()
-        messagebox.showinfo(self.translate("Success"), self.translate("The theme was applied successfully."))
+        success, message = self.settings_service.apply_theme(self.settings, theme_name)
+        if success:
+            messagebox.showinfo(self.translate("Success"), self.translate(message))
 
     def center_window(self, window, width, height):
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-        x = int((screen_width / 2) - (width / 2))
-        y = int((screen_height / 2) - (height / 2))
-        window.geometry(f'{width}x{height}+{x}+{y}')
+        self.settings_service.center_window(window, width, height)

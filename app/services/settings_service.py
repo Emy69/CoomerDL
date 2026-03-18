@@ -3,7 +3,7 @@ import os
 
 
 class SettingsService:
-    def __init__(self, settings_path="resources/settings.json"):
+    def __init__(self, settings_path="resources/config/settings.json"):
         self.settings_path = settings_path
 
     def ensure_settings_file(self):
