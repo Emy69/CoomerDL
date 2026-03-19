@@ -79,7 +79,10 @@ class PySideMainWindow(QMainWindow):
         self.update_service = UpdateService(self.tr)
         self.log_service = LogService()
         self.url_service = UrlService()
-        self.downloader_factory = DownloaderFactory(self)
+        from app.adapters.tkinter_frontend_bridge import TkinterFrontendBridge
+
+        self.frontend_bridge = TkinterFrontendBridge(self)
+        self.downloader_factory = DownloaderFactory(self.frontend_bridge, app=self)
         self.main_controller = MainController(self)
 
         # runtime
@@ -213,11 +216,12 @@ class PySideMainWindow(QMainWindow):
         self.bunkr_downloader = self.downloader_factory.create_bunkr_downloader()
 
     def setup_general_downloader(self):
-        self.general_downloader = self.downloader_factory.create_general_downloader()
+        self.general_downloader = self.downloader_factory.create_general_downloader(self.settings)
 
     def setup_jpg5_downloader(self):
         self.active_downloader = self.downloader_factory.create_jpg5_downloader(
-            self.url_entry.get().strip()
+            self.url_entry.get().strip(),
+            progress_manager=None
         )
 
     def _create_default_downloader(self):
