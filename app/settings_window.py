@@ -13,6 +13,8 @@ from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
 from app.services.database_settings_service import DatabaseSettingsService
 from app.services.cookies_settings_service import CookiesSettingsService
+from app.services.structure_preview_service import StructurePreviewService
+
 
 class SettingsWindow:
     CONFIG_PATH = 'resources/config/settings.json' 
@@ -41,6 +43,7 @@ class SettingsWindow:
         )
         self.download_settings_service = DownloadSettingsService()
         self.database_settings_service = DatabaseSettingsService()
+        self.structure_preview_service = StructurePreviewService()
         self.cookies_settings_service = CookiesSettingsService("resources/config/cookies.json")
         self.settings = self.settings_service.load_settings()
         self.folder_structure_icons = self.load_icons()
@@ -674,18 +677,16 @@ class SettingsWindow:
             text=self.translate("Folder Structure Preview"),
             font=("Helvetica", 16, "bold")
         )
-        structure_label.grid(row=0, column=0, pady=(20,10), sticky="w")
+        structure_label.grid(row=0, column=0, pady=(20, 10), sticky="w", padx=20)
 
-        # Descripción principal
         description_label = ctk.CTkLabel(
             tab,
             text=self.translate("Here you can see how your downloaded files will be organized on disk."),
             font=("Helvetica", 11),
             text_color="gray"
         )
-        description_label.grid(row=1, column=0, sticky="w", padx=20, pady=(0,15))
+        description_label.grid(row=1, column=0, sticky="w", padx=20, pady=(0, 15))
 
-        # -------- BLOQUE DE EJEMPLO: Ejemplos de nombres de archivos según la opción --------
         examples_text = (
             "Ejemplos de nombres según File Naming Mode:\n\n"
             " • [Modo 0] Use File ID (default):  \n"
@@ -704,8 +705,7 @@ class SettingsWindow:
             text_color="gray",
             justify="left"
         )
-        examples_label.grid(row=2, column=0, sticky="w", padx=20, pady=(0,15))
-        # ------------------------------------------------------------------------------------
+        examples_label.grid(row=2, column=0, sticky="w", padx=20, pady=(0, 15))
 
         treeview_frame = ctk.CTkFrame(tab, fg_color="transparent")
         treeview_frame.grid(row=3, column=0, sticky="nsew", padx=20, pady=20)
@@ -713,11 +713,25 @@ class SettingsWindow:
         treeview_frame.grid_columnconfigure(0, weight=1)
         treeview_frame.grid_columnconfigure(1, weight=1)
 
+        default_label = ctk.CTkLabel(
+            treeview_frame,
+            text=self.translate("Default Structure"),
+            font=("Helvetica", 12, "bold")
+        )
+        default_label.grid(row=0, column=0, sticky="w", padx=5, pady=(0, 5))
+
+        post_label = ctk.CTkLabel(
+            treeview_frame,
+            text=self.translate("Post Number Structure"),
+            font=("Helvetica", 12, "bold")
+        )
+        post_label.grid(row=0, column=1, sticky="w", padx=5, pady=(0, 5))
+
         self.default_treeview = ttk.Treeview(treeview_frame, show="tree")
-        self.default_treeview.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.default_treeview.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
         self.post_treeview = ttk.Treeview(treeview_frame, show="tree")
-        self.post_treeview.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        self.post_treeview.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
 
         self.update_treeview()
     
@@ -786,6 +800,9 @@ class SettingsWindow:
             self.save_settings()
             self.download_settings_service.apply_to_downloader(self.downloader, parsed_values)
 
+            if hasattr(self, "default_treeview") and hasattr(self, "post_treeview"):
+                self.update_treeview()
+
             messagebox.showinfo(
                 self.translate("Éxito"),
                 self.translate("La configuración de descargas se aplicó correctamente.")
@@ -813,25 +830,17 @@ class SettingsWindow:
             messagebox.showwarning(self.translate("Warning"), self.translate(message))
 
     def update_treeview(self):
-        """Update the TreeViews to display the folder structure."""
-        if hasattr(self, 'default_treeview') and hasattr(self, 'post_treeview'):
-            self.default_treeview.delete(*self.default_treeview.get_children())
-            self.post_treeview.delete(*self.post_treeview.get_children())
+        # Preview para estructura default
+        default_settings = dict(self.settings)
+        default_settings["folder_structure"] = "default"
+        default_payload = self.structure_preview_service.build_preview_payload(default_settings)
+        self.populate_structure_tree(self.default_treeview, default_payload)
 
-            root = self.default_treeview.insert("", "end", text="User", image=self.folder_structure_icons.get('folder'))
-            self.default_treeview.insert(root, "end", text="images", image=self.folder_structure_icons.get('folder'))
-            self.default_treeview.insert(root, "end", text="videos", image=self.folder_structure_icons.get('folder'))
-            self.default_treeview.insert(root, "end", text="documents", image=self.folder_structure_icons.get('folder'))
-            self.default_treeview.insert(root, "end", text="compressed", image=self.folder_structure_icons.get('folder'))
-            self.default_treeview.item(root, open=True)
-
-            post_root = self.post_treeview.insert("", "end", text="User", image=self.folder_structure_icons.get('folder'))
-            post = self.post_treeview.insert(post_root, "end", text="post_id", image=self.folder_structure_icons.get('folder'))
-            self.post_treeview.insert(post, "end", text="images", image=self.folder_structure_icons.get('folder'))
-            self.post_treeview.insert(post, "end", text="videos", image=self.folder_structure_icons.get('folder'))
-            self.post_treeview.insert(post, "end", text="documents", image=self.folder_structure_icons.get('folder'))
-            self.post_treeview.insert(post, "end", text="compressed", image=self.folder_structure_icons.get('folder'))
-            self.post_treeview.item(post_root, open=True)
+        # Preview para estructura post_number
+        post_settings = dict(self.settings)
+        post_settings["folder_structure"] = "post_number"
+        post_payload = self.structure_preview_service.build_preview_payload(post_settings)
+        self.populate_structure_tree(self.post_treeview, post_payload)
 
     def clear_frame(self, frame):
         for widget in frame.winfo_children():
@@ -943,3 +952,29 @@ class SettingsWindow:
                 self.translate("Error"),
                 self.translate(f"Error clearing cookies: {e}")
             )
+            
+    def build_structure_preview_payload(self):
+        return self.structure_preview_service.build_preview_payload(self.settings)
+
+    def populate_structure_tree(self, tree, payload):
+        for item in tree.get_children():
+            tree.delete(item)
+
+        root_id = tree.insert("", "end", text=payload["root"], open=True)
+        self._insert_structure_nodes(tree, root_id, payload)
+
+    def _insert_structure_nodes(self, tree, parent_id, payload):
+        for folder in payload.get("folders", []):
+            folder_id = tree.insert(parent_id, "end", text=folder["name"], open=True)
+            self._insert_structure_nodes(tree, folder_id, folder)
+
+        for file_name in payload.get("files", []):
+            tree.insert(parent_id, "end", text=file_name, open=True)
+
+    def refresh_structure_preview(self, tree=None):
+        if tree is not None:
+            payload = self.build_structure_preview_payload()
+            self.populate_structure_tree(tree, payload)
+            return
+
+        self.update_treeview()
