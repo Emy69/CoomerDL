@@ -27,7 +27,7 @@ from app.adapters.downloader_factory import DownloaderFactory
 from app.views.pyside.widgets.download_panel import DownloadPanel
 from app.views.pyside.widgets.log_panel import LogPanel
 from app.views.pyside.widgets.footer_bar import FooterBar
-
+from app.views.pyside.dialogs.settings_dialog import SettingsDialog
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -106,6 +106,7 @@ class PySideMainWindow(QMainWindow):
         self._build_ui()
         self._bind_events()
         self._create_default_downloader()
+        self.update_ui_texts()
 
     # ------------------------------------------------------------------
     # UI
@@ -114,9 +115,20 @@ class PySideMainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
 
+        from PySide6.QtWidgets import QPushButton, QHBoxLayout
+
         layout = QVBoxLayout(central)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
+
+        top_row = QHBoxLayout()
+        top_row.addStretch(1)
+
+        self.settings_button = QPushButton("Settings")
+        self.settings_button.clicked.connect(self.open_settings_dialog)
+        top_row.addWidget(self.settings_button)
+
+        layout.addLayout(top_row)
 
         self.download_panel = DownloadPanel(self)
         layout.addWidget(self.download_panel)
@@ -134,6 +146,71 @@ class PySideMainWindow(QMainWindow):
         self.download_compressed_check = QtCheckBoxAdapter(self.download_panel.compressed_check)
 
         self.update_folder_label()
+    
+    def open_settings_dialog(self):
+        dialog = SettingsDialog(
+            parent=self,
+            tr=self.tr,
+            load_translations=self.load_translations,
+            update_ui_texts=self.update_ui_texts,
+            save_language_preference=self.save_language_preference,
+            version=self.version,
+            downloader=getattr(self, "active_downloader", None),
+            check_for_new_version=lambda startup=False: None,
+            on_settings_changed=self.apply_runtime_settings,
+        )
+        dialog.exec()
+        
+    def load_translations(self, language=None):
+        target_language = language or self.app_state.language
+        self.app_state.language = target_language
+        self.translation_service.set_language(target_language)
+
+    def save_language_preference(self, language):
+        self.app_state.language = language
+        self.settings_service.save_language_preference(language)
+        self.translation_service.set_language(language)
+
+    def update_ui_texts(self):
+        self.download_panel.url_label.setText(self.tr("URL de la página web:"))
+        self.download_panel.browse_button.setText(self.tr("Seleccionar Carpeta"))
+        self.download_panel.images_check.setText(self.tr("Descargar Imágenes"))
+        self.download_panel.videos_check.setText(self.tr("Descargar Vídeos"))
+        self.download_panel.compressed_check.setText(self.tr("Descargar Comprimidos"))
+        self.download_panel.download_button.setText(self.tr("Descargar"))
+        self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
+        if hasattr(self, "settings_button"):
+            self.settings_button.setText(self.tr("Settings"))
+        self.setWindowTitle(f"Downloader [{self.version}]")
+
+    def apply_runtime_settings(self, new_settings: dict):
+        try:
+            self.settings = new_settings
+            self.max_downloads = int(new_settings.get("max_downloads", 3) or 3)
+
+            if hasattr(self, "default_downloader") and self.default_downloader:
+                dd = self.default_downloader
+                dd.max_workers = self.max_downloads
+                dd.folder_structure = new_settings.get("folder_structure", "default")
+
+                try:
+                    dd.file_naming_mode = int(new_settings.get("file_naming_mode", 0) or 0)
+                except Exception:
+                    pass
+
+                try:
+                    dd.max_retries = int(new_settings.get("max_retries", 3) or 3)
+                except Exception:
+                    pass
+
+                try:
+                    dd.retry_interval = float(new_settings.get("retry_interval", 2.0) or 2.0)
+                except Exception:
+                    pass
+
+            self.add_log_message_safe("Settings applied.")
+        except Exception as e:
+            self.add_log_message_safe(f"Error applying settings: {e}")
 
     def _bind_events(self):
         self.download_panel.browse_button.clicked.connect(self.select_folder)
