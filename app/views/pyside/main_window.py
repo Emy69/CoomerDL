@@ -28,6 +28,7 @@ from app.views.pyside.widgets.download_panel import DownloadPanel
 from app.views.pyside.widgets.log_panel import LogPanel
 from app.views.pyside.widgets.footer_bar import FooterBar
 from app.views.pyside.dialogs.settings_dialog import SettingsDialog
+from app.views.pyside.progress.progress_controller import ProgressController
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -84,7 +85,7 @@ class PySideMainWindow(QMainWindow):
         self.frontend_bridge = TkinterFrontendBridge(self)
         self.downloader_factory = DownloaderFactory(self.frontend_bridge, app=self)
         self.main_controller = MainController(self)
-
+        self.progress_controller = ProgressController(self)
         # runtime
         self.active_downloader = None
         self.download_start_time = None
@@ -124,6 +125,10 @@ class PySideMainWindow(QMainWindow):
         top_row = QHBoxLayout()
         top_row.addStretch(1)
 
+        self.progress_details_button = QPushButton("Progress Details")
+        self.progress_details_button.clicked.connect(self.toggle_progress_details)
+        top_row.addWidget(self.progress_details_button)
+
         self.settings_button = QPushButton("Settings")
         self.settings_button.clicked.connect(self.open_settings_dialog)
         top_row.addWidget(self.settings_button)
@@ -146,6 +151,15 @@ class PySideMainWindow(QMainWindow):
         self.download_compressed_check = QtCheckBoxAdapter(self.download_panel.compressed_check)
 
         self.update_folder_label()
+        
+    def toggle_progress_details(self):
+        self.progress_controller.toggle_dialog()
+
+    def remove_progress_bar(self, file_id):
+        self.progress_controller.remove_item(str(file_id))
+
+    def center_progress_details_frame(self):
+        pass
     
     def open_settings_dialog(self):
         dialog = SettingsDialog(
@@ -179,6 +193,8 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.compressed_check.setText(self.tr("Descargar Comprimidos"))
         self.download_panel.download_button.setText(self.tr("Descargar"))
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
+        if hasattr(self, "progress_details_button"):
+            self.progress_details_button.setText(self.tr("Progress Details"))
         if hasattr(self, "settings_button"):
             self.settings_button.setText(self.tr("Settings"))
         self.setWindowTitle(f"Downloader [{self.version}]")
@@ -240,10 +256,10 @@ class PySideMainWindow(QMainWindow):
         self.signals.set_cancel_enabled.emit(False)
 
     def clear_progress_bars(self):
-        # fase 1 PySide: solo progreso global
         self.signals.global_progress.emit(0, 0)
         self.footer_set_speed("Speed: 0 KB/s")
         self.footer_set_eta("ETA: N/A")
+        self.progress_controller.clear_all()
 
     def add_log_message_safe(self, message: str):
         self.log_service.add(message)
@@ -262,9 +278,23 @@ class PySideMainWindow(QMainWindow):
             self.signals.log_message.emit(f"No se pudo exportar los logs: {e}")
 
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
-        # fase 1: si viene progreso global o individual, usamos el porcentaje recibido
-        if total and total > 0:
-            self.signals.global_progress.emit(int(downloaded), int(total))
+        if file_id is None:
+            if total and total > 0:
+                self.signals.global_progress.emit(int(downloaded), int(total))
+        else:
+            eta_text = "ETA: N/A"
+            if eta is not None:
+                minutes = int(eta // 60)
+                seconds = int(eta % 60)
+                eta_text = f"ETA: {minutes}m {seconds}s"
+
+            self.progress_controller.update_item(
+                file_id=str(file_id),
+                file_path=str(file_path or file_id),
+                downloaded=int(downloaded),
+                total=int(total),
+                eta_text=eta_text,
+            )
 
         if speed is not None:
             self.footer_set_speed_from_value(speed)
