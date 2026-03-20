@@ -31,6 +31,8 @@ from app.views.pyside.dialogs.settings_dialog import SettingsDialog
 from app.views.pyside.progress.progress_controller import ProgressController
 from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
+from app.donors import DonorsModal
+
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -133,6 +135,10 @@ class PySideMainWindow(QMainWindow):
         self.about_button = QPushButton("About")
         self.about_button.clicked.connect(self.open_about_window)
         top_row.addWidget(self.about_button)
+        
+        self.donors_button = QPushButton("Patreons")
+        self.donors_button.clicked.connect(self.open_donors_modal)
+        top_row.addWidget(self.donors_button)
 
         self.settings_button = QPushButton("Settings")
         self.settings_button.clicked.connect(self.open_settings_dialog)
@@ -183,6 +189,10 @@ class PySideMainWindow(QMainWindow):
     def open_about_window(self):
         dialog = AboutWindow(self, self.tr, self.version)
         dialog.show_about()
+    
+    def open_donors_modal(self):
+        dialog = DonorsModal(self, self.tr)
+        dialog.show_modal()
         
     def load_translations(self, language=None):
         target_language = language or self.app_state.language
