@@ -29,6 +29,7 @@ from app.views.pyside.widgets.log_panel import LogPanel
 from app.views.pyside.widgets.footer_bar import FooterBar
 from app.views.pyside.dialogs.settings_dialog import SettingsDialog
 from app.views.pyside.progress.progress_controller import ProgressController
+from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -80,9 +81,8 @@ class PySideMainWindow(QMainWindow):
         self.update_service = UpdateService(self.tr)
         self.log_service = LogService()
         self.url_service = UrlService()
-        from app.adapters.tkinter_frontend_bridge import TkinterFrontendBridge
 
-        self.frontend_bridge = TkinterFrontendBridge(self)
+        self.frontend_bridge = PySideFrontendBridge(self)
         self.downloader_factory = DownloaderFactory(self.frontend_bridge, app=self)
         self.main_controller = MainController(self)
         self.progress_controller = ProgressController(self)

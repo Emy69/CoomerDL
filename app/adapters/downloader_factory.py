@@ -12,7 +12,6 @@ class DownloaderFactory:
 
     def create_erome_downloader(self, is_profile_download=False):
         return EromeDownloader(
-            root=self.app,
             enable_widgets_callback=self.frontend.enable_widgets,
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",

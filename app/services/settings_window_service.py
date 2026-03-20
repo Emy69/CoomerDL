@@ -1,7 +1,6 @@
 import json
 import os
 import threading
-import customtkinter as ctk
 
 
 class SettingsWindowService:
@@ -70,13 +69,6 @@ class SettingsWindowService:
         return True, "The language was applied successfully."
 
     def apply_theme(self, settings: dict, theme_name: str):
-        if theme_name.lower() == "light":
-            ctk.set_appearance_mode("light")
-        elif theme_name.lower() == "dark":
-            ctk.set_appearance_mode("dark")
-        else:
-            ctk.set_appearance_mode("system")
-
         settings["theme"] = theme_name
         self.save_settings(settings)
         return True, "The theme was applied successfully."
@@ -90,8 +82,15 @@ class SettingsWindowService:
         threading.Thread(target=worker, daemon=True).start()
 
     def center_window(self, window, width, height):
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-        x = int((screen_width / 2) - (width / 2))
-        y = int((screen_height / 2) - (height / 2))
-        window.geometry(f"{width}x{height}+{x}+{y}")
+        try:
+            # PySide6 / Qt
+            screen = window.screen()
+            if screen is not None:
+                geometry = screen.availableGeometry()
+                x = geometry.x() + (geometry.width() - width) // 2
+                y = geometry.y() + (geometry.height() - height) // 2
+                window.resize(width, height)
+                window.move(x, y)
+                return
+        except Exception:
+            pass

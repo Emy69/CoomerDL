@@ -10,11 +10,9 @@ from urllib.parse import urljoin, quote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from requests.exceptions import ChunkedEncodingError
-from tkinter import messagebox, simpledialog
 
 class EromeDownloader:
-    def __init__(self, root, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
-        self.root = root
+    def __init__(self, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
         self.session = requests.Session()
         self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
@@ -60,18 +58,14 @@ class EromeDownloader:
     def create_folder(self, folder_name):
         try:
             os.makedirs(folder_name, exist_ok=True)
+            return folder_name
         except OSError as e:
             self.log(self.tr("Error creating folder: {error}", error=e))
-            response = messagebox.askyesno(self.tr("Error"), self.tr("Couldn't create folder: {folder_name}\nWould you like to choose a new name?", folder_name=folder_name), parent=self.root)
-            if response:
-                new_folder_name = simpledialog.askstring(self.tr("New folder name"), self.tr("Enter new folder name:"), parent=self.root)
-                if new_folder_name:
-                    folder_name = os.path.join(os.path.dirname(folder_name), self.clean_filename(new_folder_name))
-                    try:
-                        os.makedirs(folder_name, exist_ok=True)
-                    except OSError as e:
-                        messagebox.showerror(self.tr("Error"), self.tr("Could not create folder: {folder_name}\nError: {error}", folder_name=folder_name, error=e), parent=self.root)
-        return folder_name
+            fallback = os.path.join(os.path.dirname(folder_name), "erome_album")
+            fallback = self.clean_filename(fallback)
+            os.makedirs(fallback, exist_ok=True)
+            self.log(self.tr("Fallback folder created: {folder_name}", folder_name=fallback))
+            return fallback
 
     def download_file(self, url, file_path, resource_type, file_id=None, max_retries=999999):
         if self.cancel_requested:
