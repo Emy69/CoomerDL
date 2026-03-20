@@ -12,11 +12,14 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QTreeWidget,
     QTreeWidgetItem,
+    QTextEdit,
+    QFileDialog,
 )
 
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
 from app.services.structure_preview_service import StructurePreviewService
+from app.services.cookies_settings_service import CookiesSettingsService
 
 
 class SettingsDialog(QDialog):
@@ -45,6 +48,7 @@ class SettingsDialog(QDialog):
         self.on_settings_changed = on_settings_changed
 
         self.CONFIG_PATH = "resources/config/settings.json"
+        self.COOKIES_PATH = "resources/config/cookies.json"
 
         self.languages = {
             "English": "en",
@@ -57,10 +61,11 @@ class SettingsDialog(QDialog):
         )
         self.download_settings_service = DownloadSettingsService()
         self.structure_preview_service = StructurePreviewService()
+        self.cookies_settings_service = CookiesSettingsService(self.COOKIES_PATH)
         self.settings = self.settings_service.load_settings()
 
         self.setWindowTitle(f"Settings [{self.version}]")
-        self.resize(760, 560)
+        self.resize(800, 620)
 
         self._build_ui()
 
@@ -76,14 +81,17 @@ class SettingsDialog(QDialog):
         self.general_tab = QWidget()
         self.downloads_tab = QWidget()
         self.structure_tab = QWidget()
+        self.cookies_tab = QWidget()
 
         self.tabs.addTab(self.general_tab, self.translate("General"))
         self.tabs.addTab(self.downloads_tab, self.translate("Downloads"))
         self.tabs.addTab(self.structure_tab, self.translate("Structure"))
+        self.tabs.addTab(self.cookies_tab, self.translate("Cookies"))
 
         self._build_general_tab()
         self._build_downloads_tab()
         self._build_structure_tab()
+        self._build_cookies_tab()
 
         buttons_row = QHBoxLayout()
         buttons_row.addStretch(1)
@@ -173,6 +181,35 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.structure_tree, 1)
 
         self.refresh_structure_preview()
+
+    def _build_cookies_tab(self):
+        layout = QVBoxLayout(self.cookies_tab)
+
+        self.cookies_info_label = QLabel(
+            self.translate("Here you can paste, import, save, or clear your cookies JSON.")
+        )
+        layout.addWidget(self.cookies_info_label)
+
+        self.cookies_text = QTextEdit()
+        self.cookies_text.setPlainText(self.cookies_settings_service.load_cookies_text())
+        layout.addWidget(self.cookies_text, 1)
+
+        buttons_row = QHBoxLayout()
+
+        self.import_cookies_button = QPushButton(self.translate("Import Cookies"))
+        self.import_cookies_button.clicked.connect(self._import_cookies)
+        buttons_row.addWidget(self.import_cookies_button)
+
+        self.save_cookies_button = QPushButton(self.translate("Save Cookies"))
+        self.save_cookies_button.clicked.connect(self._save_cookies)
+        buttons_row.addWidget(self.save_cookies_button)
+
+        self.clear_cookies_button = QPushButton(self.translate("Clear Cookies"))
+        self.clear_cookies_button.clicked.connect(self._clear_cookies)
+        buttons_row.addWidget(self.clear_cookies_button)
+
+        buttons_row.addStretch(1)
+        layout.addLayout(buttons_row)
 
     # ------------------------------------------------------------
     # Structure preview
@@ -275,11 +312,77 @@ class SettingsDialog(QDialog):
                 self.translate("Por favor, ingresa valores numéricos válidos.")
             )
 
+    def _save_cookies(self):
+        cookies_text = self.cookies_text.toPlainText().strip()
+        try:
+            self.cookies_settings_service.save_cookies_text(cookies_text)
+            QMessageBox.information(
+                self,
+                self.translate("Success"),
+                self.translate("Cookies were saved successfully.")
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.translate("Error"),
+                self.translate(f"Error saving cookies: {e}")
+            )
+
+    def _import_cookies(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.translate("Import Cookies"),
+            "",
+            "JSON Files (*.json);;Text Files (*.txt);;All Files (*)"
+        )
+        if not file_path:
+            return
+
+        try:
+            content = self.cookies_settings_service.import_cookies_file(file_path)
+            self.cookies_text.setPlainText(content)
+            QMessageBox.information(
+                self,
+                self.translate("Success"),
+                self.translate("Cookies were imported successfully.")
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.translate("Error"),
+                self.translate(f"Error importing cookies: {e}")
+            )
+
+    def _clear_cookies(self):
+        confirm = QMessageBox.question(
+            self,
+            self.translate("Confirm"),
+            self.translate("Are you sure you want to clear the saved cookies?")
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.cookies_settings_service.clear_cookies()
+            self.cookies_text.clear()
+            QMessageBox.information(
+                self,
+                self.translate("Success"),
+                self.translate("Cookies were cleared successfully.")
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.translate("Error"),
+                self.translate(f"Error clearing cookies: {e}")
+            )
+
     def _retranslate_ui(self):
         self.setWindowTitle(f"Settings [{self.version}]")
         self.tabs.setTabText(0, self.translate("General"))
         self.tabs.setTabText(1, self.translate("Downloads"))
         self.tabs.setTabText(2, self.translate("Structure"))
+        self.tabs.setTabText(3, self.translate("Cookies"))
         self.check_updates_button.setText(self.translate("Check for Updates"))
         self.close_button.setText(self.translate("Close"))
         self.apply_language_button.setText(self.translate("Apply Language"))
@@ -288,3 +391,9 @@ class SettingsDialog(QDialog):
         self.structure_info_label.setText(
             self.translate("Preview of how files will be organized on disk.")
         )
+        self.cookies_info_label.setText(
+            self.translate("Here you can paste, import, save, or clear your cookies JSON.")
+        )
+        self.import_cookies_button.setText(self.translate("Import Cookies"))
+        self.save_cookies_button.setText(self.translate("Save Cookies"))
+        self.clear_cookies_button.setText(self.translate("Clear Cookies"))
