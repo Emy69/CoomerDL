@@ -670,24 +670,50 @@ class Downloader:
 			if not post:
 				self.log(self.tr("No post found for this ID."))
 				return
-			media_urls = self.process_post(post[0], site)
+
+			current_post = post[0]
+			current_post_id = current_post.get('id') or post_id or "unknown_id"
+			title = current_post.get('title') or ""
+			published_time = current_post.get('published') or ""
+
+			media_urls = self.process_post(current_post, site)
 			futures = []
+
 			grouped_media_urls = defaultdict(list)
 			for media_url in media_urls:
-				grouped_media_urls[post[0]['id']].append(media_url)
+				grouped_media_urls[current_post_id].append(media_url)
+
 			self.total_files = len(media_urls)
 			self.completed_files = 0
-			for post_id, media_urls in grouped_media_urls.items():
-				for media_url in media_urls:
+
+			for grouped_post_id, grouped_urls in grouped_media_urls.items():
+				for media_url in grouped_urls:
 					if self.download_mode == 'queue':
-						self.process_media_element(media_url, user_id, post_id)
+						self.process_media_element(
+							media_url,
+							user_id,
+							post_id=grouped_post_id,
+							post_name=title,
+							post_time=published_time,
+							download_id=media_url
+						)
 					else:
-						future = self.executor.submit(self.process_media_element, media_url, user_id, post_id)
+						future = self.executor.submit(
+							self.process_media_element,
+							media_url,
+							user_id,
+							grouped_post_id,
+							title,
+							published_time,
+							media_url
+						)
 						futures.append(future)
+
 			if self.download_mode == 'multi':
 				for future in as_completed(futures):
 					if self.cancel_requested.is_set():
 						break
+
 		except Exception as e:
 			self.log(self.tr(f"Error during download: {e}"))
 		finally:
