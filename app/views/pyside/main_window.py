@@ -30,6 +30,7 @@ from app.views.pyside.widgets.footer_bar import FooterBar
 from app.views.pyside.dialogs.settings_dialog import SettingsDialog
 from app.views.pyside.progress.progress_controller import ProgressController
 from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
+from app.about_window import AboutWindow
 
 VERSION = "V0.8.12"
 MAX_LOG_LINES = None
@@ -128,6 +129,10 @@ class PySideMainWindow(QMainWindow):
         self.progress_details_button = QPushButton("Progress Details")
         self.progress_details_button.clicked.connect(self.toggle_progress_details)
         top_row.addWidget(self.progress_details_button)
+        
+        self.about_button = QPushButton("About")
+        self.about_button.clicked.connect(self.open_about_window)
+        top_row.addWidget(self.about_button)
 
         self.settings_button = QPushButton("Settings")
         self.settings_button.clicked.connect(self.open_settings_dialog)
@@ -175,6 +180,10 @@ class PySideMainWindow(QMainWindow):
         )
         dialog.exec()
         
+    def open_about_window(self):
+        dialog = AboutWindow(self, self.tr, self.version)
+        dialog.show_about()
+        
     def load_translations(self, language=None):
         target_language = language or self.app_state.language
         self.app_state.language = target_language
@@ -195,9 +204,10 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
         if hasattr(self, "progress_details_button"):
             self.progress_details_button.setText(self.tr("Progress Details"))
+        if hasattr(self, "about_button"):
+            self.about_button.setText(self.tr("About"))
         if hasattr(self, "settings_button"):
             self.settings_button.setText(self.tr("Settings"))
-        self.setWindowTitle(f"Downloader [{self.version}]")
 
     def apply_runtime_settings(self, new_settings: dict):
         try:

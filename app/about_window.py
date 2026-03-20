@@ -1,187 +1,304 @@
-import threading
-import customtkinter as ctk
-import webbrowser
 import requests
-from PIL import Image
 
-class AboutWindow:
-    def __init__(self, parent, translate, version):
-        self.parent = parent
-        self.translate = translate
-        self.version = version
+from PySide6.QtCore import Qt, QObject, QThread, Signal, QSize, QUrl
+from PySide6.QtGui import QPixmap, QDesktopServices, QIcon
+from PySide6.QtWidgets import (
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QFrame,
+    QLabel,
+    QPushButton,
+    QWidget,
+)
 
-    def get_github_data(self):
+
+class GitHubDataWorker(QObject):
+    finished = Signal(str, int)
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
         url = "https://api.github.com/repos/Emy69/CoomerDL"
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=15)
             response.raise_for_status()
             repo_data = response.json()
 
-            # Obtener la fecha de creación y las descargas totales (si existen releases)
             created_at = repo_data.get("created_at", "N/A")
             created_date = created_at.split("T")[0] if created_at != "N/A" else "N/A"
 
             releases_url = repo_data.get("releases_url", "").replace("{/id}", "")
-            releases_response = requests.get(releases_url)
-            releases_response.raise_for_status()
-            releases_data = releases_response.json()
+            total_downloads = 0
 
-            total_downloads = sum(
-                asset["download_count"] for release in releases_data for asset in release.get("assets", [])
-            ) if releases_data else 0
+            if releases_url:
+                releases_response = requests.get(releases_url, timeout=15)
+                releases_response.raise_for_status()
+                releases_data = releases_response.json()
 
-            return created_date, total_downloads
+                if releases_data:
+                    total_downloads = sum(
+                        asset.get("download_count", 0)
+                        for release in releases_data
+                        for asset in release.get("assets", [])
+                    )
+
+            self.finished.emit(created_date, total_downloads)
         except Exception as e:
             print(f"Error fetching GitHub data: {e}")
-            return "N/A", 0
+            self.finished.emit("N/A", 0)
 
-    def show_about(self):
-        # Crear una nueva ventana
-        about_window = ctk.CTkToplevel(self.parent)
-        about_window.title(self.translate("About"))
-        about_window.geometry("300x600")
-        about_window.resizable(False, False)
 
-        # Centrar la ventana
-        self.center_window(about_window, 300, 600)
+class AboutWindow(QDialog):
+    def __init__(self, parent, translate, version):
+        super().__init__(parent)
+        self.parent = parent
+        self.translate = translate
+        self.version = version
 
-        # Hacer que la ventana aparezca al frente
-        about_window.transient(self.parent)
-        about_window.lift()
-        about_window.grab_set()
+        self.worker_thread = None
+        self.worker = None
 
-        # placeholders mientras carga
-        created_date = self.translate("Loading...")
-        total_downloads = self.translate("Loading...")
+        self.setWindowTitle(self.translate("About"))
+        self.setModal(True)
+        self.setFixedSize(360, 640)
 
-        # Crear un marco para el contenido
-        about_frame = ctk.CTkFrame(about_window, corner_radius=15)
-        about_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        if self.parent is not None:
+            self.setWindowModality(Qt.WindowModal)
 
-        # Encabezado estilizado
-        header_label = ctk.CTkLabel(
-            about_frame,
-            text=self.translate("About This App"), 
-            font=("Helvetica", 20, "bold"),
-            text_color="white",
-            anchor="w" 
-        )
-        header_label.pack(pady=(10, 5), padx=10, anchor="w") 
-
-        # Cargar las imágenes de los íconos
-        developer_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/user-account-solid-24.png"), size=(20, 20))
-        version_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/git-branch-line.png"), size=(20, 20))
-        downloads_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/download_icon.png"), size=(20, 20))
-        date_icon = ctk.CTkImage(Image.open("resources/img/iconos/about/calendar-event-line.png"), size=(20, 20))
-
-        # labels que se actualizarán
         self.downloads_label = None
         self.date_label = None
 
+        self._build_ui()
+        self._center_window()
+        self._load_github_data_async()
+
+    def _build_ui(self):
+        self.setStyleSheet(
+            """
+            QDialog {
+                background-color: #1f1f1f;
+                color: white;
+            }
+            QFrame#card {
+                background-color: #2b2b2b;
+                border: 1px solid #3a3a3a;
+                border-radius: 14px;
+            }
+            QLabel {
+                color: white;
+                background: transparent;
+            }
+            QLabel[role="title"] {
+                font-size: 22px;
+                font-weight: 700;
+            }
+            QLabel[role="section"] {
+                font-size: 16px;
+                font-weight: 700;
+            }
+            QLabel[role="body"] {
+                font-size: 14px;
+            }
+            QLabel[role="footer"] {
+                font-size: 12px;
+                font-style: italic;
+                color: #cfcfcf;
+            }
+            QFrame[role="separator"] {
+                background-color: #555555;
+                max-height: 1px;
+                min-height: 1px;
+            }
+            QPushButton[role="link"] {
+                background-color: transparent;
+                color: white;
+                border: none;
+                text-align: left;
+                padding: 4px 8px;
+                font-size: 14px;
+            }
+            QPushButton[role="link"]:hover {
+                background-color: #3a3a3a;
+                border-radius: 6px;
+            }
+            """
+        )
+
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(10, 10, 10, 10)
+        root_layout.setSpacing(0)
+
+        card = QFrame()
+        card.setObjectName("card")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(16, 16, 16, 16)
+        card_layout.setSpacing(10)
+
+        title_label = QLabel(self.translate("About This App"))
+        title_label.setProperty("role", "title")
+        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(title_label)
+
         details = [
-            (developer_icon, f"{self.translate('Developer')}: Emy69", None),
-            (version_icon, f"{self.translate('Version')}: {self.version}", None),
-            (downloads_icon, f"{self.translate('Total Downloads')}: {total_downloads}", "downloads"),
-            (date_icon, f"{self.translate('Release Date')}: {created_date}", "date")
+            (
+                "resources/img/iconos/about/user-account-solid-24.png",
+                f"{self.translate('Developer')}: Emy69",
+                "developer",
+            ),
+            (
+                "resources/img/iconos/about/git-branch-line.png",
+                f"{self.translate('Version')}: {self.version}",
+                "version",
+            ),
+            (
+                "resources/img/iconos/about/download_icon.png",
+                f"{self.translate('Total Downloads')}: {self.translate('Loading...')}",
+                "downloads",
+            ),
+            (
+                "resources/img/iconos/about/calendar-event-line.png",
+                f"{self.translate('Release Date')}: {self.translate('Loading...')}",
+                "date",
+            ),
         ]
 
-        for icon, text, key in details:
-            detail_frame = ctk.CTkFrame(about_frame, fg_color="transparent")
-            detail_frame.pack(anchor="w", pady=5, padx=30)
+        for icon_path, text, key in details:
+            row, text_label = self._make_detail_row(icon_path, text)
+            card_layout.addWidget(row)
 
-            icon_label = ctk.CTkLabel(detail_frame, text="", image=icon)
-            icon_label.pack(side="left", padx=(0, 10))
-
-            text_label = ctk.CTkLabel(
-                detail_frame,
-                text=text,
-                font=("Helvetica", 14),
-                text_color="white",
-                justify="left"
-            )
-            text_label.pack(side="left")
-
-            if key == "downloads":   # agregado
+            if key == "downloads":
                 self.downloads_label = text_label
-            elif key == "date":      # agregado
+            elif key == "date":
                 self.date_label = text_label
 
-        separator = ctk.CTkFrame(about_frame, height=1, fg_color="gray")
-        separator.pack(fill="x", padx=10, pady=10)
+        separator = QFrame()
+        separator.setProperty("role", "separator")
+        card_layout.addWidget(separator)
 
-        # Sección de plataformas soportadas
-        supported_label = ctk.CTkLabel(
-            about_frame, 
-            text=self.translate("Supported Platforms"), 
-            font=("Helvetica", 16, "bold"),
-            text_color="white",
-            anchor="w"
-        )
-        supported_label.pack(pady=(10, 5), padx=10, anchor="w")
+        supported_label = QLabel(self.translate("Supported Platforms"))
+        supported_label.setProperty("role", "section")
+        supported_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(supported_label)
 
-        # Lista de plataformas con íconos
         platforms = [
             ("coomer.su", "https://coomer.su"),
             ("kemono.su", "https://kemono.su"),
             ("erome.com", "https://erome.com"),
             ("bunkr-albums.io", "https://bunkr-albums.io"),
             ("simpcity.su", "https://simpcity.su"),
-            ("jpg5.su", "https://jpg5.su")
+            ("jpg5.su", "https://jpg5.su"),
         ]
 
         for name, url in platforms:
-            # Crear el marco para cada plataforma
-            platform_frame = ctk.CTkFrame(about_frame, fg_color="transparent")
-            platform_frame.pack(anchor="w", pady=5, padx=10)
-
-            icon_image = ctk.CTkImage(Image.open("resources/img/iconos/about/global-line.png"), size=(20, 20))
-            icon_label = ctk.CTkLabel(platform_frame, text="", image=icon_image)
-            icon_label.pack(side="left")
-
-            # Botón con el nombre de la plataforma
-            platform_button = ctk.CTkButton(
-                platform_frame,
-                text=name,
-                font=("Helvetica", 14),
-                fg_color="transparent",
-                hover_color="gray25",
-                command=lambda u=url: webbrowser.open(u)
+            row = self._make_platform_row(
+                "resources/img/iconos/about/global-line.png",
+                name,
+                url,
             )
-            platform_button.pack(side="left")
+            card_layout.addWidget(row)
 
-        # Footer
-        footer_label = ctk.CTkLabel(
-            about_frame, 
-            text=self.translate("Thank you for using our app!"), 
-            font=("Helvetica", 12, "italic"), 
-            text_color="white",
-            anchor="w"
-        )
-        footer_label.pack(pady=(10, 10), padx=10, anchor="w")
+        card_layout.addStretch()
 
-        # hilo para cargar datos
-        def fetch_and_update():
-            cd, td = self.get_github_data()
+        footer_label = QLabel(self.translate("Thank you for using our app!"))
+        footer_label.setProperty("role", "footer")
+        footer_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(footer_label)
 
-            def safe_update():
-                try:
-                    if not about_window.winfo_exists():
-                        return
-                    if self.date_label and self.date_label.winfo_exists():
-                        self.date_label.configure(text=f"{self.translate('Release Date')}: {cd}")
-                    if self.downloads_label and self.downloads_label.winfo_exists():
-                        self.downloads_label.configure(text=f"{self.translate('Total Downloads')}: {td}")
-                except Exception:
-                    pass
+        root_layout.addWidget(card)
 
-            about_window.after(0, safe_update)
-        threading.Thread(target=fetch_and_update, daemon=True).start()
+    def _make_detail_row(self, icon_path: str, text: str):
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(10)
 
+        icon_label = QLabel()
+        pixmap = QPixmap(icon_path)
+        if not pixmap.isNull():
+            icon_label.setPixmap(
+                pixmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+        icon_label.setFixedSize(20, 20)
+        icon_label.setAlignment(Qt.AlignCenter)
 
+        text_label = QLabel(text)
+        text_label.setProperty("role", "body")
+        text_label.setWordWrap(True)
+        text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-    def center_window(self, window, width, height):
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-        x = int((screen_width / 2) - (width / 2))
-        y = int((screen_height / 2) - (height / 2))
-        window.geometry(f'{width}x{height}+{x}+{y}')
+        layout.addWidget(icon_label, 0, Qt.AlignTop)
+        layout.addWidget(text_label, 1)
+
+        return row, text_label
+
+    def _make_platform_row(self, icon_path: str, name: str, url: str):
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        icon_label = QLabel()
+        pixmap = QPixmap(icon_path)
+        if not pixmap.isNull():
+            icon_label.setPixmap(
+                pixmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+        icon_label.setFixedSize(20, 20)
+        icon_label.setAlignment(Qt.AlignCenter)
+
+        button = QPushButton(name)
+        button.setProperty("role", "link")
+        button.setCursor(Qt.PointingHandCursor)
+        button.clicked.connect(lambda checked=False, u=url: self._open_url(u))
+
+        layout.addWidget(icon_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        layout.addWidget(button, 1, Qt.AlignLeft)
+
+        return row
+
+    def _open_url(self, url: str):
+        QDesktopServices.openUrl(QUrl(url))
+
+    def _load_github_data_async(self):
+        self.worker_thread = QThread(self)
+        self.worker = GitHubDataWorker()
+        self.worker.moveToThread(self.worker_thread)
+
+        self.worker_thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self._update_github_labels)
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+
+        self.worker_thread.start()
+
+    def _update_github_labels(self, created_date: str, total_downloads: int):
+        if self.date_label is not None:
+            self.date_label.setText(
+                f"{self.translate('Release Date')}: {created_date}"
+            )
+
+        if self.downloads_label is not None:
+            self.downloads_label.setText(
+                f"{self.translate('Total Downloads')}: {total_downloads}"
+            )
+
+    def _center_window(self):
+        if self.parent is not None:
+            parent_geometry = self.parent.frameGeometry()
+            dialog_geometry = self.frameGeometry()
+            dialog_geometry.moveCenter(parent_geometry.center())
+            self.move(dialog_geometry.topLeft())
+            return
+
+        screen = self.screen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            dialog_geometry = self.frameGeometry()
+            dialog_geometry.moveCenter(available.center())
+            self.move(dialog_geometry.topLeft())
+
+    def show_about(self):
+        self.exec()
