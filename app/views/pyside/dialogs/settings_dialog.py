@@ -10,10 +10,13 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QMessageBox,
+    QTreeWidget,
+    QTreeWidgetItem,
 )
 
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
+from app.services.structure_preview_service import StructurePreviewService
 
 
 class SettingsDialog(QDialog):
@@ -53,10 +56,11 @@ class SettingsDialog(QDialog):
             on_settings_changed=on_settings_changed
         )
         self.download_settings_service = DownloadSettingsService()
+        self.structure_preview_service = StructurePreviewService()
         self.settings = self.settings_service.load_settings()
 
         self.setWindowTitle(f"Settings [{self.version}]")
-        self.resize(700, 500)
+        self.resize(760, 560)
 
         self._build_ui()
 
@@ -71,12 +75,15 @@ class SettingsDialog(QDialog):
 
         self.general_tab = QWidget()
         self.downloads_tab = QWidget()
+        self.structure_tab = QWidget()
 
         self.tabs.addTab(self.general_tab, self.translate("General"))
         self.tabs.addTab(self.downloads_tab, self.translate("Downloads"))
+        self.tabs.addTab(self.structure_tab, self.translate("Structure"))
 
         self._build_general_tab()
         self._build_downloads_tab()
+        self._build_structure_tab()
 
         buttons_row = QHBoxLayout()
         buttons_row.addStretch(1)
@@ -128,6 +135,7 @@ class SettingsDialog(QDialog):
         self.folder_structure_combo = QComboBox()
         self.folder_structure_combo.addItems(["default", "post_number"])
         self.folder_structure_combo.setCurrentText(self.settings.get("folder_structure", "default"))
+        self.folder_structure_combo.currentTextChanged.connect(self.refresh_structure_preview)
         layout.addRow(QLabel(self.translate("Folder Structure")), self.folder_structure_combo)
 
         self.max_retries_combo = QComboBox()
@@ -145,11 +153,62 @@ class SettingsDialog(QDialog):
             self.settings.get("file_naming_mode", 0)
         )
         self.file_naming_combo.setCurrentText(current_naming_label)
+        self.file_naming_combo.currentTextChanged.connect(self.refresh_structure_preview)
         layout.addRow(QLabel(self.translate("File Naming Mode")), self.file_naming_combo)
 
         self.apply_downloads_button = QPushButton(self.translate("Apply Download Settings"))
         self.apply_downloads_button.clicked.connect(self._apply_download_settings)
         layout.addRow("", self.apply_downloads_button)
+
+    def _build_structure_tab(self):
+        layout = QVBoxLayout(self.structure_tab)
+
+        self.structure_info_label = QLabel(
+            self.translate("Preview of how files will be organized on disk.")
+        )
+        layout.addWidget(self.structure_info_label)
+
+        self.structure_tree = QTreeWidget()
+        self.structure_tree.setHeaderHidden(True)
+        layout.addWidget(self.structure_tree, 1)
+
+        self.refresh_structure_preview()
+
+    # ------------------------------------------------------------
+    # Structure preview
+    # ------------------------------------------------------------
+    def build_structure_preview_payload(self):
+        temp_settings = dict(self.settings)
+        temp_settings["folder_structure"] = self.folder_structure_combo.currentText()
+        temp_settings["file_naming_mode"] = (
+            self.download_settings_service.NAMING_MODE_LABEL_TO_VALUE.get(
+                self.file_naming_combo.currentText(),
+                0
+            )
+        )
+        return self.structure_preview_service.build_preview_payload(temp_settings)
+
+    def refresh_structure_preview(self):
+        if not hasattr(self, "structure_tree"):
+            return
+
+        payload = self.build_structure_preview_payload()
+        self.structure_tree.clear()
+
+        root_item = QTreeWidgetItem([payload["root"]])
+        self.structure_tree.addTopLevelItem(root_item)
+        self._populate_structure_nodes(root_item, payload)
+        self.structure_tree.expandAll()
+
+    def _populate_structure_nodes(self, parent_item, payload):
+        for folder in payload.get("folders", []):
+            folder_item = QTreeWidgetItem([folder["name"]])
+            parent_item.addChild(folder_item)
+            self._populate_structure_nodes(folder_item, folder)
+
+        for file_name in payload.get("files", []):
+            file_item = QTreeWidgetItem([file_name])
+            parent_item.addChild(file_item)
 
     # ------------------------------------------------------------
     # actions
@@ -195,12 +254,13 @@ class SettingsDialog(QDialog):
             self.settings_service.save_settings(self.settings)
             self.download_settings_service.apply_to_downloader(self.downloader, parsed_values)
 
-            # aplicar también al runtime del parent si existe
             if self.parent_window is not None:
                 if hasattr(self.parent_window, "settings"):
                     self.parent_window.settings = self.settings
                 if hasattr(self.parent_window, "max_downloads"):
                     self.parent_window.max_downloads = parsed_values["max_downloads"]
+
+            self.refresh_structure_preview()
 
             QMessageBox.information(
                 self,
@@ -219,8 +279,12 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(f"Settings [{self.version}]")
         self.tabs.setTabText(0, self.translate("General"))
         self.tabs.setTabText(1, self.translate("Downloads"))
+        self.tabs.setTabText(2, self.translate("Structure"))
         self.check_updates_button.setText(self.translate("Check for Updates"))
         self.close_button.setText(self.translate("Close"))
         self.apply_language_button.setText(self.translate("Apply Language"))
         self.apply_theme_button.setText(self.translate("Apply Theme"))
         self.apply_downloads_button.setText(self.translate("Apply Download Settings"))
+        self.structure_info_label.setText(
+            self.translate("Preview of how files will be organized on disk.")
+        )

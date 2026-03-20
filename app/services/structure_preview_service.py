@@ -44,7 +44,31 @@ class StructurePreviewService:
                 "files": [],
             }
 
-        # default
+        if folder_structure == "post_number":
+            return {
+                "root": "Downloads",
+                "folders": [
+                    {
+                        "name": "service_name",
+                        "folders": [
+                            {
+                                "name": "creator_name",
+                                "folders": [
+                                    {
+                                        "name": "post_001",
+                                        "folders": [],
+                                        "files": [file_name],
+                                    }
+                                ],
+                                "files": [],
+                            }
+                        ],
+                        "files": [],
+                    }
+                ],
+                "files": [],
+            }
+
         return {
             "root": "Downloads",
             "folders": [
