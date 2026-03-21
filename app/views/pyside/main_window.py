@@ -22,7 +22,6 @@ from app.controllers.main_controller import MainController
 from app.models.app_state import AppState
 from app.services.settings_service import SettingsService
 from app.services.translation_service import TranslationService
-from app.services.update_service import UpdateService
 from app.services.log_service import LogService
 from app.services.url_service import UrlService
 from app.adapters.downloader_factory import DownloaderFactory
@@ -35,7 +34,6 @@ from app.views.pyside.progress.progress_controller import ProgressController
 from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
 from app.donors import DonorsModal
-
 
 VERSION = "V1.Beta"
 MAX_LOG_LINES = None
@@ -84,7 +82,6 @@ class PySideMainWindow(QMainWindow):
         self.download_folder = self.app_state.download_folder
 
         self.translation_service = TranslationService(language=self.app_state.language)
-        self.update_service = UpdateService(self.tr)
         self.log_service = LogService()
         self.url_service = UrlService()
 
@@ -188,7 +185,6 @@ class PySideMainWindow(QMainWindow):
             save_language_preference=self.save_language_preference,
             version=self.version,
             downloader=getattr(self, "active_downloader", None),
-            check_for_new_version=lambda startup=False: None,
             on_settings_changed=self.apply_runtime_settings,
         )
         dialog.exec()

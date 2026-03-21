@@ -32,7 +32,6 @@ class SettingsDialog(QDialog):
         save_language_preference,
         version,
         downloader,
-        check_for_new_version,
         on_settings_changed=None,
     ):
         super().__init__(parent)
@@ -44,7 +43,6 @@ class SettingsDialog(QDialog):
         self.save_language_preference = save_language_preference
         self.version = version
         self.downloader = downloader
-        self.check_for_new_version = check_for_new_version
         self.on_settings_changed = on_settings_changed
 
         self.CONFIG_PATH = "resources/config/settings.json"
@@ -95,14 +93,6 @@ class SettingsDialog(QDialog):
 
         buttons_row = QHBoxLayout()
         buttons_row.addStretch(1)
-
-        self.check_updates_button = QPushButton(self.translate("Check for Updates"))
-        self.check_updates_button.clicked.connect(lambda: self.check_for_new_version(False))
-        buttons_row.addWidget(self.check_updates_button)
-
-        self.close_button = QPushButton(self.translate("Close"))
-        self.close_button.clicked.connect(self.accept)
-        buttons_row.addWidget(self.close_button)
 
         root.addLayout(buttons_row)
 
@@ -571,17 +561,12 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(f"Settings [{self.version}]")
         self.tabs.setTabText(0, self.translate("General"))
         self.tabs.setTabText(1, self.translate("Downloads"))
-        self.tabs.setTabText(2, self.translate("Structure"))
-        self.tabs.setTabText(3, self.translate("Cookies"))
-        self.tabs.setTabText(4, self.translate("Database"))
-        self.check_updates_button.setText(self.translate("Check for Updates"))
+        self.tabs.setTabText(2, self.translate("Cookies"))
+        self.tabs.setTabText(3, self.translate("Database"))
         self.close_button.setText(self.translate("Close"))
         self.apply_language_button.setText(self.translate("Apply Language"))
         self.apply_theme_button.setText(self.translate("Apply Theme"))
         self.apply_downloads_button.setText(self.translate("Apply Download Settings"))
-        self.structure_info_label.setText(
-            self.translate("Preview of how files will be organized on disk.")
-        )
         self.cookies_info_label.setText(
             self.translate(
                 "These cookies are only used for SimpCity. "
