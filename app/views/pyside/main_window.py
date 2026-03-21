@@ -130,7 +130,7 @@ class PySideMainWindow(QMainWindow):
         top_row = QHBoxLayout()
 
         self.menu_button = QToolButton()
-        self.menu_button.setText("File")
+        self.menu_button.setText("Archivo")
         self.menu_button.setPopupMode(QToolButton.InstantPopup)
 
         self.main_menu = QMenu(self)
@@ -141,14 +141,11 @@ class PySideMainWindow(QMainWindow):
         self.about_action = self.main_menu.addAction("About")
         self.about_action.triggered.connect(self.open_about_window)
 
-        self.donors_action = self.main_menu.addAction("Patreons")
-        self.donors_action.triggered.connect(self.open_donors_modal)
-
         self.menu_button.setMenu(self.main_menu)
 
         self.menu_button.setStyleSheet("""
             QToolButton {
-                min-height: 15px;
+                min-height: 20px;
                 padding: 6px 12px;
                 border-radius: 8px;
                 border: 1px solid #4a4a4a;
@@ -179,12 +176,11 @@ class PySideMainWindow(QMainWindow):
         """)
 
         top_row.addWidget(self.menu_button)
-
-        self.progress_details_button = QPushButton("Progress Details")
-        self.progress_details_button.clicked.connect(self.toggle_progress_details)
-        top_row.addWidget(self.progress_details_button)
-
         top_row.addStretch(1)
+
+        self.donors_button = QPushButton("Patreons")
+        self.donors_button.clicked.connect(self.open_donors_modal)
+        top_row.addWidget(self.donors_button)
 
         layout.addLayout(top_row)
 
@@ -195,6 +191,7 @@ class PySideMainWindow(QMainWindow):
         layout.addWidget(self.log_panel, 1)
 
         self.footer_bar = FooterBar(self)
+        self.footer_bar.progress_details_button.clicked.connect(self.toggle_progress_details)
         layout.addWidget(self.footer_bar)
 
         self.url_entry = QtLineEditAdapter(self.download_panel.url_input)
@@ -253,14 +250,17 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.compressed_check.setText(self.tr("Descargar Comprimidos"))
         self.download_panel.download_button.setText(self.tr("Descargar"))
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
-        if hasattr(self, "progress_details_button"):
-            self.progress_details_button.setText(self.tr("Progress Details"))
+
         if hasattr(self, "menu_button"):
-            self.menu_button.setText(self.tr("File"))
+            self.menu_button.setText(self.tr("Archivo"))
         if hasattr(self, "settings_action"):
             self.settings_action.setText(self.tr("Settings"))
         if hasattr(self, "about_action"):
             self.about_action.setText(self.tr("About"))
+        if hasattr(self, "donors_button"):
+            self.donors_button.setText(self.tr("Patreons"))
+        if hasattr(self, "footer_bar") and hasattr(self.footer_bar, "progress_details_button"):
+            self.footer_bar.progress_details_button.setToolTip(self.tr("Progress Details"))
 
     def apply_runtime_settings(self, new_settings: dict):
         try:
@@ -457,8 +457,8 @@ class PySideMainWindow(QMainWindow):
         else:
             percentage = 0
 
-        self.log_panel.progress_bar.setValue(percentage)
-        self.log_panel.progress_label.setText(f"{percentage}%")
+        self.footer_bar.progress_bar.setValue(percentage)
+        self.footer_bar.progress_label.setText(f"{percentage}%")
 
     def _clear_logs(self):
         self.log_panel.log_text.clear()
