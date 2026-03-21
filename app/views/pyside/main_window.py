@@ -365,13 +365,18 @@ class PySideMainWindow(QMainWindow):
             )
 
         if speed is not None:
-            self.footer_set_speed_from_value(speed)
+            if speed < 1_048_576:
+                self.signals.footer_speed.emit(f"Speed: {speed / 1024:.2f} KB/s")
+            else:
+                self.signals.footer_speed.emit(f"Speed: {speed / 1_048_576:.2f} MB/s")
 
         if eta is not None:
-            self.footer_set_eta_from_value(eta)
+            minutes = int(eta // 60)
+            seconds = int(eta % 60)
+            self.signals.footer_eta.emit(f"ETA: {minutes}m {seconds}s")
 
         if status is not None:
-            self.footer_set_eta(f"ETA: N/A | STATUS:{status}")
+            self.signals.footer_eta.emit(f"ETA: N/A | STATUS:{status}")
 
     def update_global_progress(self, completed_files, total_files):
         self.signals.global_progress.emit(int(completed_files), int(total_files))

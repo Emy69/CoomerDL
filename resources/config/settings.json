@@ -1,9 +1,9 @@
 {
-    "max_downloads": 5,
+    "max_downloads": 2,
     "folder_structure": "default",
     "language": "en",
     "theme": "Dark",
     "max_retries": 4,
     "retry_interval": 2.0,
-    "file_naming_mode": 0
+    "file_naming_mode": 3
 }
