@@ -172,8 +172,28 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self.cookies_tab)
 
         self.cookies_info_label = QLabel(
-            self.translate("Here you can paste, import, save, or clear your cookies JSON.")
+            self.translate(
+                "These cookies are only used for SimpCity. "
+                "Here you can paste, import, save, or clear your cookies JSON."
+            )
         )
+        self.cookies_info_label.setWordWrap(True)
+        self.cookies_tutorial_label = QLabel(
+            self.translate(
+                "How to extract SimpCity cookies from your browser:\n\n"
+                "1. Open SimpCity in your browser and log into your account.\n"
+                "2. Press F12 to open Developer Tools.\n"
+                "3. Go to the Application tab in Chrome/Edge, or Storage in Firefox.\n"
+                "4. Open Cookies and select the SimpCity domain.\n"
+                "5. Copy the required cookie values, or export them as JSON using a cookies extension.\n"
+                "6. Paste the JSON here or import the exported file.\n\n"
+                "Tip: make sure the cookies belong to your active SimpCity session."
+            )
+        )
+        self.cookies_tutorial_label.setStyleSheet("color: #bfbfbf;")
+        self.cookies_tutorial_label.setWordWrap(True)
+        layout.addWidget(self.cookies_tutorial_label)
+        
         layout.addWidget(self.cookies_info_label)
 
         self.cookies_text = QTextEdit()
@@ -563,7 +583,22 @@ class SettingsDialog(QDialog):
             self.translate("Preview of how files will be organized on disk.")
         )
         self.cookies_info_label.setText(
-            self.translate("Here you can paste, import, save, or clear your cookies JSON.")
+            self.translate(
+                "These cookies are only used for SimpCity. "
+                "Here you can paste, import, save, or clear your cookies JSON."
+            )
+        )
+        self.cookies_tutorial_label.setText(
+            self.translate(
+                "How to extract SimpCity cookies from your browser:\n\n"
+                "1. Open SimpCity in your browser and log into your account.\n"
+                "2. Press F12 to open Developer Tools.\n"
+                "3. Go to the Application tab in Chrome/Edge, or Storage in Firefox.\n"
+                "4. Open Cookies and select the SimpCity domain.\n"
+                "5. Copy the required cookie values, or export them as JSON using a cookies extension.\n"
+                "6. Paste the JSON here or import the exported file.\n\n"
+                "Tip: make sure the cookies belong to your active SimpCity session."
+            )
         )
         self.import_cookies_button.setText(self.translate("Import Cookies"))
         self.save_cookies_button.setText(self.translate("Save Cookies"))
