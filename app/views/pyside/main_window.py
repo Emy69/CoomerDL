@@ -12,6 +12,10 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QMessageBox,
+    QHBoxLayout,
+    QPushButton,
+    QToolButton,
+    QMenu,
     QFileDialog,
 )
 
@@ -119,30 +123,68 @@ class PySideMainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
 
-        from PySide6.QtWidgets import QPushButton, QHBoxLayout
-
         layout = QVBoxLayout(central)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
         top_row = QHBoxLayout()
-        top_row.addStretch(1)
+
+        self.menu_button = QToolButton()
+        self.menu_button.setText("File")
+        self.menu_button.setPopupMode(QToolButton.InstantPopup)
+
+        self.main_menu = QMenu(self)
+
+        self.settings_action = self.main_menu.addAction("Settings")
+        self.settings_action.triggered.connect(self.open_settings_dialog)
+
+        self.about_action = self.main_menu.addAction("About")
+        self.about_action.triggered.connect(self.open_about_window)
+
+        self.donors_action = self.main_menu.addAction("Patreons")
+        self.donors_action.triggered.connect(self.open_donors_modal)
+
+        self.menu_button.setMenu(self.main_menu)
+
+        self.menu_button.setStyleSheet("""
+            QToolButton {
+                min-height: 15px;
+                padding: 6px 12px;
+                border-radius: 8px;
+                border: 1px solid #4a4a4a;
+                background-color: #3a3a3a;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            QToolButton:hover {
+                background-color: #4a4a4a;
+            }
+        """)
+
+        self.main_menu.setStyleSheet("""
+            QMenu {
+                background-color: #2b2b2b;
+                color: white;
+                border: 1px solid #4a4a4a;
+                padding: 6px;
+            }
+            QMenu::item {
+                padding: 8px 18px;
+                border-radius: 6px;
+            }
+            QMenu::item:selected {
+                background-color: #3a3a3a;
+            }
+        """)
+
+        top_row.addWidget(self.menu_button)
 
         self.progress_details_button = QPushButton("Progress Details")
         self.progress_details_button.clicked.connect(self.toggle_progress_details)
         top_row.addWidget(self.progress_details_button)
-        
-        self.about_button = QPushButton("About")
-        self.about_button.clicked.connect(self.open_about_window)
-        top_row.addWidget(self.about_button)
-        
-        self.donors_button = QPushButton("Patreons")
-        self.donors_button.clicked.connect(self.open_donors_modal)
-        top_row.addWidget(self.donors_button)
 
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.open_settings_dialog)
-        top_row.addWidget(self.settings_button)
+        top_row.addStretch(1)
 
         layout.addLayout(top_row)
 
@@ -155,7 +197,6 @@ class PySideMainWindow(QMainWindow):
         self.footer_bar = FooterBar(self)
         layout.addWidget(self.footer_bar)
 
-        # adaptadores para reusar MainController actual
         self.url_entry = QtLineEditAdapter(self.download_panel.url_input)
         self.download_images_check = QtCheckBoxAdapter(self.download_panel.images_check)
         self.download_videos_check = QtCheckBoxAdapter(self.download_panel.videos_check)
@@ -214,10 +255,12 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
         if hasattr(self, "progress_details_button"):
             self.progress_details_button.setText(self.tr("Progress Details"))
-        if hasattr(self, "about_button"):
-            self.about_button.setText(self.tr("About"))
-        if hasattr(self, "settings_button"):
-            self.settings_button.setText(self.tr("Settings"))
+        if hasattr(self, "menu_button"):
+            self.menu_button.setText(self.tr("File"))
+        if hasattr(self, "settings_action"):
+            self.settings_action.setText(self.tr("Settings"))
+        if hasattr(self, "about_action"):
+            self.about_action.setText(self.tr("About"))
 
     def apply_runtime_settings(self, new_settings: dict):
         try:
