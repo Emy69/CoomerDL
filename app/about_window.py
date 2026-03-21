@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 
 class GitHubDataWorker(QObject):
-    finished = Signal(str, int)
+    finished = Signal(str, int, int)
 
     def __init__(self):
         super().__init__()
@@ -28,6 +28,7 @@ class GitHubDataWorker(QObject):
 
             created_at = repo_data.get("created_at", "N/A")
             created_date = created_at.split("T")[0] if created_at != "N/A" else "N/A"
+            stars = int(repo_data.get("stargazers_count", 0))
 
             releases_url = repo_data.get("releases_url", "").replace("{/id}", "")
             total_downloads = 0
@@ -44,10 +45,10 @@ class GitHubDataWorker(QObject):
                         for asset in release.get("assets", [])
                     )
 
-            self.finished.emit(created_date, total_downloads)
+            self.finished.emit(created_date, total_downloads, stars)
         except Exception as e:
             print(f"Error fetching GitHub data: {e}")
-            self.finished.emit("N/A", 0)
+            self.finished.emit("N/A", 0, 0)
 
 
 class AboutWindow(QDialog):
@@ -62,13 +63,14 @@ class AboutWindow(QDialog):
 
         self.setWindowTitle(self.translate("About"))
         self.setModal(True)
-        self.setFixedSize(360, 640)
+        self.setFixedSize(360, 540)
 
         if self.parent is not None:
             self.setWindowModality(Qt.WindowModal)
 
         self.downloads_label = None
         self.date_label = None
+        self.stars_button = None
 
         self._build_ui()
         self._center_window()
@@ -111,6 +113,19 @@ class AboutWindow(QDialog):
                 max-height: 1px;
                 min-height: 1px;
             }
+            QPushButton {
+                min-height: 36px;
+                padding: 6px 12px;
+                border-radius: 8px;
+                border: 1px solid #4a4a4a;
+                background-color: #3a3a3a;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #4a4a4a;
+            }
             QPushButton[role="link"] {
                 background-color: transparent;
                 color: white;
@@ -118,11 +133,13 @@ class AboutWindow(QDialog):
                 text-align: left;
                 padding: 4px 8px;
                 font-size: 14px;
+                font-weight: 400;
             }
             QPushButton[role="link"]:hover {
                 background-color: #3a3a3a;
                 border-radius: 6px;
             }
+            
             """
         )
 
@@ -177,27 +194,28 @@ class AboutWindow(QDialog):
         separator.setProperty("role", "separator")
         card_layout.addWidget(separator)
 
-        supported_label = QLabel(self.translate("Supported Platforms"))
-        supported_label.setProperty("role", "section")
-        supported_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        card_layout.addWidget(supported_label)
+        links_separator = QFrame()
+        links_separator.setProperty("role", "separator")
+        card_layout.addWidget(links_separator)
 
-        platforms = [
-            ("coomer.su", "https://coomer.su"),
-            ("kemono.su", "https://kemono.su"),
-            ("erome.com", "https://erome.com"),
-            ("bunkr-albums.io", "https://bunkr-albums.io"),
-            ("simpcity.su", "https://simpcity.su"),
-            ("jpg5.su", "https://jpg5.su"),
-        ]
+        community_label = QLabel(self.translate("Community"))
+        community_label.setProperty("role", "section")
+        community_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(community_label)
 
-        for name, url in platforms:
-            row = self._make_platform_row(
-                "resources/img/iconos/about/global-line.png",
-                name,
-                url,
-            )
-            card_layout.addWidget(row)
+        self.discord_button = QPushButton(self.translate("Join Discord"))
+        self.discord_button.setCursor(Qt.PointingHandCursor)
+        self.discord_button.clicked.connect(
+            lambda: self._open_url("https://discord.gg/6zbjrJbJ3Q")
+        )
+        card_layout.addWidget(self.discord_button)
+
+        self.stars_button = QPushButton(f"{self.translate('GitHub Stars')}: {self.translate('Loading...')}")
+        self.stars_button.setCursor(Qt.PointingHandCursor)
+        self.stars_button.clicked.connect(
+            lambda: self._open_url("https://github.com/Emy69/CoomerDL")
+        )
+        card_layout.addWidget(self.stars_button)
 
         card_layout.addStretch()
 
@@ -274,7 +292,7 @@ class AboutWindow(QDialog):
 
         self.worker_thread.start()
 
-    def _update_github_labels(self, created_date: str, total_downloads: int):
+    def _update_github_labels(self, created_date: str, total_downloads: int, stars: int):
         if self.date_label is not None:
             self.date_label.setText(
                 f"{self.translate('Release Date')}: {created_date}"
@@ -283,6 +301,11 @@ class AboutWindow(QDialog):
         if self.downloads_label is not None:
             self.downloads_label.setText(
                 f"{self.translate('Total Downloads')}: {total_downloads}"
+            )
+            
+        if self.stars_button is not None:
+            self.stars_button.setText(
+                f"{self.translate('GitHub Stars')}: {stars}"
             )
 
     def _center_window(self):
