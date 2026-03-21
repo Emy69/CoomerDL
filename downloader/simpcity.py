@@ -109,7 +109,7 @@ class SimpCity:
                     file_path = os.path.join(download_folder, file_name)
                     self.save_file(href, file_path)
 
-    def process_page(self, url):
+    def process_page(self, url, paginate=True):
         soup = self.fetch_page(url)
         if not soup:
             return
@@ -125,14 +125,15 @@ class SimpCity:
             if post_content:
                 self.process_post(post_content, download_folder)
 
-        next_page = soup.select_one(self.next_page_selector)
-        if next_page:
-            next_page_url = next_page.get('href')
-            if next_page_url:
-                resolved_next_url = urljoin(url, next_page_url)
-                self.process_page(resolved_next_url)
+        if paginate:
+            next_page = soup.select_one(self.next_page_selector)
+            if next_page:
+                next_page_url = next_page.get('href')
+                if next_page_url:
+                    resolved_next_url = urljoin(url, next_page_url)
+                    self.process_page(resolved_next_url, paginate=True)
 
-    def download_images_from_simpcity(self, url):
+    def download_images_from_simpcity(self, url, paginate=True):
         self.log(self.tr(f"Procesando hilo: {url}"))
-        self.process_page(url)
+        self.process_page(url, paginate=paginate)
         self.log(self.tr("Descarga completada."))

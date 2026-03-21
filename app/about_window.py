@@ -216,6 +216,21 @@ class AboutWindow(QDialog):
             lambda: self._open_url("https://github.com/Emy69/CoomerDL")
         )
         card_layout.addWidget(self.stars_button)
+        
+        
+        self.patron_button = QPushButton(self.translate("Support on Patreon"))
+        self.patron_button.setCursor(Qt.PointingHandCursor)
+        self.patron_button.clicked.connect(
+            lambda: self._open_url("https://www.patreon.com/Emy69")
+        )
+        card_layout.addWidget(self.patron_button)
+        
+        self.x_button = QPushButton(self.translate("Follow on X"))
+        self.x_button.setCursor(Qt.PointingHandCursor)
+        self.x_button.clicked.connect(
+            lambda: self._open_url("https://x.com/dev_emy")
+        )
+        card_layout.addWidget(self.x_button)
 
         card_layout.addStretch()
 

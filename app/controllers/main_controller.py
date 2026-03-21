@@ -14,7 +14,8 @@ class MainController:
             download_images=bool(self.app.download_images_check.get()),
             download_videos=bool(self.app.download_videos_check.get()),
             download_compressed=bool(self.app.download_compressed_check.get()),
-            max_downloads=getattr(self.app, "max_downloads", 3)
+            max_downloads=getattr(self.app, "max_downloads", 3),
+            only_this_url=bool(self.app.only_this_url_check.get()),
         )
 
     def start_download(self):
@@ -128,7 +129,16 @@ class MainController:
                 self.app.add_log_message_safe(self.app.tr("Descargando todo el contenido del usuario..."))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.start_ck_profile_download, site, service, user, parsed.query, True, parsed.offset),
+                    args=(
+                        self.start_ck_profile_download,
+                        site,
+                        service,
+                        user,
+                        parsed.query,
+                        True,
+                        parsed.offset,
+                        request.only_this_url,
+                    ),
                     daemon=True
                 )
 
@@ -138,7 +148,11 @@ class MainController:
             self.app.active_downloader = self.app.simpcity_downloader
             download_thread = threading.Thread(
                 target=self.wrapped_download,
-                args=(self.app.active_downloader.download_images_from_simpcity, request.url),
+                args=(
+                    self.app.active_downloader.download_images_from_simpcity,
+                    request.url,
+                    not request.only_this_url,
+                ),
                 daemon=True
             )
 
@@ -168,14 +182,15 @@ class MainController:
             self.app.enable_widgets()
             self.app.export_logs()
 
-    def start_ck_profile_download(self, site, service, user, query, download_all, initial_offset):
+    def start_ck_profile_download(self, site, service, user, query, download_all, initial_offset, only_this_url=False):
         download_info = self.app.active_downloader.download_media(
             site,
             user,
             service,
             query=query,
             download_all=download_all,
-            initial_offset=initial_offset
+            initial_offset=initial_offset,
+            only_first_page=only_this_url,
         )
         if download_info:
             self.app.add_log_message_safe(f"Download info: {download_info}")

@@ -46,8 +46,25 @@ class DownloadPanel(QWidget):
         self.compressed_check = QCheckBox("Descargar Comprimidos")
         self.compressed_check.setChecked(True)
         options_row.addWidget(self.compressed_check)
+
         options_row.addStretch(1)
         root.addLayout(options_row)
+
+        extra_options_row = QHBoxLayout()
+
+        self.only_this_url_check = QCheckBox("Solo esta URL")
+        self.only_this_url_check.setChecked(False)
+        self.only_this_url_check.setToolTip(
+            "No paginar perfiles o hilos; descargar solo la URL actual."
+        )
+        extra_options_row.addWidget(self.only_this_url_check)
+
+        self.autoscroll_log_check = QCheckBox("Auto-scroll log")
+        self.autoscroll_log_check.setChecked(True)
+        extra_options_row.addWidget(self.autoscroll_log_check)
+
+        extra_options_row.addStretch(1)
+        root.addLayout(extra_options_row)
 
         buttons_row = QHBoxLayout()
         self.download_button = QPushButton("Descargar")

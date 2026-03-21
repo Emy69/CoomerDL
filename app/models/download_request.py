@@ -11,3 +11,4 @@ class DownloadRequest:
     create_subfolders: bool = True
     profile_name: str = ""
     max_downloads: int = 3
+    only_this_url: bool = False

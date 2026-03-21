@@ -198,6 +198,9 @@ class PySideMainWindow(QMainWindow):
         self.download_images_check = QtCheckBoxAdapter(self.download_panel.images_check)
         self.download_videos_check = QtCheckBoxAdapter(self.download_panel.videos_check)
         self.download_compressed_check = QtCheckBoxAdapter(self.download_panel.compressed_check)
+        
+        self.only_this_url_check = QtCheckBoxAdapter(self.download_panel.only_this_url_check)
+        self.autoscroll_log_check = QtCheckBoxAdapter(self.download_panel.autoscroll_log_check)
 
         self.update_folder_label()
         
@@ -247,6 +250,8 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.browse_button.setText(self.tr("Seleccionar Carpeta"))
         self.download_panel.images_check.setText(self.tr("Descargar Imágenes"))
         self.download_panel.videos_check.setText(self.tr("Descargar Vídeos"))
+        self.download_panel.only_this_url_check.setText(self.tr("Solo esta URL"))
+        self.download_panel.autoscroll_log_check.setText(self.tr("Auto-scroll log"))
         self.download_panel.compressed_check.setText(self.tr("Descargar Comprimidos"))
         self.download_panel.download_button.setText(self.tr("Descargar"))
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
@@ -436,6 +441,11 @@ class PySideMainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _append_log(self, message: str):
         self.log_panel.log_text.append(message)
+
+        if bool(self.autoscroll_log_check.get()):
+            scrollbar = self.log_panel.log_text.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+
         if MAX_LOG_LINES is not None:
             doc = self.log_panel.log_text.document()
             while doc.blockCount() > MAX_LOG_LINES:
@@ -462,8 +472,8 @@ class PySideMainWindow(QMainWindow):
 
     def _clear_logs(self):
         self.log_panel.log_text.clear()
-        self.log_panel.progress_bar.setValue(0)
-        self.log_panel.progress_label.setText("0%")
+        self.footer_bar.progress_bar.setValue(0)
+        self.footer_bar.progress_label.setText("0%")
         self.footer_set_speed("Speed: 0 KB/s")
         self.footer_set_eta("ETA: N/A")
 

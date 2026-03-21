@@ -263,7 +263,7 @@ class Downloader:
 
 		return url
 
-	def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True):
+	def fetch_user_posts(self, site, user_id, service, query=None, specific_post_id=None, initial_offset=0, log_fetching=True, only_first_page=False):
 		all_posts = []
 		offset = initial_offset
 		user_id_encoded = quote_plus(user_id)
@@ -305,6 +305,8 @@ class Downloader:
 						return [post]
 				all_posts.extend(posts)
 				offset += 50
+				if only_first_page and not specific_post_id:
+					break
 			except Exception as e:
 				self.log(self.tr("Error fetching user posts: {e}", e=e))
 				break
@@ -576,15 +578,18 @@ class Downloader:
 			self.log(self.tr(f"Error getting size for {filename}: {e}"))
 			return media_url, filename, None
 
-	def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0):
+	def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0, only_first_page=False):
 		try:
 			self.log(self.tr("Starting download process..."))
 
 			posts = self.fetch_user_posts(
-				site, user_id, service,
+				site,
+				user_id,
+				service,
 				query=query,
 				initial_offset=initial_offset,
-				log_fetching=download_all
+				log_fetching=download_all,
+				only_first_page=only_first_page,
 			)
 			if not posts:
 				self.log(self.tr("No posts found for this user."))
