@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
 
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
-from app.services.structure_preview_service import StructurePreviewService
 from app.services.cookies_settings_service import CookiesSettingsService
 from app.services.database_settings_service import DatabaseSettingsService
 from PySide6.QtCore import Qt
@@ -61,7 +60,6 @@ class SettingsDialog(QDialog):
             on_settings_changed=on_settings_changed
         )
         self.download_settings_service = DownloadSettingsService()
-        self.structure_preview_service = StructurePreviewService()
         self.cookies_settings_service = CookiesSettingsService(self.COOKIES_PATH)
         self.database_settings_service = DatabaseSettingsService()
         self.settings = self.settings_service.load_settings()
@@ -82,19 +80,16 @@ class SettingsDialog(QDialog):
 
         self.general_tab = QWidget()
         self.downloads_tab = QWidget()
-        self.structure_tab = QWidget()
         self.cookies_tab = QWidget()
         self.database_tab = QWidget()
 
         self.tabs.addTab(self.general_tab, self.translate("General"))
         self.tabs.addTab(self.downloads_tab, self.translate("Downloads"))
-        self.tabs.addTab(self.structure_tab, self.translate("Structure"))
         self.tabs.addTab(self.cookies_tab, self.translate("Cookies"))
         self.tabs.addTab(self.database_tab, self.translate("Database"))
 
         self._build_general_tab()
         self._build_downloads_tab()
-        self._build_structure_tab()
         self._build_cookies_tab()
         self._build_database_tab()
 
@@ -172,20 +167,6 @@ class SettingsDialog(QDialog):
         self.apply_downloads_button = QPushButton(self.translate("Apply Download Settings"))
         self.apply_downloads_button.clicked.connect(self._apply_download_settings)
         layout.addRow("", self.apply_downloads_button)
-
-    def _build_structure_tab(self):
-        layout = QVBoxLayout(self.structure_tab)
-
-        self.structure_info_label = QLabel(
-            self.translate("Preview of how files will be organized on disk.")
-        )
-        layout.addWidget(self.structure_info_label)
-
-        self.structure_tree = QTreeWidget()
-        self.structure_tree.setHeaderHidden(True)
-        layout.addWidget(self.structure_tree, 1)
-
-        self.refresh_structure_preview()
 
     def _build_cookies_tab(self):
         layout = QVBoxLayout(self.cookies_tab)
