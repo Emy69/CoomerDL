@@ -34,7 +34,7 @@ from app.about_window import AboutWindow
 from app.donors import DonorsModal
 
 
-VERSION = "V0.8.12"
+VERSION = "V1.Beta"
 MAX_LOG_LINES = None
 
 

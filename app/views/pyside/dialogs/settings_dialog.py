@@ -290,12 +290,13 @@ class SettingsDialog(QDialog):
     # ------------------------------------------------------------
     # Database
     # ------------------------------------------------------------
+    def _get_db_path(self):
+        if self.downloader and hasattr(self.downloader, "db_path") and self.downloader.db_path:
+            return self.downloader.db_path
+        return "resources/config/downloads.db"
+    
     def load_db_records(self):
-        if not self.downloader or not hasattr(self.downloader, "db_path"):
-            self.db_tree.clear()
-            return
-
-        db_path = self.downloader.db_path
+        db_path = self._get_db_path()
 
         if not self.database_settings_service.database_exists(db_path):
             self.db_tree.clear()
@@ -349,13 +350,10 @@ class SettingsDialog(QDialog):
         self.db_tree.expandToDepth(0)
 
     def _export_db(self):
-        if not self.downloader or not hasattr(self.downloader, "db_path"):
-            QMessageBox.warning(self, self.translate("Warning"), self.translate("Database not found."))
-            return
+        db_path = self._get_db_path()
 
-        db_path = self.downloader.db_path
         if not self.database_settings_service.database_exists(db_path):
-            QMessageBox.warning(self, self.translate("Warning"), self.translate("Database not found."))
+            QMessageBox.warning(self, self.translate("Warning"), self.translate("Database file does not exist."))
             return
 
         export_path, _ = QFileDialog.getSaveFileName(
@@ -382,7 +380,8 @@ class SettingsDialog(QDialog):
             )
 
     def _delete_selected_users(self):
-        if not self.downloader or not hasattr(self.downloader, "db_path"):
+        db_path = self._get_db_path()
+        if not self.database_settings_service.database_exists(db_path):
             QMessageBox.warning(self, self.translate("Warning"), self.translate("Database not found."))
             return
 
@@ -423,7 +422,7 @@ class SettingsDialog(QDialog):
             return
 
         try:
-            self.database_settings_service.delete_users(self.downloader.db_path, user_ids)
+            self.database_settings_service.delete_users(db_path, user_ids)
             QMessageBox.information(
                 self,
                 self.translate("Success"),
