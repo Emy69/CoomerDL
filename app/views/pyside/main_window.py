@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Qt, QTimer
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -14,8 +15,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QHBoxLayout,
     QPushButton,
-    QToolButton,
-    QMenu,
     QFileDialog,
 )
 
@@ -129,58 +128,25 @@ class PySideMainWindow(QMainWindow):
 
         top_row = QHBoxLayout()
 
-        self.menu_button = QToolButton()
-        self.menu_button.setText("Archivo")
-        self.menu_button.setPopupMode(QToolButton.InstantPopup)
+        menu_bar = self.menuBar()
 
-        self.main_menu = QMenu(self)
+        self.file_menu = menu_bar.addMenu("File")
 
-        self.settings_action = self.main_menu.addAction("Settings")
+        self.settings_action = self.file_menu.addAction("Settings")
         self.settings_action.triggered.connect(self.open_settings_dialog)
 
-        self.about_action = self.main_menu.addAction("About")
-        self.about_action.triggered.connect(self.open_about_window)
+        self.help_action = QAction("About", self)
+        self.help_action.triggered.connect(self.open_about_window)
+        menu_bar.addAction(self.help_action)
 
-        self.menu_button.setMenu(self.main_menu)
+        self.support_action = QAction("Patreons", self)
+        self.support_action.triggered.connect(self.open_donors_modal)
+        menu_bar.addAction(self.support_action)
 
-        self.menu_button.setStyleSheet("""
-            QToolButton {
-                min-height: 20px;
-                padding: 6px 12px;
-                border-radius: 8px;
-                border: 1px solid #4a4a4a;
-                background-color: #3a3a3a;
-                color: white;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QToolButton:hover {
-                background-color: #4a4a4a;
-            }
-        """)
+        
 
-        self.main_menu.setStyleSheet("""
-            QMenu {
-                background-color: #2b2b2b;
-                color: white;
-                border: 1px solid #4a4a4a;
-                padding: 6px;
-            }
-            QMenu::item {
-                padding: 8px 18px;
-                border-radius: 6px;
-            }
-            QMenu::item:selected {
-                background-color: #3a3a3a;
-            }
-        """)
-
-        top_row.addWidget(self.menu_button)
+        top_row = QHBoxLayout()
         top_row.addStretch(1)
-
-        self.donors_button = QPushButton("Patreons")
-        self.donors_button.clicked.connect(self.open_donors_modal)
-        top_row.addWidget(self.donors_button)
 
         layout.addLayout(top_row)
 
@@ -256,8 +222,8 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.download_button.setText(self.tr("Descargar"))
         self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
 
-        if hasattr(self, "menu_button"):
-            self.menu_button.setText(self.tr("Archivo"))
+        if hasattr(self, "file_menu"):
+            self.file_menu.setTitle(self.tr("File"))
         if hasattr(self, "settings_action"):
             self.settings_action.setText(self.tr("Settings"))
         if hasattr(self, "about_action"):
