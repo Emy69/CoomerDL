@@ -18,6 +18,19 @@ class ProgressItemWidget(QWidget):
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setFixedHeight(16)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #1f1f1f;
+                border: 1px solid #5a5a5a;
+                border-radius: 6px;
+            }
+            QProgressBar::chunk {
+                background-color: #16a34a;
+                border-radius: 6px;
+            }
+        """)
         layout.addWidget(self.progress_bar)
 
         bottom = QHBoxLayout()
