@@ -23,15 +23,15 @@ class MainController:
 
         if not request.download_folder:
             self.app.show_error(
-                self.app.tr("Error"),
-                self.app.tr("Por favor, selecciona una carpeta de descarga.")
+                self.app.tr("ERROR"),
+                self.app.tr("PLEASE_SELECT_DOWNLOAD_FOLDER")
             )
             return
 
         if not request.url:
             self.app.show_error(
-                self.app.tr("Error"),
-                self.app.tr("Por favor, introduce una URL válida.")
+                self.app.tr("ERROR"),
+                self.app.tr("PLEASE_ENTER_VALID_URL")
             )
             return
 
@@ -41,12 +41,12 @@ class MainController:
         download_thread = None
 
         if parsed.site_type == "erome":
-            self.app.add_log_message_safe(self.app.tr("Descargando Erome"))
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_EROME"))
             self.app.setup_erome_downloader(is_profile_download=parsed.is_profile)
             self.app.active_downloader = self.app.erome_downloader
 
             if parsed.is_album:
-                self.app.add_log_message_safe(self.app.tr("URL del álbum"))
+                self.app.add_log_message_safe(self.app.tr("ALBUM_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
@@ -59,7 +59,7 @@ class MainController:
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe(self.app.tr("URL del perfil"))
+                self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
@@ -73,19 +73,19 @@ class MainController:
                 )
 
         elif parsed.site_type == "bunkr":
-            self.app.add_log_message_safe(self.app.tr("Descargando Bunkr"))
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_BUNKR"))
             self.app.setup_bunkr_downloader()
             self.app.active_downloader = self.app.bunkr_downloader
 
             if parsed.is_post:
-                self.app.add_log_message_safe(self.app.tr("URL del post"))
+                self.app.add_log_message_safe(self.app.tr("POST_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(self.app.bunkr_downloader.descargar_post_bunkr, request.url),
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe(self.app.tr("URL del perfil"))
+                self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),
@@ -93,7 +93,7 @@ class MainController:
                 )
 
         elif parsed.site_type == "coomer_kemono":
-            self.app.add_log_message_safe(self.app.tr("Iniciando descarga..."))
+            self.app.add_log_message_safe(self.app.tr("STARTING_DOWNLOAD"))
             self.app.setup_general_downloader()
             self.app.active_downloader = self.app.general_downloader
 
@@ -104,29 +104,39 @@ class MainController:
 
             if service is None or user is None:
                 if service is None:
-                    self.app.add_log_message_safe(self.app.tr("No se pudo extraer el servicio."))
-                    self.app.show_error(self.app.tr("Error"), self.app.tr("No se pudo extraer el servicio."))
+                    self.app.add_log_message_safe(self.app.tr("FAILED_TO_EXTRACT_SERVICE"))
+                    self.app.show_error(
+                        self.app.tr("ERROR"),
+                        self.app.tr("FAILED_TO_EXTRACT_SERVICE")
+                    )
                 else:
-                    self.app.add_log_message_safe(self.app.tr("No se pudo extraer el ID del usuario."))
-                    self.app.show_error(self.app.tr("Error"), self.app.tr("No se pudo extraer el ID del usuario."))
+                    self.app.add_log_message_safe(self.app.tr("FAILED_TO_EXTRACT_USER_ID"))
+                    self.app.show_error(
+                        self.app.tr("ERROR"),
+                        self.app.tr("FAILED_TO_EXTRACT_USER_ID")
+                    )
 
-                self.app.add_log_message_safe("SYSTEM", self.app.tr("URL no válida"))
+                self.app.add_log_message_safe("SYSTEM", self.app.tr("INVALID_URL"))
                 self.app.enable_widgets()
                 return
 
             self.app.add_log_message_safe(
-                self.app.tr("Servicio extraído: {service} del sitio: {site}", service=service, site=site)
+                self.app.tr(
+                    "EXTRACTED_SERVICE_SITE",
+                    service=service,
+                    site=site
+                )
             )
 
             if parsed.is_post:
-                self.app.add_log_message_safe(self.app.tr("Descargando post único..."))
+                self.app.add_log_message_safe(self.app.tr("DOWNLOADING_SINGLE_POST"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(self.start_ck_post_download, site, service, user, post),
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe(self.app.tr("Descargando todo el contenido del usuario..."))
+                self.app.add_log_message_safe(self.app.tr("DOWNLOADING_ALL_USER_CONTENT"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
@@ -143,7 +153,7 @@ class MainController:
                 )
 
         elif parsed.site_type == "simpcity":
-            self.app.add_log_message_safe(self.app.tr("Descargando SimpCity"))
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_SIMPCITY"))
             self.app.setup_simpcity_downloader()
             self.app.active_downloader = self.app.simpcity_downloader
             download_thread = threading.Thread(
@@ -157,7 +167,7 @@ class MainController:
             )
 
         elif parsed.site_type == "jpg5":
-            self.app.add_log_message_safe(self.app.tr("Descargando desde Jpg5"))
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_FROM_JPG5"))
             self.app.setup_jpg5_downloader()
             download_thread = threading.Thread(
                 target=self.wrapped_download,
@@ -166,7 +176,7 @@ class MainController:
             )
 
         else:
-            self.app.add_log_message_safe(self.app.tr("URL no válida"))
+            self.app.add_log_message_safe(self.app.tr("INVALID_URL"))
             self.app.enable_widgets()
             return
 
@@ -193,13 +203,17 @@ class MainController:
             only_first_page=only_this_url,
         )
         if download_info:
-            self.app.add_log_message_safe(f"Download info: {download_info}")
+            self.app.add_log_message_safe(
+                self.app.tr("DOWNLOAD_INFO", download_info=download_info)
+            )
         return download_info
 
     def start_ck_post_download(self, site, service, user, post):
         download_info = self.app.active_downloader.download_single_post(site, post, service, user)
         if download_info:
-            self.app.add_log_message_safe(f"Download info: {download_info}")
+            self.app.add_log_message_safe(
+                self.app.tr("DOWNLOAD_INFO", download_info=download_info)
+            )
         return download_info
 
     def cancel_download(self):
@@ -211,6 +225,6 @@ class MainController:
             self.app.active_downloader = None
             self.app.clear_progress_bars()
         else:
-            self.app.add_log_message_safe(self.app.tr("No hay una descarga en curso para cancelar."))
+            self.app.add_log_message_safe(self.app.tr("NO_ACTIVE_DOWNLOAD_TO_CANCEL"))
 
         self.app.enable_widgets()

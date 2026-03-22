@@ -1,6 +1,5 @@
 import json
 import os
-import threading
 
 
 class SettingsWindowService:
@@ -8,7 +7,6 @@ class SettingsWindowService:
         "max_downloads": 3,
         "folder_structure": "default",
         "language": "en",
-        "theme": "System",
         "max_retries": 3,
         "retry_interval": 2.0,
         "file_naming_mode": 0,
@@ -58,7 +56,7 @@ class SettingsWindowService:
         update_ui_texts_func,
     ):
         if selected_language_name not in languages:
-            return False, "Please select a language."
+            return False, "PLEASE_SELECT_LANGUAGE"
 
         selected_language_code = languages[selected_language_name]
         settings["language"] = selected_language_code
@@ -66,24 +64,10 @@ class SettingsWindowService:
         save_language_preference_func(selected_language_code)
         load_translations_func(selected_language_code)
         update_ui_texts_func()
-        return True, "The language was applied successfully."
-
-    def apply_theme(self, settings: dict, theme_name: str):
-        settings["theme"] = theme_name
-        self.save_settings(settings)
-        return True, "The theme was applied successfully."
-
-    def change_theme_in_thread(self, settings: dict, theme_name: str, callback=None):
-        def worker():
-            result = self.apply_theme(settings, theme_name)
-            if callback:
-                callback(result)
-
-        threading.Thread(target=worker, daemon=True).start()
+        return True, "LANGUAGE_APPLIED_SUCCESS"
 
     def center_window(self, window, width, height):
         try:
-            # PySide6 / Qt
             screen = window.screen()
             if screen is not None:
                 geometry = screen.availableGeometry()
