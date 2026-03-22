@@ -177,5 +177,16 @@
   "SETTINGS_COOKIES_CLEARED_SUCCESS": "Cookies were cleared successfully.",
   "SETTINGS_ERROR_CLEARING_COOKIES": "Error clearing cookies: {error}",
   "PROGRESS_DIALOG_TITLE": "Progress Details",
-  "PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS": "No active downloads"
+  "PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS": "No active downloads",
+  "DOWNLOAD_PANEL_URL_LABEL": "Website URL:",
+  "DOWNLOAD_PANEL_URL_PLACEHOLDER": "https://...",
+  "DOWNLOAD_PANEL_SELECT_FOLDER": "Select Folder",
+  "DOWNLOAD_PANEL_DOWNLOAD_IMAGES": "Download Images",
+  "DOWNLOAD_PANEL_DOWNLOAD_VIDEOS": "Download Videos",
+  "DOWNLOAD_PANEL_DOWNLOAD_COMPRESSED": "Download Compressed Files",
+  "DOWNLOAD_PANEL_ONLY_THIS_URL": "Only this URL",
+  "DOWNLOAD_PANEL_ONLY_THIS_URL_TOOLTIP": "Do not paginate profiles or threads; download only the current URL.",
+  "DOWNLOAD_PANEL_AUTOSCROLL_LOG": "Auto-scroll log",
+  "DOWNLOAD_PANEL_DOWNLOAD": "Download",
+  "DOWNLOAD_PANEL_CANCEL_DOWNLOAD": "Cancel Download"
 }

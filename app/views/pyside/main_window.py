@@ -147,7 +147,7 @@ class PySideMainWindow(QMainWindow):
 
         layout.addLayout(top_row)
 
-        self.download_panel = DownloadPanel(self)
+        self.download_panel = DownloadPanel(self, tr=self.tr)
         layout.addWidget(self.download_panel)
 
         self.log_panel = LogPanel(self)
@@ -234,6 +234,9 @@ class PySideMainWindow(QMainWindow):
             if hasattr(self.progress_controller, "dialog") and self.progress_controller.dialog is not None:
                 self.progress_controller.dialog.tr = self.tr
                 self.progress_controller.dialog.retranslate_ui()
+        
+        if hasattr(self, "download_panel") and self.download_panel is not None:
+            self.download_panel.retranslate_ui()
 
     def apply_runtime_settings(self, new_settings: dict):
         try:
