@@ -36,7 +36,7 @@ class Jpg5Downloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
-        self.domain_name = "JPG5"
+        self.domain_name = "jpg5"
 
     def descargar_imagenes(self):
         os.makedirs(self.download_folder, exist_ok=True)
@@ -52,7 +52,7 @@ class Jpg5Downloader(BaseApiDownloader):
             media_url = entry["media_url"]
 
             if self.cancel_requested.is_set():
-                self.log("Download cancelled by user.")
+                self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
                 return
 
             if self.download_mode == "queue":
@@ -84,7 +84,7 @@ class Jpg5Downloader(BaseApiDownloader):
 
         for future in as_completed(futures):
             if self.cancel_requested.is_set():
-                self.log("Download cancelled by user.")
+                self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
                 break
             future.result()
 

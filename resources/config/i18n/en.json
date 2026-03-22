@@ -110,5 +110,11 @@
   "FAILED_TO_EXPORT_LOGS": "Failed to export logs: {error}",
   "EROME_UNKNOWN_PROFILE": "Unknown Profile",
   "EROME_UNKNOWN_ALBUM": "Unknown Album",
-  "EROME_ERROR_RESOLVING_ALBUM": "Error resolving album {url}: {error}"
+  "EROME_ERROR_RESOLVING_ALBUM": "Error resolving album {url}: {error}",
+  "JPG5_DOWNLOAD_CANCELLED_BY_USER": "Download cancelled by user.",
+  "JPG5_PROCESSING_GALLERY": "Processing JPG5 gallery: {url}",
+  "JPG5_ERROR_PROCESSING_MEDIA_PAGE": "Error processing JPG5 media page {url}: {error}",
+  "JPG5_RESOLVING_MEDIA_PAGE": "Resolving JPG5 media page: {url}",
+  "JPG5_HEADER_NOT_FOUND": "header-content-right not found for {url}",
+  "JPG5_FINAL_DOWNLOAD_LINK_NOT_FOUND": "Final download link not found for {url}"
 }
