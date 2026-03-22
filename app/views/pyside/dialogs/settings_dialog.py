@@ -46,7 +46,7 @@ class SettingsDialog(QDialog):
         self.on_settings_changed = on_settings_changed
 
         self.CONFIG_PATH = "resources/config/settings.json"
-        self.COOKIES_PATH = "resources/config/cookies.json"
+        self.COOKIES_PATH = "resources/config/cookies/simpcity.json"
 
         self.languages = {
             "English": "en",
