@@ -59,7 +59,7 @@ class MainController:
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
+                self.app.add_log_message_safe("bunkr", self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
@@ -73,7 +73,7 @@ class MainController:
                 )
 
         elif parsed.site_type == "bunkr":
-            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_BUNKR"))
+            self.app.add_log_message_safe("bunkr", self.app.tr("DOWNLOADING_BUNKR"))
             self.app.setup_bunkr_downloader()
             self.app.active_downloader = self.app.bunkr_downloader
 
@@ -85,7 +85,7 @@ class MainController:
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
+                self.app.add_log_message_safe("bunkr", self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),

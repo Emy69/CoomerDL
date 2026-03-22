@@ -48,7 +48,8 @@ class DownloaderFactory:
                 "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
                 "Referer": "https://bunkr.site/",
             },
-            max_workers=self.frontend.get_max_downloads()
+            max_workers=self.frontend.get_max_downloads(),
+            tr=self.frontend.get_tr(),
         )
 
     def create_general_downloader(self, settings):

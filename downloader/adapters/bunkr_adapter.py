@@ -1,5 +1,4 @@
 import hashlib
-import os
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -20,10 +19,29 @@ class BunkrAdapter:
         self.log_callback = log_callback
         self.tr = tr
 
+    def translate(self, key, **kwargs):
+        if callable(self.tr):
+            try:
+                return self.tr(key, **kwargs)
+            except TypeError:
+                text = self.tr(key)
+                if kwargs:
+                    try:
+                        return text.format(**kwargs)
+                    except Exception:
+                        return text
+                return text
+
+        if kwargs:
+            try:
+                return key.format(**kwargs)
+            except Exception:
+                return key
+        return key
+
     def log(self, message):
-        final_message = self.tr(message) if self.tr else message
         if self.log_callback:
-            self.log_callback(self.site_name, final_message)
+            self.log_callback(self.site_name, message)
 
     def clean_filename(self, filename):
         return re.sub(r'[<>:"/\\|?*\u200b]', "_", str(filename or "")).strip()
@@ -49,7 +67,7 @@ class BunkrAdapter:
         return BeautifulSoup(response.text, "html.parser")
 
     def _resolve_f_url(self, url):
-        self.log(f"Bunkr: resolving /f/ URL {url}")
+        self.log(self.translate("BUNKR_RESOLVING_F_URL", url=url))
         soup = self._request_soup(url)
 
         first_anchor = soup.find(
@@ -59,7 +77,7 @@ class BunkrAdapter:
             },
         )
         if not first_anchor or "href" not in first_anchor.attrs:
-            self.log("Bunkr: intermediate link not found.")
+            self.log(self.translate("BUNKR_INTERMEDIATE_LINK_NOT_FOUND"))
             return {
                 "folder_name": self.get_consistent_folder_name(url, "bunkr_post"),
                 "media": [],
@@ -70,7 +88,7 @@ class BunkrAdapter:
 
         p_tag = soup2.find("p", class_="mt-3 text-center")
         if not p_tag:
-            self.log("Bunkr: final container not found in intermediate page.")
+            self.log(self.translate("BUNKR_FINAL_CONTAINER_NOT_FOUND"))
             return {
                 "folder_name": self.get_consistent_folder_name(url, "bunkr_post"),
                 "media": [],
@@ -83,7 +101,7 @@ class BunkrAdapter:
             },
         )
         if not download_anchor or "href" not in download_anchor.attrs:
-            self.log("Bunkr: final download link not found.")
+            self.log(self.translate("BUNKR_FINAL_DOWNLOAD_LINK_NOT_FOUND"))
             return {
                 "folder_name": self.get_consistent_folder_name(url, "bunkr_post"),
                 "media": [],
@@ -179,7 +197,13 @@ class BunkrAdapter:
                             })
 
             except Exception as e:
-                self.log(f"Bunkr: failed resolving profile media page {image_page_url}: {e}")
+                self.log(
+                    self.translate(
+                        "BUNKR_FAILED_RESOLVING_PROFILE_MEDIA_PAGE",
+                        url=image_page_url,
+                        error=e,
+                    )
+                )
 
         return media
 
@@ -230,6 +254,12 @@ class BunkrAdapter:
                         "published": "",
                     })
             except Exception as e:
-                self.log(f"Bunkr: failed resolving video page {video_page_url}: {e}")
+                self.log(
+                    self.translate(
+                        "BUNKR_FAILED_RESOLVING_VIDEO_PAGE",
+                        url=video_page_url,
+                        error=e,
+                    )
+                )
 
         return media

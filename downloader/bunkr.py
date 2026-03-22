@@ -15,14 +15,32 @@ class BunkrDownloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self._translate_message,
         )
-        self.domain_name = "BUNKR"
+        self.domain_name = "bunkr"
 
-    def _translate_message(self, key):
-        return self.translations.get(key, key)
+    def _translate_message(self, key, **kwargs):
+        if callable(self.tr):
+            try:
+                return self.tr(key, **kwargs)
+            except TypeError:
+                text = self.tr(key)
+                if kwargs:
+                    try:
+                        return text.format(**kwargs)
+                    except Exception:
+                        return text
+                return text
+
+        text = self.translations.get(key, key)
+        if kwargs:
+            try:
+                return text.format(**kwargs)
+            except Exception:
+                return text
+        return text
 
     def descargar_post_bunkr(self, url_post):
         try:
-            self.log(f"Starting Bunkr post download: {url_post}")
+            self.log("BUNKR_STARTING_POST_DOWNLOAD", url=url_post)
 
             resolved = self.adapter.resolve_url(url_post)
             folder_name = resolved["folder_name"]
@@ -68,13 +86,13 @@ class BunkrDownloader(BaseApiDownloader):
                 future.result()
 
         except Exception as e:
-            self.log(f"Error processing Bunkr post {url_post}: {e}")
+            self.log("BUNKR_ERROR_PROCESSING_POST", url=url_post, error=e)
         finally:
             self.shutdown_executor()
 
     def descargar_perfil_bunkr(self, url_perfil):
         try:
-            self.log(f"Starting Bunkr profile download: {url_perfil}")
+            self.log("BUNKR_STARTING_PROFILE_DOWNLOAD", url=url_perfil)
 
             resolved = self.adapter.resolve_url(url_perfil)
             folder_name = resolved["folder_name"]
@@ -120,7 +138,7 @@ class BunkrDownloader(BaseApiDownloader):
                 future.result()
 
         except Exception as e:
-            self.log(f"Error processing Bunkr profile {url_perfil}: {e}")
+            self.log("BUNKR_ERROR_PROCESSING_PROFILE", url=url_perfil, error=e)
         finally:
             self.shutdown_executor()
 
