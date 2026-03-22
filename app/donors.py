@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QGridLayout,
     QLabel,
-    QPushButton,
     QFrame,
     QWidget,
     QScrollArea,
@@ -56,10 +55,17 @@ class DonorsModal(QDialog):
         self.worker = None
         self._donor_pixmaps = {}
 
-        self.setWindowTitle(self.tr("Patreons"))
+        self.setWindowTitle(self.tr("DONORS_WINDOW_TITLE"))
         self.setModal(True)
         self.setFixedSize(600, 600)
         self.setWindowModality(Qt.WindowModal)
+
+        self.main_card = None
+        self.scroll_area = None
+        self.scroll_content = None
+        self.grid_layout = None
+        self.status_label = None
+        self.title_label = None
 
         self._build_ui()
         self._center_window()
@@ -103,17 +109,6 @@ class DonorsModal(QDialog):
                 border: 1px solid #3b3b3b;
                 border-radius: 10px;
             }
-            QPushButton {
-                min-height: 34px;
-                padding: 6px 14px;
-                border-radius: 8px;
-                border: 1px solid #4a4a4a;
-                background-color: #3a3a3a;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #4a4a4a;
-            }
             QScrollArea {
                 border: none;
                 background: transparent;
@@ -131,10 +126,10 @@ class DonorsModal(QDialog):
         main_layout.setContentsMargins(18, 18, 18, 18)
         main_layout.setSpacing(14)
 
-        title_label = QLabel(self.tr("Patreons"))
-        title_label.setProperty("role", "title")
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+        self.title_label = QLabel(self.tr("DONORS_WINDOW_TITLE"))
+        self.title_label.setProperty("role", "title")
+        self.title_label.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(self.title_label)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -148,7 +143,7 @@ class DonorsModal(QDialog):
         self.scroll_area.setWidget(self.scroll_content)
         main_layout.addWidget(self.scroll_area, 1)
 
-        self.status_label = QLabel(self.tr("Loading Patreons..."))
+        self.status_label = QLabel(self.tr("LOADING_PATREONS"))
         self.status_label.setProperty("role", "status")
         self.status_label.setAlignment(Qt.AlignCenter)
         self.grid_layout.addWidget(self.status_label, 0, 0, 1, 2)
@@ -219,13 +214,13 @@ class DonorsModal(QDialog):
 
         if raw_error.startswith("request:"):
             msg = raw_error.split(":", 1)[1]
-            text = self.tr("Error fetching donors: {error}").format(error=msg)
+            text = self.tr("ERROR_FETCHING_DONORS", error=msg)
         elif raw_error.startswith("json:"):
             msg = raw_error.split(":", 1)[1]
-            text = self.tr("Error processing donor data: {error}").format(error=msg)
+            text = self.tr("ERROR_PROCESSING_DONOR_DATA", error=msg)
         else:
             msg = raw_error.split(":", 1)[1] if ":" in raw_error else raw_error
-            text = self.tr("Error fetching donors: {error}").format(error=msg)
+            text = self.tr("ERROR_FETCHING_DONORS", error=msg)
 
         self.status_label = QLabel(text)
         self.status_label.setProperty("role", "status")
@@ -241,7 +236,7 @@ class DonorsModal(QDialog):
         columns = 2
 
         if not donors:
-            empty_label = QLabel(self.tr("No donors found."))
+            empty_label = QLabel(self.tr("NO_DONORS_FOUND"))
             empty_label.setProperty("role", "status")
             empty_label.setAlignment(Qt.AlignCenter)
             self.grid_layout.addWidget(empty_label, 0, 0, 1, columns)
@@ -255,19 +250,14 @@ class DonorsModal(QDialog):
 
         donors.sort(key=lambda x: to_float(x.get("donated_amount", 0)), reverse=True)
 
-        info_label = QLabel(
-            self.tr(
-                "Note: Donor information is updated every 10th of each month.\n"
-                "Names and donation amounts are retrieved from my Patreon page."
-            )
-        )
+        info_label = QLabel(self.tr("DONORS_INFO_NOTE"))
         info_label.setProperty("role", "note")
         info_label.setAlignment(Qt.AlignCenter)
         info_label.setWordWrap(True)
         self.grid_layout.addWidget(info_label, 0, 0, 1, columns)
 
         for index, donor in enumerate(donors):
-            donor_name = donor.get("name", self.tr("Unknown Donor"))
+            donor_name = donor.get("name", self.tr("UNKNOWN_DONOR"))
 
             icon_key = "default"
             icon_pixmap = self._donor_pixmaps.get(icon_key)

@@ -52,5 +52,12 @@
   "GITHUB_STARS_LABEL": "GitHub Stars",
   "SUPPORT_ON_PATREON": "Support on Patreon",
   "FOLLOW_ON_X": "Follow on X",
-  "THANK_YOU_FOR_USING_APP": "Thank you for using our app!"
+  "THANK_YOU_FOR_USING_APP": "Thank you for using our app!",
+  "DONORS_WINDOW_TITLE": "Patreons",
+  "LOADING_PATREONS": "Loading Patreons...",
+  "ERROR_FETCHING_DONORS": "Error fetching donors: {error}",
+  "ERROR_PROCESSING_DONOR_DATA": "Error processing donor data: {error}",
+  "NO_DONORS_FOUND": "No donors found.",
+  "DONORS_INFO_NOTE": "Note: Donor information is updated every 10th of each month.\nNames and donation amounts are retrieved from my Patreon page.",
+  "UNKNOWN_DONOR": "Unknown Donor"
 }
