@@ -16,11 +16,12 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
+from PySide6.QtCore import Qt
+
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
 from app.services.cookies_settings_service import CookiesSettingsService
 from app.services.database_settings_service import DatabaseSettingsService
-from PySide6.QtCore import Qt
 
 
 class SettingsDialog(QDialog):
@@ -60,26 +61,10 @@ class SettingsDialog(QDialog):
         self.database_settings_service = DatabaseSettingsService()
         self.settings = self.settings_service.load_settings()
 
-        self.setWindowTitle(self.translate("SETTINGS_WINDOW_TITLE", version=self.version))
+        self.setWindowTitle(self._t("SETTINGS_WINDOW_TITLE", version=self.version))
         self.resize(920, 680)
 
         self._build_ui()
-
-    def _load_languages_map(self):
-        available = self.parent_window.translation_service.get_available_languages()
-        languages = {
-            item["name"]: item["code"]
-            for item in available
-            if "name" in item and "code" in item
-        }
-
-        if not languages:
-            languages = {
-                "English": "en",
-                "Español": "es",
-            }
-
-        return languages
 
     def _t(self, key, **kwargs):
         try:
@@ -92,6 +77,29 @@ class SettingsDialog(QDialog):
                 except Exception:
                     return text
             return text
+
+    def _load_languages_map(self):
+        available = []
+        if (
+            self.parent_window is not None
+            and hasattr(self.parent_window, "translation_service")
+            and self.parent_window.translation_service is not None
+        ):
+            available = self.parent_window.translation_service.get_available_languages()
+
+        languages = {
+            item["name"]: item["code"]
+            for item in available
+            if isinstance(item, dict) and "name" in item and "code" in item
+        }
+
+        if not languages:
+            languages = {
+                "English": "en",
+                "Español": "es",
+            }
+
+        return languages
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -116,7 +124,6 @@ class SettingsDialog(QDialog):
 
         buttons_row = QHBoxLayout()
         buttons_row.addStretch(1)
-
         root.addLayout(buttons_row)
 
     def _build_general_tab(self):
@@ -130,7 +137,9 @@ class SettingsDialog(QDialog):
                 self.settings.get("language", "en")
             )
         )
-        layout.addRow(QLabel(self.translate("SETTINGS_LANGUAGE")), self.language_combo)
+
+        self.language_label = QLabel(self.translate("SETTINGS_LANGUAGE"))
+        layout.addRow(self.language_label, self.language_combo)
 
         self.apply_language_button = QPushButton(self.translate("SETTINGS_APPLY_LANGUAGE"))
         self.apply_language_button.clicked.connect(self._apply_language)
@@ -142,21 +151,25 @@ class SettingsDialog(QDialog):
         self.max_downloads_combo = QComboBox()
         self.max_downloads_combo.addItems([str(i) for i in range(1, 33)])
         self.max_downloads_combo.setCurrentText(str(self.settings.get("max_downloads", 3)))
-        layout.addRow(QLabel(self.translate("SETTINGS_MAX_DOWNLOADS")), self.max_downloads_combo)
+        self.max_downloads_label = QLabel(self.translate("SETTINGS_MAX_DOWNLOADS"))
+        layout.addRow(self.max_downloads_label, self.max_downloads_combo)
 
         self.folder_structure_combo = QComboBox()
         self.folder_structure_combo.addItems(["default", "post_number"])
         self.folder_structure_combo.setCurrentText(self.settings.get("folder_structure", "default"))
         self.folder_structure_combo.currentTextChanged.connect(self.refresh_structure_preview)
-        layout.addRow(QLabel(self.translate("SETTINGS_FOLDER_STRUCTURE")), self.folder_structure_combo)
+        self.folder_structure_label = QLabel(self.translate("SETTINGS_FOLDER_STRUCTURE"))
+        layout.addRow(self.folder_structure_label, self.folder_structure_combo)
 
         self.max_retries_combo = QComboBox()
         self.max_retries_combo.addItems([str(i) for i in range(0, 21)])
         self.max_retries_combo.setCurrentText(str(self.settings.get("max_retries", 3)))
-        layout.addRow(QLabel(self.translate("SETTINGS_MAX_RETRIES")), self.max_retries_combo)
+        self.max_retries_label = QLabel(self.translate("SETTINGS_MAX_RETRIES"))
+        layout.addRow(self.max_retries_label, self.max_retries_combo)
 
         self.retry_interval_edit = QLineEdit(str(self.settings.get("retry_interval", 2.0)))
-        layout.addRow(QLabel(self.translate("SETTINGS_RETRY_INTERVAL_SECONDS")), self.retry_interval_edit)
+        self.retry_interval_label = QLabel(self.translate("SETTINGS_RETRY_INTERVAL_SECONDS"))
+        layout.addRow(self.retry_interval_label, self.retry_interval_edit)
 
         self.file_naming_combo = QComboBox()
         naming_options = self.download_settings_service.get_naming_options()
@@ -166,7 +179,8 @@ class SettingsDialog(QDialog):
         )
         self.file_naming_combo.setCurrentText(current_naming_label)
         self.file_naming_combo.currentTextChanged.connect(self.refresh_structure_preview)
-        layout.addRow(QLabel(self.translate("SETTINGS_FILE_NAMING_MODE")), self.file_naming_combo)
+        self.file_naming_label = QLabel(self.translate("SETTINGS_FILE_NAMING_MODE"))
+        layout.addRow(self.file_naming_label, self.file_naming_combo)
 
         self.apply_downloads_button = QPushButton(self.translate("SETTINGS_APPLY_DOWNLOAD_SETTINGS"))
         self.apply_downloads_button.clicked.connect(self._apply_download_settings)
@@ -177,13 +191,12 @@ class SettingsDialog(QDialog):
 
         self.cookies_info_label = QLabel(self.translate("SETTINGS_COOKIES_INFO"))
         self.cookies_info_label.setWordWrap(True)
+        layout.addWidget(self.cookies_info_label)
 
         self.cookies_tutorial_label = QLabel(self.translate("SETTINGS_COOKIES_TUTORIAL"))
         self.cookies_tutorial_label.setStyleSheet("color: #bfbfbf;")
         self.cookies_tutorial_label.setWordWrap(True)
         layout.addWidget(self.cookies_tutorial_label)
-
-        layout.addWidget(self.cookies_info_label)
 
         self.cookies_text = QTextEdit()
         self.cookies_text.setPlainText(self.cookies_settings_service.load_cookies_text())
@@ -243,9 +256,36 @@ class SettingsDialog(QDialog):
 
         self.load_db_records()
 
-    # ------------------------------------------------------------
-    # Structure preview
-    # ------------------------------------------------------------
+    def _reload_language_combo(self):
+        current_language_code = self.settings.get("language", "en")
+        self.languages = self._load_languages_map()
+
+        self.language_combo.blockSignals(True)
+        self.language_combo.clear()
+        self.language_combo.addItems(list(self.languages.keys()))
+        self.language_combo.setCurrentText(
+            self.settings_service.get_language_name(self.languages, current_language_code)
+        )
+        self.language_combo.blockSignals(False)
+
+    def _reload_file_naming_combo(self):
+        current_mode_value = self.settings.get("file_naming_mode", 0)
+
+        self.file_naming_combo.blockSignals(True)
+        self.file_naming_combo.clear()
+
+        naming_options = self.download_settings_service.get_naming_options()
+        self.file_naming_combo.addItems(naming_options)
+
+        current_naming_label = self.download_settings_service.get_naming_label_from_setting(
+            current_mode_value
+        )
+        self.file_naming_combo.setCurrentText(current_naming_label)
+        self.file_naming_combo.blockSignals(False)
+
+    def _reload_cookies_text(self):
+        self.cookies_text.setPlainText(self.cookies_settings_service.load_cookies_text())
+
     def build_structure_preview_payload(self):
         temp_settings = dict(self.settings)
         temp_settings["folder_structure"] = self.folder_structure_combo.currentText()
@@ -259,6 +299,8 @@ class SettingsDialog(QDialog):
 
     def refresh_structure_preview(self):
         if not hasattr(self, "structure_tree"):
+            return
+        if not hasattr(self, "structure_preview_service"):
             return
 
         payload = self.build_structure_preview_payload()
@@ -345,7 +387,11 @@ class SettingsDialog(QDialog):
         db_path = self._get_db_path()
 
         if not self.database_settings_service.database_exists(db_path):
-            QMessageBox.warning(self, self.translate("WARNING"), self.translate("SETTINGS_DATABASE_FILE_DOES_NOT_EXIST"))
+            QMessageBox.warning(
+                self,
+                self.translate("WARNING"),
+                self.translate("SETTINGS_DATABASE_FILE_DOES_NOT_EXIST")
+            )
             return
 
         export_path, _ = QFileDialog.getSaveFileName(
@@ -374,7 +420,11 @@ class SettingsDialog(QDialog):
     def _delete_selected_users(self):
         db_path = self._get_db_path()
         if not self.database_settings_service.database_exists(db_path):
-            QMessageBox.warning(self, self.translate("WARNING"), self.translate("SETTINGS_DATABASE_NOT_FOUND"))
+            QMessageBox.warning(
+                self,
+                self.translate("WARNING"),
+                self.translate("SETTINGS_DATABASE_NOT_FOUND")
+            )
             return
 
         selected_items = self.db_tree.selectedItems()
@@ -438,8 +488,8 @@ class SettingsDialog(QDialog):
         )
 
         if success:
-            QMessageBox.information(self, self.translate("SUCCESS"), self.translate(message))
             self._retranslate_ui()
+            QMessageBox.information(self, self.translate("SUCCESS"), self.translate(message))
         else:
             QMessageBox.warning(self, self.translate("WARNING"), self.translate(message))
 
@@ -485,6 +535,7 @@ class SettingsDialog(QDialog):
         cookies_text = self.cookies_text.toPlainText().strip()
         try:
             self.cookies_settings_service.save_cookies_text(cookies_text)
+            self._reload_cookies_text()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -509,7 +560,8 @@ class SettingsDialog(QDialog):
 
         try:
             content = self.cookies_settings_service.import_cookies_file(file_path)
-            self.cookies_text.setPlainText(content)
+            self.cookies_settings_service.save_cookies_text(content)
+            self._reload_cookies_text()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -533,7 +585,7 @@ class SettingsDialog(QDialog):
 
         try:
             self.cookies_settings_service.clear_cookies()
-            self.cookies_text.clear()
+            self._reload_cookies_text()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -548,21 +600,36 @@ class SettingsDialog(QDialog):
 
     def _retranslate_ui(self):
         self.setWindowTitle(self._t("SETTINGS_WINDOW_TITLE", version=self.version))
+
         self.tabs.setTabText(0, self.translate("SETTINGS_TAB_GENERAL"))
         self.tabs.setTabText(1, self.translate("SETTINGS_TAB_DOWNLOADS"))
         self.tabs.setTabText(2, self.translate("SETTINGS_TAB_COOKIES"))
         self.tabs.setTabText(3, self.translate("SETTINGS_TAB_DATABASE"))
+
+        self.language_label.setText(self.translate("SETTINGS_LANGUAGE"))
+        self.max_downloads_label.setText(self.translate("SETTINGS_MAX_DOWNLOADS"))
+        self.folder_structure_label.setText(self.translate("SETTINGS_FOLDER_STRUCTURE"))
+        self.max_retries_label.setText(self.translate("SETTINGS_MAX_RETRIES"))
+        self.retry_interval_label.setText(self.translate("SETTINGS_RETRY_INTERVAL_SECONDS"))
+        self.file_naming_label.setText(self.translate("SETTINGS_FILE_NAMING_MODE"))
+
         self.apply_language_button.setText(self.translate("SETTINGS_APPLY_LANGUAGE"))
         self.apply_downloads_button.setText(self.translate("SETTINGS_APPLY_DOWNLOAD_SETTINGS"))
+
         self.cookies_info_label.setText(self.translate("SETTINGS_COOKIES_INFO"))
         self.cookies_tutorial_label.setText(self.translate("SETTINGS_COOKIES_TUTORIAL"))
         self.import_cookies_button.setText(self.translate("SETTINGS_IMPORT_COOKIES"))
         self.save_cookies_button.setText(self.translate("SETTINGS_SAVE_COOKIES"))
         self.clear_cookies_button.setText(self.translate("SETTINGS_CLEAR_COOKIES"))
+
         self.database_info_label.setText(self.translate("SETTINGS_DATABASE_INFO"))
         self.reload_db_button.setText(self.translate("SETTINGS_RELOAD_DATABASE"))
         self.export_db_button.setText(self.translate("SETTINGS_EXPORT_DATABASE"))
         self.delete_users_button.setText(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
+
+        self._reload_language_combo()
+        self._reload_file_naming_combo()
+
         self.db_tree.setHeaderLabels([
             self.translate("SETTINGS_DB_HEADER_ID"),
             self.translate("SETTINGS_DB_HEADER_FILE_NAME"),
@@ -570,3 +637,8 @@ class SettingsDialog(QDialog):
             self.translate("SETTINGS_DB_HEADER_SIZE"),
             self.translate("SETTINGS_DB_HEADER_DOWNLOADED_AT"),
         ])
+
+        self.load_db_records()
+
+        if hasattr(self, "structure_tree"):
+            self.refresh_structure_preview()
