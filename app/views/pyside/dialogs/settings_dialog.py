@@ -22,6 +22,7 @@ from app.services.cookies_settings_service import CookiesSettingsService
 from app.services.database_settings_service import DatabaseSettingsService
 from PySide6.QtCore import Qt
 
+
 class SettingsDialog(QDialog):
     def __init__(
         self,
@@ -59,11 +60,11 @@ class SettingsDialog(QDialog):
         self.database_settings_service = DatabaseSettingsService()
         self.settings = self.settings_service.load_settings()
 
-        self.setWindowTitle(f"Settings [{self.version}]")
+        self.setWindowTitle(self.translate("SETTINGS_WINDOW_TITLE", version=self.version))
         self.resize(920, 680)
 
         self._build_ui()
-    
+
     def _load_languages_map(self):
         available = self.parent_window.translation_service.get_available_languages()
         languages = {
@@ -80,9 +81,18 @@ class SettingsDialog(QDialog):
 
         return languages
 
-    # ------------------------------------------------------------
-    # UI
-    # ------------------------------------------------------------
+    def _t(self, key, **kwargs):
+        try:
+            return self.translate(key, **kwargs)
+        except TypeError:
+            text = self.translate(key)
+            if kwargs:
+                try:
+                    return text.format(**kwargs)
+                except Exception:
+                    return text
+            return text
+
     def _build_ui(self):
         root = QVBoxLayout(self)
 
@@ -94,10 +104,10 @@ class SettingsDialog(QDialog):
         self.cookies_tab = QWidget()
         self.database_tab = QWidget()
 
-        self.tabs.addTab(self.general_tab, self.translate("General"))
-        self.tabs.addTab(self.downloads_tab, self.translate("Downloads"))
-        self.tabs.addTab(self.cookies_tab, self.translate("Cookies"))
-        self.tabs.addTab(self.database_tab, self.translate("Database"))
+        self.tabs.addTab(self.general_tab, self.translate("SETTINGS_TAB_GENERAL"))
+        self.tabs.addTab(self.downloads_tab, self.translate("SETTINGS_TAB_DOWNLOADS"))
+        self.tabs.addTab(self.cookies_tab, self.translate("SETTINGS_TAB_COOKIES"))
+        self.tabs.addTab(self.database_tab, self.translate("SETTINGS_TAB_DATABASE"))
 
         self._build_general_tab()
         self._build_downloads_tab()
@@ -120,9 +130,9 @@ class SettingsDialog(QDialog):
                 self.settings.get("language", "en")
             )
         )
-        layout.addRow(QLabel(self.translate("Language")), self.language_combo)
+        layout.addRow(QLabel(self.translate("SETTINGS_LANGUAGE")), self.language_combo)
 
-        self.apply_language_button = QPushButton(self.translate("Apply Language"))
+        self.apply_language_button = QPushButton(self.translate("SETTINGS_APPLY_LANGUAGE"))
         self.apply_language_button.clicked.connect(self._apply_language)
         layout.addRow("", self.apply_language_button)
 
@@ -132,21 +142,21 @@ class SettingsDialog(QDialog):
         self.max_downloads_combo = QComboBox()
         self.max_downloads_combo.addItems([str(i) for i in range(1, 33)])
         self.max_downloads_combo.setCurrentText(str(self.settings.get("max_downloads", 3)))
-        layout.addRow(QLabel(self.translate("Max Downloads")), self.max_downloads_combo)
+        layout.addRow(QLabel(self.translate("SETTINGS_MAX_DOWNLOADS")), self.max_downloads_combo)
 
         self.folder_structure_combo = QComboBox()
         self.folder_structure_combo.addItems(["default", "post_number"])
         self.folder_structure_combo.setCurrentText(self.settings.get("folder_structure", "default"))
         self.folder_structure_combo.currentTextChanged.connect(self.refresh_structure_preview)
-        layout.addRow(QLabel(self.translate("Folder Structure")), self.folder_structure_combo)
+        layout.addRow(QLabel(self.translate("SETTINGS_FOLDER_STRUCTURE")), self.folder_structure_combo)
 
         self.max_retries_combo = QComboBox()
         self.max_retries_combo.addItems([str(i) for i in range(0, 21)])
         self.max_retries_combo.setCurrentText(str(self.settings.get("max_retries", 3)))
-        layout.addRow(QLabel(self.translate("Max Retries")), self.max_retries_combo)
+        layout.addRow(QLabel(self.translate("SETTINGS_MAX_RETRIES")), self.max_retries_combo)
 
         self.retry_interval_edit = QLineEdit(str(self.settings.get("retry_interval", 2.0)))
-        layout.addRow(QLabel(self.translate("Retry Interval (seconds)")), self.retry_interval_edit)
+        layout.addRow(QLabel(self.translate("SETTINGS_RETRY_INTERVAL_SECONDS")), self.retry_interval_edit)
 
         self.file_naming_combo = QComboBox()
         naming_options = self.download_settings_service.get_naming_options()
@@ -156,38 +166,23 @@ class SettingsDialog(QDialog):
         )
         self.file_naming_combo.setCurrentText(current_naming_label)
         self.file_naming_combo.currentTextChanged.connect(self.refresh_structure_preview)
-        layout.addRow(QLabel(self.translate("File Naming Mode")), self.file_naming_combo)
+        layout.addRow(QLabel(self.translate("SETTINGS_FILE_NAMING_MODE")), self.file_naming_combo)
 
-        self.apply_downloads_button = QPushButton(self.translate("Apply Download Settings"))
+        self.apply_downloads_button = QPushButton(self.translate("SETTINGS_APPLY_DOWNLOAD_SETTINGS"))
         self.apply_downloads_button.clicked.connect(self._apply_download_settings)
         layout.addRow("", self.apply_downloads_button)
 
     def _build_cookies_tab(self):
         layout = QVBoxLayout(self.cookies_tab)
 
-        self.cookies_info_label = QLabel(
-            self.translate(
-                "These cookies are only used for SimpCity. "
-                "Here you can paste, import, save, or clear your cookies JSON."
-            )
-        )
+        self.cookies_info_label = QLabel(self.translate("SETTINGS_COOKIES_INFO"))
         self.cookies_info_label.setWordWrap(True)
-        self.cookies_tutorial_label = QLabel(
-            self.translate(
-                "How to extract SimpCity cookies from your browser:\n\n"
-                "1. Open SimpCity in your browser and log into your account.\n"
-                "2. Press F12 to open Developer Tools.\n"
-                "3. Go to the Application tab in Chrome/Edge, or Storage in Firefox.\n"
-                "4. Open Cookies and select the SimpCity domain.\n"
-                "5. Copy the required cookie values, or export them as JSON using a cookies extension.\n"
-                "6. Paste the JSON here or import the exported file.\n\n"
-                "Tip: make sure the cookies belong to your active SimpCity session."
-            )
-        )
+
+        self.cookies_tutorial_label = QLabel(self.translate("SETTINGS_COOKIES_TUTORIAL"))
         self.cookies_tutorial_label.setStyleSheet("color: #bfbfbf;")
         self.cookies_tutorial_label.setWordWrap(True)
         layout.addWidget(self.cookies_tutorial_label)
-        
+
         layout.addWidget(self.cookies_info_label)
 
         self.cookies_text = QTextEdit()
@@ -196,15 +191,15 @@ class SettingsDialog(QDialog):
 
         buttons_row = QHBoxLayout()
 
-        self.import_cookies_button = QPushButton(self.translate("Import Cookies"))
+        self.import_cookies_button = QPushButton(self.translate("SETTINGS_IMPORT_COOKIES"))
         self.import_cookies_button.clicked.connect(self._import_cookies)
         buttons_row.addWidget(self.import_cookies_button)
 
-        self.save_cookies_button = QPushButton(self.translate("Save Cookies"))
+        self.save_cookies_button = QPushButton(self.translate("SETTINGS_SAVE_COOKIES"))
         self.save_cookies_button.clicked.connect(self._save_cookies)
         buttons_row.addWidget(self.save_cookies_button)
 
-        self.clear_cookies_button = QPushButton(self.translate("Clear Cookies"))
+        self.clear_cookies_button = QPushButton(self.translate("SETTINGS_CLEAR_COOKIES"))
         self.clear_cookies_button.clicked.connect(self._clear_cookies)
         buttons_row.addWidget(self.clear_cookies_button)
 
@@ -214,30 +209,32 @@ class SettingsDialog(QDialog):
     def _build_database_tab(self):
         layout = QVBoxLayout(self.database_tab)
 
-        self.database_info_label = QLabel(
-            self.translate("Browse, export, and manage downloaded records from the database.")
-        )
+        self.database_info_label = QLabel(self.translate("SETTINGS_DATABASE_INFO"))
         layout.addWidget(self.database_info_label)
 
         self.db_tree = QTreeWidget()
         self.db_tree.setColumnCount(5)
         self.db_tree.setHeaderLabels([
-            "ID", "File Name", "Type", "Size", "Downloaded At"
+            self.translate("SETTINGS_DB_HEADER_ID"),
+            self.translate("SETTINGS_DB_HEADER_FILE_NAME"),
+            self.translate("SETTINGS_DB_HEADER_TYPE"),
+            self.translate("SETTINGS_DB_HEADER_SIZE"),
+            self.translate("SETTINGS_DB_HEADER_DOWNLOADED_AT"),
         ])
         self.db_tree.setSelectionMode(self.db_tree.SelectionMode.ExtendedSelection)
         layout.addWidget(self.db_tree, 1)
 
         buttons_row = QHBoxLayout()
 
-        self.reload_db_button = QPushButton(self.translate("Reload Database"))
+        self.reload_db_button = QPushButton(self.translate("SETTINGS_RELOAD_DATABASE"))
         self.reload_db_button.clicked.connect(self.load_db_records)
         buttons_row.addWidget(self.reload_db_button)
 
-        self.export_db_button = QPushButton(self.translate("Export Database"))
+        self.export_db_button = QPushButton(self.translate("SETTINGS_EXPORT_DATABASE"))
         self.export_db_button.clicked.connect(self._export_db)
         buttons_row.addWidget(self.export_db_button)
 
-        self.delete_users_button = QPushButton(self.translate("Delete Selected Users"))
+        self.delete_users_button = QPushButton(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
         self.delete_users_button.clicked.connect(self._delete_selected_users)
         buttons_row.addWidget(self.delete_users_button)
 
@@ -289,7 +286,7 @@ class SettingsDialog(QDialog):
         if self.downloader and hasattr(self.downloader, "db_path") and self.downloader.db_path:
             return self.downloader.db_path
         return "resources/config/downloads.db"
-    
+
     def load_db_records(self):
         db_path = self._get_db_path()
 
@@ -303,8 +300,8 @@ class SettingsDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error loading database: {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_LOADING_DATABASE", error=e)
             )
             return
 
@@ -329,7 +326,7 @@ class SettingsDialog(QDialog):
                     post_item.addChild(file_item)
 
             if user_entry["no_post"]:
-                no_post_item = QTreeWidgetItem([self.translate("No Post")])
+                no_post_item = QTreeWidgetItem([self.translate("SETTINGS_NO_POST")])
                 user_item.addChild(no_post_item)
 
                 for item in user_entry["no_post"]:
@@ -348,12 +345,12 @@ class SettingsDialog(QDialog):
         db_path = self._get_db_path()
 
         if not self.database_settings_service.database_exists(db_path):
-            QMessageBox.warning(self, self.translate("Warning"), self.translate("Database file does not exist."))
+            QMessageBox.warning(self, self.translate("WARNING"), self.translate("SETTINGS_DATABASE_FILE_DOES_NOT_EXIST"))
             return
 
         export_path, _ = QFileDialog.getSaveFileName(
             self,
-            self.translate("Export Database"),
+            self.translate("SETTINGS_EXPORT_DATABASE"),
             "",
             "SQLite DB (*.db)"
         )
@@ -364,28 +361,28 @@ class SettingsDialog(QDialog):
             self.database_settings_service.export_database(db_path, export_path)
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("The database was exported successfully.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_DATABASE_EXPORTED_SUCCESS")
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error exporting database: {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_EXPORTING_DATABASE", error=e)
             )
 
     def _delete_selected_users(self):
         db_path = self._get_db_path()
         if not self.database_settings_service.database_exists(db_path):
-            QMessageBox.warning(self, self.translate("Warning"), self.translate("Database not found."))
+            QMessageBox.warning(self, self.translate("WARNING"), self.translate("SETTINGS_DATABASE_NOT_FOUND"))
             return
 
         selected_items = self.db_tree.selectedItems()
         if not selected_items:
             QMessageBox.warning(
                 self,
-                self.translate("Warning"),
-                self.translate("Please select at least one user to delete.")
+                self.translate("WARNING"),
+                self.translate("SETTINGS_SELECT_AT_LEAST_ONE_USER")
             )
             return
 
@@ -399,19 +396,15 @@ class SettingsDialog(QDialog):
         if not user_ids:
             QMessageBox.warning(
                 self,
-                self.translate("Warning"),
-                self.translate("Please select valid user entries (not posts/files).")
+                self.translate("WARNING"),
+                self.translate("SETTINGS_SELECT_VALID_USER_ENTRIES")
             )
             return
 
         confirm = QMessageBox.question(
             self,
-            self.translate("Confirm"),
-            self.translate(
-                "Are you sure you want to delete all records for user(s): {}?".format(
-                    ", ".join(user_ids)
-                )
-            )
+            self.translate("CONFIRM"),
+            self._t("SETTINGS_CONFIRM_DELETE_USERS", users=", ".join(user_ids))
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return
@@ -420,15 +413,15 @@ class SettingsDialog(QDialog):
             self.database_settings_service.delete_users(db_path, user_ids)
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("Selected user(s) and their records were deleted.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_SELECTED_USERS_DELETED")
             )
             self.load_db_records()
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error deleting user(s): {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_DELETING_USERS", error=e)
             )
 
     # ------------------------------------------------------------
@@ -445,10 +438,10 @@ class SettingsDialog(QDialog):
         )
 
         if success:
-            QMessageBox.information(self, self.translate("Success"), self.translate(message))
+            QMessageBox.information(self, self.translate("SUCCESS"), self.translate(message))
             self._retranslate_ui()
         else:
-            QMessageBox.warning(self, self.translate("Warning"), self.translate(message))
+            QMessageBox.warning(self, self.translate("WARNING"), self.translate(message))
 
     def _apply_download_settings(self):
         try:
@@ -477,15 +470,15 @@ class SettingsDialog(QDialog):
 
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("La configuración de descargas se aplicó correctamente.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_DOWNLOADS_APPLIED_SUCCESS")
             )
 
         except ValueError:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate("Por favor, ingresa valores numéricos válidos.")
+                self.translate("ERROR"),
+                self.translate("SETTINGS_INVALID_NUMERIC_VALUES")
             )
 
     def _save_cookies(self):
@@ -494,20 +487,20 @@ class SettingsDialog(QDialog):
             self.cookies_settings_service.save_cookies_text(cookies_text)
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("Cookies were saved successfully.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_COOKIES_SAVED_SUCCESS")
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error saving cookies: {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_SAVING_COOKIES", error=e)
             )
 
     def _import_cookies(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            self.translate("Import Cookies"),
+            self.translate("SETTINGS_IMPORT_COOKIES"),
             "",
             "JSON Files (*.json);;Text Files (*.txt);;All Files (*)"
         )
@@ -519,21 +512,21 @@ class SettingsDialog(QDialog):
             self.cookies_text.setPlainText(content)
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("Cookies were imported successfully.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_COOKIES_IMPORTED_SUCCESS")
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error importing cookies: {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_IMPORTING_COOKIES", error=e)
             )
 
     def _clear_cookies(self):
         confirm = QMessageBox.question(
             self,
-            self.translate("Confirm"),
-            self.translate("Are you sure you want to clear the saved cookies?")
+            self.translate("CONFIRM"),
+            self.translate("SETTINGS_CONFIRM_CLEAR_COOKIES")
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return
@@ -543,48 +536,37 @@ class SettingsDialog(QDialog):
             self.cookies_text.clear()
             QMessageBox.information(
                 self,
-                self.translate("Success"),
-                self.translate("Cookies were cleared successfully.")
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_COOKIES_CLEARED_SUCCESS")
             )
         except Exception as e:
             QMessageBox.critical(
                 self,
-                self.translate("Error"),
-                self.translate(f"Error clearing cookies: {e}")
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_CLEARING_COOKIES", error=e)
             )
 
     def _retranslate_ui(self):
-        self.setWindowTitle(f"Settings [{self.version}]")
-        self.tabs.setTabText(0, self.translate("General"))
-        self.tabs.setTabText(1, self.translate("Downloads"))
-        self.tabs.setTabText(2, self.translate("Cookies"))
-        self.tabs.setTabText(3, self.translate("Database"))
-        self.apply_language_button.setText(self.translate("Apply Language"))
-        self.apply_downloads_button.setText(self.translate("Apply Download Settings"))
-        self.cookies_info_label.setText(
-            self.translate(
-                "These cookies are only used for SimpCity. "
-                "Here you can paste, import, save, or clear your cookies JSON."
-            )
-        )
-        self.cookies_tutorial_label.setText(
-            self.translate(
-                "How to extract SimpCity cookies from your browser:\n\n"
-                "1. Open SimpCity in your browser and log into your account.\n"
-                "2. Press F12 to open Developer Tools.\n"
-                "3. Go to the Application tab in Chrome/Edge, or Storage in Firefox.\n"
-                "4. Open Cookies and select the SimpCity domain.\n"
-                "5. Copy the required cookie values, or export them as JSON using a cookies extension.\n"
-                "6. Paste the JSON here or import the exported file.\n\n"
-                "Tip: make sure the cookies belong to your active SimpCity session."
-            )
-        )
-        self.import_cookies_button.setText(self.translate("Import Cookies"))
-        self.save_cookies_button.setText(self.translate("Save Cookies"))
-        self.clear_cookies_button.setText(self.translate("Clear Cookies"))
-        self.database_info_label.setText(
-            self.translate("Browse, export, and manage downloaded records from the database.")
-        )
-        self.reload_db_button.setText(self.translate("Reload Database"))
-        self.export_db_button.setText(self.translate("Export Database"))
-        self.delete_users_button.setText(self.translate("Delete Selected Users"))
+        self.setWindowTitle(self._t("SETTINGS_WINDOW_TITLE", version=self.version))
+        self.tabs.setTabText(0, self.translate("SETTINGS_TAB_GENERAL"))
+        self.tabs.setTabText(1, self.translate("SETTINGS_TAB_DOWNLOADS"))
+        self.tabs.setTabText(2, self.translate("SETTINGS_TAB_COOKIES"))
+        self.tabs.setTabText(3, self.translate("SETTINGS_TAB_DATABASE"))
+        self.apply_language_button.setText(self.translate("SETTINGS_APPLY_LANGUAGE"))
+        self.apply_downloads_button.setText(self.translate("SETTINGS_APPLY_DOWNLOAD_SETTINGS"))
+        self.cookies_info_label.setText(self.translate("SETTINGS_COOKIES_INFO"))
+        self.cookies_tutorial_label.setText(self.translate("SETTINGS_COOKIES_TUTORIAL"))
+        self.import_cookies_button.setText(self.translate("SETTINGS_IMPORT_COOKIES"))
+        self.save_cookies_button.setText(self.translate("SETTINGS_SAVE_COOKIES"))
+        self.clear_cookies_button.setText(self.translate("SETTINGS_CLEAR_COOKIES"))
+        self.database_info_label.setText(self.translate("SETTINGS_DATABASE_INFO"))
+        self.reload_db_button.setText(self.translate("SETTINGS_RELOAD_DATABASE"))
+        self.export_db_button.setText(self.translate("SETTINGS_EXPORT_DATABASE"))
+        self.delete_users_button.setText(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
+        self.db_tree.setHeaderLabels([
+            self.translate("SETTINGS_DB_HEADER_ID"),
+            self.translate("SETTINGS_DB_HEADER_FILE_NAME"),
+            self.translate("SETTINGS_DB_HEADER_TYPE"),
+            self.translate("SETTINGS_DB_HEADER_SIZE"),
+            self.translate("SETTINGS_DB_HEADER_DOWNLOADED_AT"),
+        ])
