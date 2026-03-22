@@ -175,5 +175,7 @@
   "SETTINGS_ERROR_IMPORTING_COOKIES": "Error importing cookies: {error}",
   "SETTINGS_CONFIRM_CLEAR_COOKIES": "Are you sure you want to clear the saved cookies?",
   "SETTINGS_COOKIES_CLEARED_SUCCESS": "Cookies were cleared successfully.",
-  "SETTINGS_ERROR_CLEARING_COOKIES": "Error clearing cookies: {error}"
+  "SETTINGS_ERROR_CLEARING_COOKIES": "Error clearing cookies: {error}",
+  "PROGRESS_DIALOG_TITLE": "Progress Details",
+  "PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS": "No active downloads"
 }

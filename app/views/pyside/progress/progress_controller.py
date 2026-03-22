@@ -14,7 +14,8 @@ class ProgressSignals(QObject):
 class ProgressController:
     def __init__(self, parent_window):
         self.parent_window = parent_window
-        self.dialog = ProgressDialog(parent_window)
+        self.tr = parent_window.tr
+        self.dialog = ProgressDialog(parent_window, tr=parent_window.tr)
         self.signals = ProgressSignals()
 
         self.items = {}

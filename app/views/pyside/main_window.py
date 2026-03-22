@@ -228,6 +228,8 @@ class PySideMainWindow(QMainWindow):
             self.donors_button.setText(self.tr("Patreons"))
         if hasattr(self, "footer_bar") and hasattr(self.footer_bar, "progress_details_button"):
             self.footer_bar.progress_details_button.setToolTip(self.tr("Progress Details"))
+        if hasattr(self, "progress_dialog") and self.progress_dialog is not None:
+            self.progress_dialog.retranslate_ui()
 
     def apply_runtime_settings(self, new_settings: dict):
         try:

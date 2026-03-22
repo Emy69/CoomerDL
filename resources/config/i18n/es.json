@@ -175,5 +175,7 @@
   "SETTINGS_ERROR_IMPORTING_COOKIES": "Error al importar cookies: {error}",
   "SETTINGS_CONFIRM_CLEAR_COOKIES": "¿Seguro que deseas limpiar las cookies guardadas?",
   "SETTINGS_COOKIES_CLEARED_SUCCESS": "Las cookies se limpiaron correctamente.",
-  "SETTINGS_ERROR_CLEARING_COOKIES": "Error al limpiar cookies: {error}"
+  "SETTINGS_ERROR_CLEARING_COOKIES": "Error al limpiar cookies: {error}",
+  "PROGRESS_DIALOG_TITLE": "Detalles del progreso",
+  "PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS": "No hay descargas activas"
 }

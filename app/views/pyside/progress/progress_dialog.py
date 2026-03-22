@@ -2,15 +2,17 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QScrollArea, QWidget, QLabel
 
 
 class ProgressDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, tr=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Progress Details")
+        self.tr = tr if tr else (lambda key, **kwargs: key.format(**kwargs) if kwargs else key)
+
+        self.setWindowTitle(self.tr("PROGRESS_DIALOG_TITLE"))
         self.resize(700, 500)
 
         layout = QVBoxLayout(self)
 
-        self.empty_label = QLabel("No active downloads")
+        self.empty_label = QLabel(self.tr("PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS"))
         layout.addWidget(self.empty_label)
 
         self.scroll = QScrollArea()
@@ -27,3 +29,7 @@ class ProgressDialog(QDialog):
 
     def show_empty(self, visible: bool):
         self.empty_label.setVisible(visible)
+
+    def retranslate_ui(self):
+        self.setWindowTitle(self.tr("PROGRESS_DIALOG_TITLE"))
+        self.empty_label.setText(self.tr("PROGRESS_DIALOG_NO_ACTIVE_DOWNLOADS"))
