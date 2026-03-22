@@ -222,14 +222,18 @@ class PySideMainWindow(QMainWindow):
             self.file_menu.setTitle(self.tr("File"))
         if hasattr(self, "settings_action"):
             self.settings_action.setText(self.tr("Settings"))
-        if hasattr(self, "about_action"):
-            self.about_action.setText(self.tr("About"))
-        if hasattr(self, "donors_button"):
-            self.donors_button.setText(self.tr("Patreons"))
+        if hasattr(self, "help_action"):
+            self.help_action.setText(self.tr("About"))
+        if hasattr(self, "support_action"):
+            self.support_action.setText(self.tr("Patreons"))
+
         if hasattr(self, "footer_bar") and hasattr(self.footer_bar, "progress_details_button"):
             self.footer_bar.progress_details_button.setToolTip(self.tr("Progress Details"))
-        if hasattr(self, "progress_dialog") and self.progress_dialog is not None:
-            self.progress_dialog.retranslate_ui()
+
+        if hasattr(self, "progress_controller") and self.progress_controller is not None:
+            if hasattr(self.progress_controller, "dialog") and self.progress_controller.dialog is not None:
+                self.progress_controller.dialog.tr = self.tr
+                self.progress_controller.dialog.retranslate_ui()
 
     def apply_runtime_settings(self, new_settings: dict):
         try:
