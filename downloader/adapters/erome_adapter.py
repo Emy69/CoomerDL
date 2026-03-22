@@ -1,4 +1,3 @@
-from email.mime import message
 import os
 import re
 import uuid
@@ -12,13 +11,15 @@ class EromeAdapter:
 
     def __init__(self, session, headers=None, log_callback=None, tr=None):
         self.session = session
-        self.headers = {k: str(v).encode("ascii", "ignore").decode("ascii")
-                        for k, v in (headers or {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                        }).items()}
+        self.headers = {
+            k: str(v).encode("ascii", "ignore").decode("ascii")
+            for k, v in (headers or {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            }).items()
+        }
         self.log_callback = log_callback
-        self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs))
+        self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
 
     def log(self, message, **kwargs):
         if kwargs:
@@ -53,7 +54,7 @@ class EromeAdapter:
         soup = soup or self._request_soup(profile_url)
 
         username_tag = soup.find("h1", class_="username")
-        username = username_tag.text.strip() if username_tag else "Unknown Profile"
+        username = username_tag.text.strip() if username_tag else self.tr("EROME_UNKNOWN_PROFILE")
         base_folder_name = self.clean_filename(username)
 
         media = []
@@ -76,7 +77,7 @@ class EromeAdapter:
                 )
                 media.extend(album_data["media"])
             except Exception as e:
-                self.log("Error resolving album {url}: {error}", url=album_url, error=e)
+                self.log("EROME_ERROR_RESOLVING_ALBUM", url=album_url, error=e)
 
         return {
             "mode": "profile",
@@ -95,7 +96,7 @@ class EromeAdapter:
     ):
         soup = soup or self._request_soup(album_url)
 
-        album_title = soup.find("h1").text if soup.find("h1") else "Unknown Album"
+        album_title = soup.find("h1").text if soup.find("h1") else self.tr("EROME_UNKNOWN_ALBUM")
         album_folder_name = self.clean_filename(album_title)
 
         if direct_download and inherited_base_folder:

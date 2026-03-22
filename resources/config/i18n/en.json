@@ -98,5 +98,17 @@
   "CK_STARTING_DOWNLOAD_PROCESS": "Starting download process...",
   "CK_NO_POSTS_FOUND_FOR_USER": "No posts found for this user.",
   "CK_ERROR_DURING_DOWNLOAD": "Error during download: {error}",
-  "CK_NO_POST_FOUND_FOR_ID": "No post found for this ID."
+  "CK_NO_POST_FOUND_FOR_ID": "No post found for this ID.",
+  "EROME_DOWNLOAD_CANCELLED": "Download cancelled",
+  "EROME_CANCELLING_REMAINING_DOWNLOADS": "Cancelling remaining downloads.",
+  "EROME_PROCESSING_ALBUM_URL": "Processing album URL: {page_url}",
+  "EROME_ALBUM_DOWNLOAD_COMPLETE": "Album download complete: {folder_name}",
+  "EROME_ERROR_ACCESSING_PAGE": "Error accessing page: {page_url}, status code: {status_code}",
+  "EROME_PROCESSING_PROFILE_URL": "Processing profile URL: {url}",
+  "EROME_PROFILE_DOWNLOAD_COMPLETE": "Profile download complete: {username}",
+  "LOGS_EXPORTED_SUCCESSFULLY_TO": "Logs exported successfully to {path}",
+  "FAILED_TO_EXPORT_LOGS": "Failed to export logs: {error}",
+  "EROME_UNKNOWN_PROFILE": "Unknown Profile",
+  "EROME_UNKNOWN_ALBUM": "Unknown Album",
+  "EROME_ERROR_RESOLVING_ALBUM": "Error resolving album {url}: {error}"
 }

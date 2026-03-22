@@ -49,22 +49,27 @@ class EromeDownloader(BaseApiDownloader):
             log_callback=self._capture_log,
             tr=self.tr,
         )
-        self.domain_name = "EROME"
+        self.domain_name = "erome"
 
-    def _capture_log(self, message):
-        self.log_messages.append(message)
+    def _capture_log(self, domain_or_message, message=None):
+        if message is None:
+            final_message = domain_or_message
+        else:
+            final_message = message
+
+        self.log_messages.append(final_message)
         if self.log_callback:
-            self.log_callback(self.domain_name, message)
+            self.log_callback(self.domain_name, final_message)
 
-    def log(self, message):
-        final_message = self.tr(message) if self.tr else message
+    def log(self, message, **kwargs):
+        final_message = self._translate_text(message, **kwargs)
         self.log_messages.append(final_message)
         if self.log_callback:
             self.log_callback(self.domain_name, final_message)
 
     def request_cancel(self):
         self.cancel_requested.set()
-        self.log("Download cancelled")
+        self.log("EROME_DOWNLOAD_CANCELLED")
         if self.is_profile_download and self.enable_widgets_callback:
             self.enable_widgets_callback()
 
@@ -110,7 +115,7 @@ class EromeDownloader(BaseApiDownloader):
         if self.download_mode == "multi":
             for future in as_completed(futures):
                 if self.cancel_requested.is_set():
-                    self.log("Cancelling remaining downloads.")
+                    self.log("EROME_CANCELLING_REMAINING_DOWNLOADS")
                     break
                 future.result()
 
@@ -119,7 +124,7 @@ class EromeDownloader(BaseApiDownloader):
             if self.cancel_requested.is_set():
                 return
 
-            self._capture_log(self.tr("Processing album URL: {page_url}", page_url=page_url))
+            self.log("EROME_PROCESSING_ALBUM_URL", page_url=page_url)
             resolved = self.adapter._resolve_album(
                 page_url,
                 download_images=download_images,
@@ -128,10 +133,10 @@ class EromeDownloader(BaseApiDownloader):
             )
 
             self._download_entries(resolved["media"], base_folder)
-            self._capture_log(self.tr("Album download complete: {folder_name}", folder_name=resolved["folder_name"]))
+            self.log("EROME_ALBUM_DOWNLOAD_COMPLETE", folder_name=resolved["folder_name"])
 
         except Exception as e:
-            self._capture_log(self.tr("Error accessing page: {page_url}, status code: {status_code}", page_url=page_url, status_code=str(e)))
+            self.log("EROME_ERROR_ACCESSING_PAGE", page_url=page_url, status_code=str(e))
         finally:
             if not self.is_profile_download and self.enable_widgets_callback:
                 self.enable_widgets_callback()
@@ -142,7 +147,7 @@ class EromeDownloader(BaseApiDownloader):
             if self.cancel_requested.is_set():
                 return
 
-            self._capture_log(self.tr("Processing profile URL: {url}", url=url))
+            self.log("EROME_PROCESSING_PROFILE_URL", url=url)
             resolved = self.adapter._resolve_profile(
                 url,
                 download_images=download_images,
@@ -151,10 +156,10 @@ class EromeDownloader(BaseApiDownloader):
             )
 
             self._download_entries(resolved["media"], download_folder)
-            self._capture_log(self.tr("Profile download complete: {username}", username=resolved["folder_name"]))
+            self.log("EROME_PROFILE_DOWNLOAD_COMPLETE", username=resolved["folder_name"])
 
         except Exception as e:
-            self._capture_log(self.tr("Error accessing page: {url}, status code: {status_code}", url=url, status_code=str(e)))
+            self.log("EROME_ERROR_ACCESSING_PAGE", page_url=url, status_code=str(e))
         finally:
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
@@ -168,7 +173,13 @@ class EromeDownloader(BaseApiDownloader):
             with open(log_file_path, "w", encoding="utf-8") as file:
                 file.write("\n".join(self.log_messages))
             if self.log_callback:
-                self.log_callback(self.tr("Logs exported successfully to {path}", path=log_file_path))
+                self.log_callback(
+                    self.domain_name,
+                    self._translate_text("LOGS_EXPORTED_SUCCESSFULLY_TO", path=log_file_path),
+                )
         except Exception as e:
             if self.log_callback:
-                self.log_callback(self.tr("Failed to export logs: {error}", error=e))
+                self.log_callback(
+                    self.domain_name,
+                    self._translate_text("FAILED_TO_EXPORT_LOGS", error=e),
+                )
