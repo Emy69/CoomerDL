@@ -1,7 +1,7 @@
 import requests
 
-from PySide6.QtCore import Qt, QObject, QThread, Signal, QSize, QUrl
-from PySide6.QtGui import QPixmap, QDesktopServices, QIcon
+from PySide6.QtCore import Qt, QObject, QThread, Signal, QUrl
+from PySide6.QtGui import QPixmap, QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -61,7 +61,7 @@ class AboutWindow(QDialog):
         self.worker_thread = None
         self.worker = None
 
-        self.setWindowTitle(self.translate("About"))
+        self.setWindowTitle(self.translate("ABOUT_WINDOW_TITLE"))
         self.setModal(True)
         self.setFixedSize(360, 540)
 
@@ -71,6 +71,13 @@ class AboutWindow(QDialog):
         self.downloads_label = None
         self.date_label = None
         self.stars_button = None
+
+        self.discord_button = None
+        self.patron_button = None
+        self.x_button = None
+        self.footer_label = None
+        self.community_label = None
+        self.title_label = None
 
         self._build_ui()
         self._center_window()
@@ -139,7 +146,6 @@ class AboutWindow(QDialog):
                 background-color: #3a3a3a;
                 border-radius: 6px;
             }
-            
             """
         )
 
@@ -153,30 +159,30 @@ class AboutWindow(QDialog):
         card_layout.setContentsMargins(16, 16, 16, 16)
         card_layout.setSpacing(10)
 
-        title_label = QLabel(self.translate("About This App"))
-        title_label.setProperty("role", "title")
-        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        card_layout.addWidget(title_label)
+        self.title_label = QLabel(self.translate("ABOUT_THIS_APP"))
+        self.title_label.setProperty("role", "title")
+        self.title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(self.title_label)
 
         details = [
             (
                 "resources/img/iconos/about/user-account-solid-24.png",
-                f"{self.translate('Developer')}: Emy69",
+                f"{self.translate('DEVELOPER_LABEL')}: Emy69",
                 "developer",
             ),
             (
                 "resources/img/iconos/about/git-branch-line.png",
-                f"{self.translate('Version')}: {self.version}",
+                f"{self.translate('VERSION_LABEL')}: {self.version}",
                 "version",
             ),
             (
                 "resources/img/iconos/about/download_icon.png",
-                f"{self.translate('Total Downloads')}: {self.translate('Loading...')}",
+                f"{self.translate('TOTAL_DOWNLOADS_LABEL')}: {self.translate('LOADING')}",
                 "downloads",
             ),
             (
                 "resources/img/iconos/about/calendar-event-line.png",
-                f"{self.translate('Release Date')}: {self.translate('Loading...')}",
+                f"{self.translate('RELEASE_DATE_LABEL')}: {self.translate('LOADING')}",
                 "date",
             ),
         ]
@@ -198,34 +204,35 @@ class AboutWindow(QDialog):
         links_separator.setProperty("role", "separator")
         card_layout.addWidget(links_separator)
 
-        community_label = QLabel(self.translate("Community"))
-        community_label.setProperty("role", "section")
-        community_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        card_layout.addWidget(community_label)
+        self.community_label = QLabel(self.translate("COMMUNITY_SECTION"))
+        self.community_label.setProperty("role", "section")
+        self.community_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(self.community_label)
 
-        self.discord_button = QPushButton(self.translate("Join Discord"))
+        self.discord_button = QPushButton(self.translate("JOIN_DISCORD"))
         self.discord_button.setCursor(Qt.PointingHandCursor)
         self.discord_button.clicked.connect(
             lambda: self._open_url("https://discord.gg/6zbjrJbJ3Q")
         )
         card_layout.addWidget(self.discord_button)
 
-        self.stars_button = QPushButton(f"{self.translate('GitHub Stars')}: {self.translate('Loading...')}")
+        self.stars_button = QPushButton(
+            f"{self.translate('GITHUB_STARS_LABEL')}: {self.translate('LOADING')}"
+        )
         self.stars_button.setCursor(Qt.PointingHandCursor)
         self.stars_button.clicked.connect(
             lambda: self._open_url("https://github.com/Emy69/CoomerDL")
         )
         card_layout.addWidget(self.stars_button)
-        
-        
-        self.patron_button = QPushButton(self.translate("Support on Patreon"))
+
+        self.patron_button = QPushButton(self.translate("SUPPORT_ON_PATREON"))
         self.patron_button.setCursor(Qt.PointingHandCursor)
         self.patron_button.clicked.connect(
             lambda: self._open_url("https://www.patreon.com/Emy69")
         )
         card_layout.addWidget(self.patron_button)
-        
-        self.x_button = QPushButton(self.translate("Follow on X"))
+
+        self.x_button = QPushButton(self.translate("FOLLOW_ON_X"))
         self.x_button.setCursor(Qt.PointingHandCursor)
         self.x_button.clicked.connect(
             lambda: self._open_url("https://x.com/dev_emy")
@@ -234,10 +241,10 @@ class AboutWindow(QDialog):
 
         card_layout.addStretch()
 
-        footer_label = QLabel(self.translate("Thank you for using our app!"))
-        footer_label.setProperty("role", "footer")
-        footer_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        card_layout.addWidget(footer_label)
+        self.footer_label = QLabel(self.translate("THANK_YOU_FOR_USING_APP"))
+        self.footer_label.setProperty("role", "footer")
+        self.footer_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        card_layout.addWidget(self.footer_label)
 
         root_layout.addWidget(card)
 
@@ -266,31 +273,6 @@ class AboutWindow(QDialog):
 
         return row, text_label
 
-    def _make_platform_row(self, icon_path: str, name: str, url: str):
-        row = QWidget()
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-
-        icon_label = QLabel()
-        pixmap = QPixmap(icon_path)
-        if not pixmap.isNull():
-            icon_label.setPixmap(
-                pixmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            )
-        icon_label.setFixedSize(20, 20)
-        icon_label.setAlignment(Qt.AlignCenter)
-
-        button = QPushButton(name)
-        button.setProperty("role", "link")
-        button.setCursor(Qt.PointingHandCursor)
-        button.clicked.connect(lambda checked=False, u=url: self._open_url(u))
-
-        layout.addWidget(icon_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        layout.addWidget(button, 1, Qt.AlignLeft)
-
-        return row
-
     def _open_url(self, url: str):
         QDesktopServices.openUrl(QUrl(url))
 
@@ -310,17 +292,17 @@ class AboutWindow(QDialog):
     def _update_github_labels(self, created_date: str, total_downloads: int, stars: int):
         if self.date_label is not None:
             self.date_label.setText(
-                f"{self.translate('Release Date')}: {created_date}"
+                f"{self.translate('RELEASE_DATE_LABEL')}: {created_date}"
             )
 
         if self.downloads_label is not None:
             self.downloads_label.setText(
-                f"{self.translate('Total Downloads')}: {total_downloads}"
+                f"{self.translate('TOTAL_DOWNLOADS_LABEL')}: {total_downloads}"
             )
-            
+
         if self.stars_button is not None:
             self.stars_button.setText(
-                f"{self.translate('GitHub Stars')}: {stars}"
+                f"{self.translate('GITHUB_STARS_LABEL')}: {stars}"
             )
 
     def _center_window(self):

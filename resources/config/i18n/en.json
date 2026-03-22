@@ -39,5 +39,18 @@
   "DOWNLOAD_INFO": "Download info: {download_info}",
   "NO_ACTIVE_DOWNLOAD_TO_CANCEL": "There is no active download in progress to cancel.",
   "PLEASE_SELECT_LANGUAGE": "Please select a language.",
-  "LANGUAGE_APPLIED_SUCCESS": "The language was applied successfully."
+  "LANGUAGE_APPLIED_SUCCESS": "The language was applied successfully.",
+  "ABOUT_WINDOW_TITLE": "About",
+  "ABOUT_THIS_APP": "About This App",
+  "DEVELOPER_LABEL": "Developer",
+  "VERSION_LABEL": "Version",
+  "TOTAL_DOWNLOADS_LABEL": "Total Downloads",
+  "RELEASE_DATE_LABEL": "Release Date",
+  "LOADING": "Loading...",
+  "COMMUNITY_SECTION": "Community",
+  "JOIN_DISCORD": "Join Discord",
+  "GITHUB_STARS_LABEL": "GitHub Stars",
+  "SUPPORT_ON_PATREON": "Support on Patreon",
+  "FOLLOW_ON_X": "Follow on X",
+  "THANK_YOU_FOR_USING_APP": "Thank you for using our app!"
 }

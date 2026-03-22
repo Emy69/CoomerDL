@@ -39,5 +39,18 @@
   "DOWNLOAD_INFO": "Información de descarga: {download_info}",
   "NO_ACTIVE_DOWNLOAD_TO_CANCEL": "No hay una descarga en curso para cancelar.",
   "PLEASE_SELECT_LANGUAGE": "Por favor, selecciona un idioma.",
-  "LANGUAGE_APPLIED_SUCCESS": "El idioma se aplicó correctamente."
+  "LANGUAGE_APPLIED_SUCCESS": "El idioma se aplicó correctamente.",
+  "ABOUT_WINDOW_TITLE": "Acerca de",
+  "ABOUT_THIS_APP": "Acerca de esta aplicación",
+  "DEVELOPER_LABEL": "Desarrollador",
+  "VERSION_LABEL": "Versión",
+  "TOTAL_DOWNLOADS_LABEL": "Descargas totales",
+  "RELEASE_DATE_LABEL": "Fecha de lanzamiento",
+  "LOADING": "Cargando...",
+  "COMMUNITY_SECTION": "Comunidad",
+  "JOIN_DISCORD": "Unirse a Discord",
+  "GITHUB_STARS_LABEL": "Estrellas en GitHub",
+  "SUPPORT_ON_PATREON": "Apoyar en Patreon",
+  "FOLLOW_ON_X": "Seguir en X",
+  "THANK_YOU_FOR_USING_APP": "¡Gracias por usar nuestra aplicación!"
 }
