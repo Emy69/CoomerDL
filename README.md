@@ -157,10 +157,12 @@ Example `languages.json`:
 
 ```json
 {
-  "languages": [
-    { "code": "en", "name": "English", "official": true },
-    { "code": "es", "name": "Español", "official": true },
-    { "code": "fr", "name": "Français", "official": false }
+  "official": [
+    { "code": "en", "name": "English" },
+    { "code": "es", "name": "Español" }
+  ],
+  "community": [
+    { "code": "fr", "name": "Français" }
   ]
 }
 ```
