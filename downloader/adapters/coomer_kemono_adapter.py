@@ -1,0 +1,113 @@
+from urllib.parse import quote_plus, urlencode, urljoin
+
+
+class CoomerKemonoAdapter:
+    def __init__(self, session, headers=None, log_callback=None, tr=None):
+        self.session = session
+        self.headers = headers or {}
+        self.log_callback = log_callback
+        self.tr = tr
+
+    def log(self, message):
+        if self.log_callback:
+            self.log_callback(self.tr(message) if self.tr else message)
+
+    def fetch_user_posts(
+        self,
+        site,
+        user_id,
+        service,
+        query=None,
+        specific_post_id=None,
+        initial_offset=0,
+        log_fetching=True,
+        only_first_page=False,
+        cancel_event=None,
+    ):
+        all_posts = []
+        offset = initial_offset
+        user_id_encoded = quote_plus(user_id)
+
+        while True:
+            if cancel_event and cancel_event.is_set():
+                return all_posts
+
+            api_url = f"https://{site}/api/v1/{service}/user/{user_id_encoded}/posts"
+            url_query = {"o": offset}
+            if query not in (None, "", 0, "0"):
+                url_query["q"] = query
+            api_url += "?" + urlencode(url_query)
+
+            if log_fetching:
+                self.log(f"Fetching user posts from {api_url}")
+
+            try:
+                response = self.session.get(api_url, headers=self.headers)
+                if response.status_code == 400:
+                    self.log(f"End of posts at offset {offset}.")
+                    break
+
+                response.raise_for_status()
+                posts_data = response.json()
+
+                if isinstance(posts_data, dict) and "data" in posts_data:
+                    posts = posts_data["data"]
+                else:
+                    posts = posts_data
+
+                if not posts:
+                    break
+
+                if specific_post_id:
+                    post = next((p for p in posts if p["id"] == specific_post_id), None)
+                    if post:
+                        return [post]
+
+                all_posts.extend(posts)
+                offset += 50
+
+                if only_first_page and not specific_post_id:
+                    break
+
+            except Exception as e:
+                self.log(f"Error fetching user posts: {e}")
+                break
+
+        if specific_post_id:
+            return [post for post in all_posts if post["id"] == specific_post_id]
+
+        return all_posts
+
+    def fetch_single_post(self, site, post_id, service):
+        api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
+        self.log(f"Fetching post from {api_url}")
+        try:
+            response = self.session.get(api_url, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.log(f"Error fetching post: {e}")
+            return None
+
+    def extract_media_urls(self, post, site):
+        base = f"https://{site}/"
+
+        def _full(path):
+            if not path:
+                return None
+            p = path if str(path).startswith("/") else f"/{path}"
+            return urljoin(base, p)
+
+        media_urls = []
+
+        main_file = post.get("file") or {}
+        u = _full(main_file.get("path") or main_file.get("url") or main_file.get("name"))
+        if u:
+            media_urls.append(u)
+
+        for att in (post.get("attachments") or []):
+            u = _full(att.get("path") or att.get("url") or att.get("name"))
+            if u:
+                media_urls.append(u)
+
+        return media_urls

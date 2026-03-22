@@ -1,139 +1,92 @@
 import os
-import json
-import re
-import queue
-from pathlib import Path
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
-import cloudscraper
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 
-class SimpCity:
-    def __init__(self, download_folder, max_workers=5, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, tr=None):
-        self.download_folder = download_folder
-        self.max_workers = max_workers
-        self.descargadas = set()
-        self.log_callback = log_callback
-        self.enable_widgets_callback = enable_widgets_callback
-        self.update_progress_callback = update_progress_callback
-        self.update_global_progress_callback = update_global_progress_callback
-        self.cancel_requested = False
-        self.total_files = 0
-        self.completed_files = 0
-        self.download_queue = queue.Queue()
-        self.scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
-        self.tr = tr
+from downloader.core.base_api_downloader import BaseApiDownloader
+from downloader.adapters.simpcity_adapter import SimpCityAdapter
 
-        # Selectors from original crawler
-        self.title_selector = "h1[class=p-title-value]"
-        self.posts_selector = "div[class*=message-main]"
-        self.post_content_selector = "div[class*=message-userContent]"
-        self.images_selector = "img[class*=bbImage]"
-        self.videos_selector = "video source"
-        self.iframe_selector = "iframe[class=saint-iframe]"
-        self.attachments_block_selector = "section[class=message-attachments]"
-        self.attachments_selector = "a"
-        self.next_page_selector = "a[class*=pageNav-jump--next]"
-        self.cookies_path = "resources/config/cookies/simpcity.json"
-        self.set_cookies()
 
-    def log(self, message):
-        if self.log_callback:
-            self.log_callback(message)
+class SimpCity(BaseApiDownloader):
+    def __init__(
+        self,
+        download_folder,
+        max_workers=5,
+        log_callback=None,
+        enable_widgets_callback=None,
+        update_progress_callback=None,
+        update_global_progress_callback=None,
+        tr=None,
+    ):
+        super().__init__(
+            download_folder=download_folder,
+            max_workers=max_workers,
+            log_callback=log_callback,
+            enable_widgets_callback=enable_widgets_callback,
+            update_progress_callback=update_progress_callback,
+            update_global_progress_callback=update_global_progress_callback,
+            tr=tr,
+            download_images=True,
+            download_videos=True,
+            download_compressed=True,
+        )
 
-    def sanitize_folder_name(self, name):
-        return re.sub(r'[<>:"/\\|?*]', '_', name)
-    
-    def set_cookies(self):
-        if os.path.exists(self.cookies_path):
-            with open(self.cookies_path, "r", encoding="utf-8") as f:
-                cookies = json.load(f)
-
-            if isinstance(cookies, dict):
-                cookies = [cookies]
-
-            for c in cookies:
-                if isinstance(c, dict) and "name" in c and "value" in c:
-                    self.scraper.cookies.set(c["name"], c["value"])
-
-    def fetch_page(self, url):
-        try:
-            response = self.scraper.get(url)
-            if response.status_code == 200:
-                return BeautifulSoup(response.content, 'html.parser')
-            else:
-                self.log(self.tr(f"Error: {response.status_code} al acceder a {url}"))
-                return None
-        except Exception as e:
-            self.log(self.tr(f"Error al acceder a {url}: {e}"))
-            return None
-
-    def save_file(self, file_url, path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        response = self.scraper.get(file_url, stream=True)
-        if response.status_code == 200:
-            with open(path, 'wb') as file:
-                for chunk in response.iter_content(1024):
-                    file.write(chunk)
-            self.log(self.tr(f"Archivo descargado: {path}"))
-        else:
-            self.log(self.tr(f"Error al descargar {file_url}: {response.status_code}"))
-
-    def process_post(self, post_content, download_folder):
-        # Procesar imágenes
-        images = post_content.select(self.images_selector)
-        for img in images:
-            src = img.get('src')
-            if src:
-                file_name = os.path.basename(urlparse(src).path)
-                file_path = os.path.join(download_folder, file_name)
-                self.save_file(src, file_path)
-
-        # Procesar videos
-        videos = post_content.select(self.videos_selector)
-        for video in videos:
-            src = video.get('src')
-            if src:
-                file_name = os.path.basename(urlparse(src).path)
-                file_path = os.path.join(download_folder, file_name)
-                self.save_file(src, file_path)
-
-        # Procesar archivos adjuntos
-        attachments_block = post_content.select_one(self.attachments_block_selector)
-        if attachments_block:
-            attachments = attachments_block.select(self.attachments_selector)
-            for attachment in attachments:
-                href = attachment.get('href')
-                if href:
-                    file_name = os.path.basename(urlparse(href).path)
-                    file_path = os.path.join(download_folder, file_name)
-                    self.save_file(href, file_path)
-
-    def process_page(self, url, paginate=True):
-        soup = self.fetch_page(url)
-        if not soup:
-            return
-
-        title_element = soup.select_one(self.title_selector)
-        folder_name = self.sanitize_folder_name(title_element.text.strip()) if title_element else 'SimpCity_Download'
-        download_folder = os.path.join(self.download_folder, folder_name)
-        os.makedirs(download_folder, exist_ok=True)
-
-        message_inners = soup.select(self.posts_selector)
-        for post in message_inners:
-            post_content = post.select_one(self.post_content_selector)
-            if post_content:
-                self.process_post(post_content, download_folder)
-
-        if paginate:
-            next_page = soup.select_one(self.next_page_selector)
-            if next_page:
-                next_page_url = next_page.get('href')
-                if next_page_url:
-                    resolved_next_url = urljoin(url, next_page_url)
-                    self.process_page(resolved_next_url, paginate=True)
+        self.adapter = SimpCityAdapter(
+            log_callback=self.log_callback,
+            tr=self.tr,
+        )
 
     def download_images_from_simpcity(self, url, paginate=True):
-        self.log(self.tr(f"Procesando hilo: {url}"))
-        self.process_page(url, paginate=paginate)
-        self.log(self.tr("Descarga completada."))
+        try:
+            self.log("Processing thread: {url}".format(url=url))
+
+            resolved = self.adapter.resolve_thread(url, paginate=paginate)
+            folder_name = resolved["folder_name"]
+            media_entries = resolved["media"]
+
+            target_folder = os.path.join(self.download_folder, folder_name)
+            os.makedirs(target_folder, exist_ok=True)
+
+            self.total_files = len(media_entries)
+            self.completed_files = 0
+            futures = []
+
+            for entry in media_entries:
+                media_url = entry["media_url"]
+
+                if self.download_mode == "queue":
+                    self.process_media_element(
+                        media_url,
+                        user_id=None,
+                        post_id=entry.get("post_id"),
+                        post_name=entry.get("title"),
+                        post_time=entry.get("published"),
+                        download_id=media_url,
+                        target_folder=target_folder,
+                        forced_filename=entry.get("filename"),
+                    )
+                else:
+                    future = self.executor.submit(
+                        self.process_media_element,
+                        media_url,
+                        user_id=None,
+                        post_id=entry.get("post_id"),
+                        post_name=entry.get("title"),
+                        post_time=entry.get("published"),
+                        download_id=media_url,
+                        target_folder=target_folder,
+                        forced_filename=entry.get("filename"),
+                    )
+                    futures.append(future)
+
+            self.futures = futures
+
+            for future in as_completed(futures):
+                if self.cancel_requested.is_set():
+                    self.log("Download cancelled.")
+                    break
+                future.result()
+
+            self.log("Download completed.")
+        except Exception as e:
+            self.log(f"Error while processing SimpCity thread: {e}")
+        finally:
+            self.shutdown_executor()

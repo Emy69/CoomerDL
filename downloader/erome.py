@@ -1,303 +1,160 @@
-import re
-import uuid
-import requests
 import os
-import time
 import datetime
-
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, quote
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from requests.exceptions import ChunkedEncodingError
+from concurrent.futures import as_completed
 
-class EromeDownloader:
-    def __init__(self, log_callback=None, enable_widgets_callback=None, update_progress_callback=None, update_global_progress_callback=None, download_images=True, download_videos=True, headers=None, language="en", is_profile_download=False, direct_download=False, tr=None, max_workers=5):
-        self.session = requests.Session()
-        self.headers = {k: str(v).encode('ascii', 'ignore').decode('ascii') for k, v in (headers or {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-        }).items()}
-        self.log_messages = []  # Store log messages
-        self.log_callback = log_callback
-        self.enable_widgets_callback = enable_widgets_callback
-        self.update_progress_callback = update_progress_callback
-        self.update_global_progress_callback = update_global_progress_callback
-        self.download_images = download_images
-        self.download_videos = download_videos
-        self.cancel_requested = False
+from downloader.core.base_api_downloader import BaseApiDownloader
+from downloader.adapters.erome_adapter import EromeAdapter
+
+
+class EromeDownloader(BaseApiDownloader):
+    def __init__(
+        self,
+        log_callback=None,
+        enable_widgets_callback=None,
+        update_progress_callback=None,
+        update_global_progress_callback=None,
+        download_images=True,
+        download_videos=True,
+        headers=None,
+        language="en",
+        is_profile_download=False,
+        direct_download=False,
+        tr=None,
+        max_workers=5,
+        download_folder="downloads",
+    ):
+        super().__init__(
+            download_folder=download_folder,
+            max_workers=max_workers,
+            log_callback=log_callback,
+            enable_widgets_callback=enable_widgets_callback,
+            update_progress_callback=update_progress_callback,
+            update_global_progress_callback=update_global_progress_callback,
+            headers=headers,
+            download_images=download_images,
+            download_videos=download_videos,
+            download_compressed=False,
+            tr=tr,
+        )
+
         self.language = language
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)  # Thread pool for concurrent downloads
-        self.total_files = 0
-        self.completed_files = 0
         self.is_profile_download = is_profile_download
-        self.direct_download = direct_download  # Option for direct downloads without folder creation
-        self.tr = tr if tr else lambda x, **kwargs: x.format(**kwargs)  # Translation function
+        self.direct_download = direct_download
+        self.log_messages = []
 
-    def request_cancel(self):
-        self.cancel_requested = True
-        self.log(self.tr("Download cancelled"))
-        if self.is_profile_download:
-            self.enable_widgets_callback()
+        self.adapter = EromeAdapter(
+            session=self.session,
+            headers=self.headers,
+            log_callback=self._capture_log,
+            tr=self.tr,
+        )
+
+    def _capture_log(self, message):
+        self.log_messages.append(message)
+        if self.log_callback:
+            self.log_callback(message)
 
     def log(self, message):
-        if self.log_callback is not None:
-            self.log_callback(message)
-        self.log_messages.append(message)
+        self.log_messages.append(self.tr(message) if self.tr else message)
+        if self.log_callback:
+            self.log_callback(self.tr(message) if self.tr else message)
 
-    def shutdown_executor(self):
-        self.executor.shutdown(wait=False)
-        self.log(self.tr("Executor shut down."))
-        if self.is_profile_download:
+    def request_cancel(self):
+        self.cancel_requested.set()
+        self.log("Download cancelled")
+        if self.is_profile_download and self.enable_widgets_callback:
             self.enable_widgets_callback()
 
-    @staticmethod
-    def clean_filename(filename):
-        return re.sub(r'[<>:"/\\|?*]', '_', filename.split('?')[0])
+    def _download_entries(self, media_entries, root_folder):
+        self.total_files = len(media_entries)
+        self.completed_files = 0
+        futures = []
 
-    def create_folder(self, folder_name):
-        try:
-            os.makedirs(folder_name, exist_ok=True)
-            return folder_name
-        except OSError as e:
-            self.log(self.tr("Error creating folder: {error}", error=e))
-            fallback = os.path.join(os.path.dirname(folder_name), "erome_album")
-            fallback = self.clean_filename(fallback)
-            os.makedirs(fallback, exist_ok=True)
-            self.log(self.tr("Fallback folder created: {folder_name}", folder_name=fallback))
-            return fallback
+        for entry in media_entries:
+            media_url = entry["media_url"]
+            folder_name = entry.get("folder_name") or "erome_album"
+            target_folder = os.path.join(root_folder, folder_name) if not os.path.isabs(folder_name) else folder_name
 
-    def download_file(self, url, file_path, resource_type, file_id=None, max_retries=999999):
-        if self.cancel_requested:
-            return
+            os.makedirs(target_folder, exist_ok=True)
 
-        # Evita sobreescrituras y descargas duplicadas
-        if os.path.exists(file_path):
-            self.log(self.tr("File already exists, skipping: {file_path}",
-                             file_path=file_path))
-            return
+            if self.download_mode == "queue":
+                self.process_media_element(
+                    media_url,
+                    user_id=None,
+                    post_id=entry.get("post_id"),
+                    post_name=entry.get("title"),
+                    post_time=entry.get("published"),
+                    download_id=media_url,
+                    target_folder=target_folder,
+                    forced_filename=entry.get("filename"),
+                )
+            else:
+                future = self.executor.submit(
+                    self.process_media_element,
+                    media_url,
+                    user_id=None,
+                    post_id=entry.get("post_id"),
+                    post_name=entry.get("title"),
+                    post_time=entry.get("published"),
+                    download_id=media_url,
+                    target_folder=target_folder,
+                    forced_filename=entry.get("filename"),
+                )
+                futures.append(future)
 
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        self.log(self.tr("Start downloading {resource_type}: {file_path}",
-                         resource_type=resource_type, file_path=file_path))
+        self.futures = futures
 
-        retries = 0
-        while retries <= max_retries:
-            try:
-                with self.session.get(url, headers=self.headers,
-                                  stream=True, timeout=15) as response:
-                    if response.status_code != 200:
-                        self.log(self.tr("Error downloading {resource_type}, "
-                                         "status code: {status_code}",
-                                         resource_type=resource_type,
-                                         status_code=response.status_code))
-                        break
-
-                    total_size = int(response.headers.get("content-length", 0))
-                    downloaded_size = 0
-                    start_time = last_update = time.time()
-
-                    with open(file_path, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=65536):
-                            if self.cancel_requested:
-                                return
-                            f.write(chunk)
-                            downloaded_size += len(chunk)
-
-                            # Envía actualización cada 0.5 s máx.
-                            now = time.time()
-                            if now - last_update >= 0.5:
-                                elapsed = now - start_time
-                                speed = downloaded_size / elapsed if elapsed else 0
-                                eta   = ((total_size - downloaded_size) / speed
-                                         if speed else None)
-                                self.update_progress_callback(
-                                    downloaded_size, total_size,
-                                    file_id=file_id,
-                                    file_path=file_path,
-                                    speed=speed,
-                                    eta=eta
-                                )
-                                last_update = now
-
-                    # ─────── Fin de la descarga ───────
-                    elapsed = time.time() - start_time
-                    final_speed = total_size / elapsed if elapsed else 0
-
-                    # 1· Fuerza la barra al 100 % (sin status)
-                    self.update_progress_callback(
-                        total_size, total_size,
-                        file_id=file_id,
-                        file_path=file_path,
-                        speed=final_speed,
-                        eta=0
-                    )
-
-                    # 2· Notifica “Completed” (no altera la barra)
-                    self.update_progress_callback(
-                        total_size, total_size,
-                        file_id=file_id,
-                        file_path=file_path,
-                        status="Completed"
-                    )
-
-                # Contabiliza y avanza la barra global
-                self.completed_files += 1
-                if self.update_global_progress_callback:
-                    self.update_global_progress_callback(
-                        self.completed_files, self.total_files
-                    )
-
-                self.log(self.tr("Download successful: {resource_type}, "
-                                 "{file_path}",
-                                 resource_type=resource_type,
-                                 file_path=file_path))
-                break  # Éxito ⇒ sal del bucle
-
-            except (requests.exceptions.ChunkedEncodingError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout) as e:
-                retries += 1
-                self.log(self.tr("Error downloading {resource_type}, "
-                                 "attempt {retries}/{max_retries}: {error}",
-                                 resource_type=resource_type,
-                                 retries=retries,
-                                 max_retries=max_retries,
-                                 error=e))
-                if retries == max_retries:
-                    self.log(self.tr("Max retries reached. Failed to "
-                                     "download {resource_type}: {file_path}",
-                                     resource_type=resource_type,
-                                     file_path=file_path))
-
+        if self.download_mode == "multi":
+            for future in as_completed(futures):
+                if self.cancel_requested.is_set():
+                    self.log("Cancelling remaining downloads.")
+                    break
+                future.result()
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
-            if self.cancel_requested:
+            if self.cancel_requested.is_set():
                 return
-            self.log(self.tr("Processing album URL: {page_url}", page_url=page_url))
-            response = requests.get(page_url, headers=self.headers)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                if not self.direct_download:
-                    folder_name = self.clean_filename(soup.find('h1').text if soup.find('h1') else self.tr("Unknown Album"))
-                    folder_path = self.create_folder(os.path.join(base_folder, folder_name))
-                else:
-                    folder_path = base_folder  # Use the base folder directly
 
-                media_urls = []
-                seen_urls = set() 
+            self._capture_log(self.tr("Processing album URL: {page_url}", page_url=page_url))
+            resolved = self.adapter._resolve_album(
+                page_url,
+                download_images=download_images,
+                download_videos=download_videos,
+                direct_download=self.direct_download,
+            )
 
-                # --- vídeos ---
-                if download_videos:
-                    for video in soup.find_all('video'):
-                        source = video.find('source')
-                        if source:
-                            abs_video_src = urljoin(page_url, source['src'])
-                            if abs_video_src in seen_urls:      # ya lo tenemos
-                                continue
-                            seen_urls.add(abs_video_src)
-                            video_name = os.path.join(
-                                folder_path,
-                                self.clean_filename(os.path.basename(abs_video_src))
-                            )
-                            media_urls.append(
-                                (abs_video_src, video_name, 'Video')
-                            )
+            self._download_entries(resolved["media"], base_folder)
+            self._capture_log(self.tr("Album download complete: {folder_name}", folder_name=resolved["folder_name"]))
 
-                # --- imágenes ---
-                if download_images:
-                    for div in soup.select('div.img'):
-                        img = (
-                            div.find('img', attrs={'data-src': True})
-                            or div.find('img', attrs={'src': True})
-                        )
-                        if not img:
-                            continue
-
-                        raw_src = img.get('data-src') or img.get('src')
-                        if not raw_src:
-                            continue
-
-                        abs_img_src = urljoin(page_url, raw_src)
-                        lower_src = abs_img_src.lower()
-
-                        if lower_src.startswith("data:"):
-                            continue
-                        if any(x in lower_src for x in [
-                            "/avatar/", "/users/", "/profile/",
-                            "/static/", "/assets/", "/images/"
-                        ]):
-                            continue
-                        if any(x in lower_src for x in [
-                            "bg.jpg", "background", "avatar", "cover",
-                            "logo", "icon", "banner", "profile"
-                        ]):
-                            continue
-
-                        if abs_img_src in seen_urls:
-                            continue
-                        seen_urls.add(abs_img_src)
-
-                        filename = os.path.basename(abs_img_src.split("?")[0])
-                        if not filename:
-                            filename = f"image_{uuid.uuid4().hex[:8]}.jpg"
-
-                        img_name = os.path.join(
-                            folder_path,
-                            self.clean_filename(filename)
-                        )
-                        media_urls.append((abs_img_src, img_name, 'Image'))
-
-                self.total_files += len(media_urls)
-                self.log(self.tr("Erome media found: {count}", count=len(media_urls)))
-                image_count = sum(1 for _, _, t in media_urls if t == "Image")
-                video_count = sum(1 for _, _, t in media_urls if t == "Video")
-                self.log(self.tr("Images found: {count}", count=image_count))
-                self.log(self.tr("Videos found: {count}", count=video_count))
-                futures = [self.executor.submit(self.download_file, url, file_path, resource_type, str(uuid.uuid4())) for url, file_path, resource_type in media_urls]
-                for future in as_completed(futures):
-                    if self.cancel_requested:
-                        self.log(self.tr("Cancelling remaining downloads."))
-                        break
-                    future.result()
-
-                self.log(self.tr("Album download complete: {folder_name}", folder_name=folder_name) if not self.direct_download else self.tr("Album download complete"))
-                if not self.is_profile_download:
-                    self.enable_widgets_callback()
-            else:
-                self.log(self.tr("Error accessing page: {page_url}, status code: {status_code}", page_url=page_url, status_code=response.status_code))
-                if not self.is_profile_download:
-                    self.enable_widgets_callback()
+        except Exception as e:
+            self._capture_log(self.tr("Error accessing page: {page_url}, status code: {status_code}", page_url=page_url, status_code=str(e)))
         finally:
-            if not self.is_profile_download:
+            if not self.is_profile_download and self.enable_widgets_callback:
                 self.enable_widgets_callback()
             self.export_logs()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
-            if self.cancel_requested:
+            if self.cancel_requested.is_set():
                 return
-            self.log(self.tr("Processing profile URL: {url}", url=url))
-            response = requests.get(url, headers=self.headers)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                username = soup.find('h1', class_='username').text.strip() if soup.find('h1', class_='username') else self.tr("Unknown Profile")
-                base_folder = self.create_folder(os.path.join(download_folder, self.clean_filename(username)))
 
-                album_links = soup.find_all('a', class_='album-link')
-                for album_link in album_links:
-                    album_href = album_link.get('href')
-                    album_full_url = urljoin(url, album_href)
-                    self.process_album_page(album_full_url, base_folder, download_images, download_videos)
+            self._capture_log(self.tr("Processing profile URL: {url}", url=url))
+            resolved = self.adapter._resolve_profile(
+                url,
+                download_images=download_images,
+                download_videos=download_videos,
+                direct_download=self.direct_download,
+            )
 
-                self.log(self.tr("Profile download complete: {username}", username=username))
-                self.enable_widgets_callback()
-            else:
-                self.log(self.tr("Error accessing page: {url}, status code: {status_code}", url=url, status_code=response.status_code))
-                self.enable_widgets_callback()
+            self._download_entries(resolved["media"], download_folder)
+            self._capture_log(self.tr("Profile download complete: {username}", username=resolved["folder_name"]))
+
+        except Exception as e:
+            self._capture_log(self.tr("Error accessing page: {url}, status code: {status_code}", url=url, status_code=str(e)))
         finally:
-            if not self.is_profile_download:
+            if self.enable_widgets_callback:
                 self.enable_widgets_callback()
             self.export_logs()
 
@@ -306,8 +163,10 @@ class EromeDownloader:
         Path(log_folder).mkdir(parents=True, exist_ok=True)
         log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         try:
-            with open(log_file_path, 'w') as file:
+            with open(log_file_path, "w", encoding="utf-8") as file:
                 file.write("\n".join(self.log_messages))
-            self.log(self.tr("Logs exported successfully to {path}", path=log_file_path))
+            if self.log_callback:
+                self.log_callback(self.tr("Logs exported successfully to {path}", path=log_file_path))
         except Exception as e:
-            self.log(self.tr(f"Failed to export logs: {e}"))
+            if self.log_callback:
+                self.log_callback(self.tr("Failed to export logs: {error}", error=e))
