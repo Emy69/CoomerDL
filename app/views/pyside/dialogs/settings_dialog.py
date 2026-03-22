@@ -113,15 +113,6 @@ class SettingsDialog(QDialog):
         self.apply_language_button.clicked.connect(self._apply_language)
         layout.addRow("", self.apply_language_button)
 
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["System", "Dark", "Light"])
-        self.theme_combo.setCurrentText(self.settings.get("theme", "System"))
-        layout.addRow(QLabel(self.translate("Theme")), self.theme_combo)
-
-        self.apply_theme_button = QPushButton(self.translate("Apply Theme"))
-        self.apply_theme_button.clicked.connect(self._apply_theme)
-        layout.addRow("", self.apply_theme_button)
-
     def _build_downloads_tab(self):
         layout = QFormLayout(self.downloads_tab)
 
@@ -446,14 +437,6 @@ class SettingsDialog(QDialog):
         else:
             QMessageBox.warning(self, self.translate("Warning"), self.translate(message))
 
-    def _apply_theme(self):
-        success, message = self.settings_service.apply_theme(
-            self.settings,
-            self.theme_combo.currentText()
-        )
-        if success:
-            QMessageBox.information(self, self.translate("Success"), self.translate(message))
-
     def _apply_download_settings(self):
         try:
             parsed_values = self.download_settings_service.parse_form_values(
@@ -565,7 +548,6 @@ class SettingsDialog(QDialog):
         self.tabs.setTabText(3, self.translate("Database"))
         self.close_button.setText(self.translate("Close"))
         self.apply_language_button.setText(self.translate("Apply Language"))
-        self.apply_theme_button.setText(self.translate("Apply Theme"))
         self.apply_downloads_button.setText(self.translate("Apply Download Settings"))
         self.cookies_info_label.setText(
             self.translate(
