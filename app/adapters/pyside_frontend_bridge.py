@@ -1,12 +1,16 @@
 from app.interfaces.frontend_bridge import FrontendBridge
-
+from typing import Optional
 
 class PySideFrontendBridge(FrontendBridge):
     def __init__(self, app):
         self.app = app
 
-    def log(self, message: str):
-        self.app.add_log_message_safe(message)
+
+    def log(self, domain_or_message: str, message: Optional[str] = None):
+        if message is None:
+            self.app.add_log_message_safe(domain_or_message)
+        else:
+            self.app.add_log_message_safe(domain_or_message, message)
 
     def enable_widgets(self):
         self.app.enable_widgets()

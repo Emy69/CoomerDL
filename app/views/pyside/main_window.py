@@ -5,7 +5,7 @@ import sys
 import threading
 
 from pathlib import Path
-
+from typing import Optional
 from PySide6.QtCore import QObject, Signal, Qt, QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
@@ -291,9 +291,16 @@ class PySideMainWindow(QMainWindow):
         self.footer_set_eta("ETA: N/A")
         self.progress_controller.clear_all()
 
-    def add_log_message_safe(self, message: str):
-        self.log_service.add(message)
-        self.signals.log_message.emit(message)
+    def add_log_message_safe(self, domain_or_message: str, message: Optional[str] = None):
+        if message is None:
+            domain = "SYSTEM"
+            final_message = domain_or_message
+        else:
+            domain = domain_or_message
+            final_message = message
+
+        html = self.log_service.add_domain_log(domain, final_message)
+        self.signals.log_message.emit(html)
 
     def export_logs(self):
         try:
@@ -407,7 +414,8 @@ class PySideMainWindow(QMainWindow):
     # slots UI
     # ------------------------------------------------------------------
     def _append_log(self, message: str):
-        self.log_panel.log_text.append(message)
+        self.log_panel.log_text.insertHtml(message)
+        self.log_panel.log_text.insertHtml("<br>")
 
         if bool(self.autoscroll_log_check.get()):
             scrollbar = self.log_panel.log_text.verticalScrollBar()

@@ -49,16 +49,18 @@ class EromeDownloader(BaseApiDownloader):
             log_callback=self._capture_log,
             tr=self.tr,
         )
+        self.domain_name = "EROME"
 
     def _capture_log(self, message):
         self.log_messages.append(message)
         if self.log_callback:
-            self.log_callback(message)
+            self.log_callback(self.domain_name, message)
 
     def log(self, message):
-        self.log_messages.append(self.tr(message) if self.tr else message)
+        final_message = self.tr(message) if self.tr else message
+        self.log_messages.append(final_message)
         if self.log_callback:
-            self.log_callback(self.tr(message) if self.tr else message)
+            self.log_callback(self.domain_name, final_message)
 
     def request_cancel(self):
         self.cancel_requested.set()

@@ -44,8 +44,8 @@ class SimpCityAdapter:
             message = self.tr(message)
 
         if self.log_callback:
-            self.log_callback(message)
-
+            self.log_callback(self.site_name, message)
+            
     def sanitize_folder_name(self, name):
         return re.sub(r'[<>:"/\\|?*]', "_", name)
 

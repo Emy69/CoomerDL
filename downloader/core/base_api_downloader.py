@@ -85,7 +85,8 @@ class BaseApiDownloader:
         self.db_lock = threading.Lock()
         self.init_db()
         self.load_download_cache()
-
+        self.domain_name = "SYSTEM"
+        
     def init_db(self):
         self.db_connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.db_cursor = self.db_connection.cursor()
@@ -111,8 +112,11 @@ class BaseApiDownloader:
         self.download_cache = {row[0]: (row[1], row[2]) for row in rows}
 
     def log(self, message):
+        final_message = self.tr(message) if self.tr else message
+
+        domain = getattr(self, "domain_name", "SYSTEM")
         if self.log_callback:
-            self.log_callback(self.tr(message) if self.tr else message)
+            self.log_callback(domain, final_message)
 
     def sanitize_filename(self, filename):
         return re.sub(r'[<>:"/\\\\|?*]', "_", filename)

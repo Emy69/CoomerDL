@@ -21,8 +21,9 @@ class BunkrAdapter:
         self.tr = tr
 
     def log(self, message):
+        final_message = self.tr(message) if self.tr else message
         if self.log_callback:
-            self.log_callback(self.tr(message) if self.tr else message)
+            self.log_callback(self.site_name, final_message)
 
     def clean_filename(self, filename):
         return re.sub(r'[<>:"/\\|?*\u200b]', "_", str(filename or "")).strip()

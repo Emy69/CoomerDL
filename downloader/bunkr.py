@@ -15,6 +15,7 @@ class BunkrDownloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self._translate_message,
         )
+        self.domain_name = "BUNKR"
 
     def _translate_message(self, key):
         return self.translations.get(key, key)

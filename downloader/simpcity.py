@@ -33,6 +33,7 @@ class SimpCity(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
+        self.domain_name = "SIMPCITY"
 
     def download_images_from_simpcity(self, url, paginate=True):
         try:

@@ -1,3 +1,4 @@
+from email.mime import message
 import os
 import re
 import uuid
@@ -25,7 +26,7 @@ class EromeAdapter:
         else:
             message = self.tr(message)
         if self.log_callback:
-            self.log_callback(message)
+            self.log_callback(self.site_name, message)
 
     @staticmethod
     def clean_filename(filename):

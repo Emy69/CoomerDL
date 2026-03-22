@@ -110,7 +110,7 @@ class MainController:
                     self.app.add_log_message_safe(self.app.tr("No se pudo extraer el ID del usuario."))
                     self.app.show_error(self.app.tr("Error"), self.app.tr("No se pudo extraer el ID del usuario."))
 
-                self.app.add_log_message_safe(self.app.tr("URL no válida"))
+                self.app.add_log_message_safe("SYSTEM", self.app.tr("URL no válida"))
                 self.app.enable_widgets()
                 return
 

@@ -1,6 +1,6 @@
 import datetime
 from pathlib import Path
-
+from html import escape
 
 class LogService:
     def __init__(self, log_folder="resources/config/logs/"):
@@ -10,6 +10,41 @@ class LogService:
         self.errors = []
         self.warnings = []
 
+    DOMAIN_COLORS = {
+        "coomer": "#4FC3F7",
+        "kemono": "#81C784",
+        "erome": "#F48FB1",
+        "bunkr": "#FFB74D",
+        "simpcity": "#BA68C8",
+        "jpg5": "#FFD54F",
+        "system": "#FDFDFD",
+        "error": "#EF5350",
+        "warning": "#FFA726",
+    }
+
+    def get_domain_color(self, domain: str) -> str:
+        return self.DOMAIN_COLORS.get(domain.lower(), "#90A4AE")
+
+    def format_plain(self, domain: str, message: str) -> str:
+        return f"{domain}: {message}"
+
+    def format_html(self, domain: str, message: str) -> str:
+        color = self.get_domain_color(domain)
+        domain_escaped = escape(domain)
+        message_escaped = escape(message)
+
+        return (
+            f'<div style="margin:2px 0; padding:4px 8px; border-left:4px solid {color};">'
+            f'<span style="color:{color}; font-weight:600;">{domain_escaped}:</span> '
+            f'<span>{message_escaped}</span>'
+            f'</div>'
+        )
+
+    def add_domain_log(self, domain: str, message: str):
+        plain = self.format_plain(domain, message)
+        self.all_logs.append(plain)
+        return self.format_html(domain, message)
+    
     def add(self, message: str):
         self.all_logs.append(message)
 

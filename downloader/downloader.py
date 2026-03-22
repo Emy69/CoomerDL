@@ -13,6 +13,7 @@ class Downloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
+        self.domain_name = "COOMER"
 
     def fetch_user_posts(self, *args, **kwargs):
         kwargs.setdefault("cancel_event", self.cancel_requested)

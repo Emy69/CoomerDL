@@ -36,6 +36,7 @@ class Jpg5Downloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
+        self.domain_name = "JPG5"
 
     def descargar_imagenes(self):
         os.makedirs(self.download_folder, exist_ok=True)

@@ -9,8 +9,10 @@ class CoomerKemonoAdapter:
         self.tr = tr
 
     def log(self, message):
+        final_message = self.tr(message) if self.tr else message
+        domain = getattr(self, "site_name", "coomer")
         if self.log_callback:
-            self.log_callback(self.tr(message) if self.tr else message)
+            self.log_callback(domain, final_message)
 
     def fetch_user_posts(
         self,
@@ -37,7 +39,7 @@ class CoomerKemonoAdapter:
             if query not in (None, "", 0, "0"):
                 url_query["q"] = query
             api_url += "?" + urlencode(url_query)
-
+            self.site_name = "kemono" if "kemono" in site else "coomer"
             if log_fetching:
                 self.log(f"Fetching user posts from {api_url}")
 
@@ -79,6 +81,7 @@ class CoomerKemonoAdapter:
         return all_posts
 
     def fetch_single_post(self, site, post_id, service):
+        self.site_name = "kemono" if "kemono" in site else "coomer"
         api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
         self.log(f"Fetching post from {api_url}")
         try:

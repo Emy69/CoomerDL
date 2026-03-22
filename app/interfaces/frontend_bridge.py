@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class FrontendBridge(ABC):
     @abstractmethod
-    def log(self, message: str):
+    def log(self, domain: str, message: str):
         pass
 
     @abstractmethod
