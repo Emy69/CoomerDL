@@ -33,11 +33,11 @@ class SimpCity(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
-        self.domain_name = "SIMPCITY"
+        self.domain_name = "simpcity"
 
     def download_images_from_simpcity(self, url, paginate=True):
         try:
-            self.log("Processing thread: {url}".format(url=url))
+            self.log("SIMPCITY_PROCESSING_THREAD", url=url)
 
             resolved = self.adapter.resolve_thread(url, paginate=paginate)
             folder_name = resolved["folder_name"]
@@ -82,12 +82,12 @@ class SimpCity(BaseApiDownloader):
 
             for future in as_completed(futures):
                 if self.cancel_requested.is_set():
-                    self.log("Download cancelled.")
+                    self.log("SIMPCITY_DOWNLOAD_CANCELLED")
                     break
                 future.result()
 
-            self.log("Download completed.")
+            self.log("SIMPCITY_DOWNLOAD_COMPLETED")
         except Exception as e:
-            self.log(f"Error while processing SimpCity thread: {e}")
+            self.log("SIMPCITY_ERROR_PROCESSING_THREAD", error=e)
         finally:
             self.shutdown_executor()

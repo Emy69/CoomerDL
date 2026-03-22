@@ -12,7 +12,7 @@ class SimpCityAdapter:
     def __init__(self, cookies_path="resources/config/cookies/simpcity.json", log_callback=None, tr=None):
         self.cookies_path = cookies_path
         self.log_callback = log_callback
-        self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs))
+        self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
 
         try:
             import cloudscraper
@@ -45,7 +45,7 @@ class SimpCityAdapter:
 
         if self.log_callback:
             self.log_callback(self.site_name, message)
-            
+
     def sanitize_folder_name(self, name):
         return re.sub(r'[<>:"/\\|?*]', "_", name)
 
@@ -73,7 +73,7 @@ class SimpCityAdapter:
         return BeautifulSoup(response.content, "html.parser")
 
     def resolve_thread(self, url, paginate=True, download_images=True, download_videos=True, download_attachments=True):
-        self.log("Processing SimpCity thread: {url}", url=url)
+        self.log("SIMPCITY_PROCESSING_THREAD", url=url)
 
         all_media = []
         visited = set()
@@ -87,7 +87,11 @@ class SimpCityAdapter:
 
             if folder_name is None:
                 title_element = soup.select_one(self.title_selector)
-                folder_name = self.sanitize_folder_name(title_element.text.strip()) if title_element else "SimpCity_Download"
+                folder_name = (
+                    self.sanitize_folder_name(title_element.text.strip())
+                    if title_element
+                    else self.tr("SIMPCITY_DEFAULT_FOLDER")
+                )
 
             page_media = self._extract_page_media(
                 soup,
@@ -109,7 +113,7 @@ class SimpCityAdapter:
                 current_url = None
 
         return {
-            "folder_name": folder_name or "SimpCity_Download",
+            "folder_name": folder_name or self.tr("SIMPCITY_DEFAULT_FOLDER"),
             "media": all_media,
         }
 

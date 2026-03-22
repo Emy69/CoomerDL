@@ -116,5 +116,10 @@
   "JPG5_ERROR_PROCESSING_MEDIA_PAGE": "Error processing JPG5 media page {url}: {error}",
   "JPG5_RESOLVING_MEDIA_PAGE": "Resolving JPG5 media page: {url}",
   "JPG5_HEADER_NOT_FOUND": "header-content-right not found for {url}",
-  "JPG5_FINAL_DOWNLOAD_LINK_NOT_FOUND": "Final download link not found for {url}"
+  "JPG5_FINAL_DOWNLOAD_LINK_NOT_FOUND": "Final download link not found for {url}",
+  "SIMPCITY_PROCESSING_THREAD": "Processing SimpCity thread: {url}",
+  "SIMPCITY_DOWNLOAD_CANCELLED": "Download cancelled.",
+  "SIMPCITY_DOWNLOAD_COMPLETED": "Download completed.",
+  "SIMPCITY_ERROR_PROCESSING_THREAD": "Error while processing SimpCity thread: {error}",
+  "SIMPCITY_DEFAULT_FOLDER": "SimpCity_Download"
 }
