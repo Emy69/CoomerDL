@@ -89,5 +89,14 @@
   "DOWNLOAD_SUCCESS_FROM": "Download success from {media_url}",
   "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS": "Failed to download {media_url} after {total} total download attempts.",
   "DATABASE_CLEARED": "Database cleared.",
-  "UPDATED_MAX_WORKERS": "Updated max_workers to {new_max} (per_domain_limit={per_domain_limit})"
+  "UPDATED_MAX_WORKERS": "Updated max_workers to {new_max} (per_domain_limit={per_domain_limit})",
+  "CK_FETCHING_USER_POSTS": "Fetching user posts from {api_url}",
+  "CK_END_OF_POSTS_AT_OFFSET": "End of posts at offset {offset}.",
+  "CK_ERROR_FETCHING_USER_POSTS": "Error fetching user posts: {error}",
+  "CK_FETCHING_POST": "Fetching post from {api_url}",
+  "CK_ERROR_FETCHING_POST": "Error fetching post: {error}",
+  "CK_STARTING_DOWNLOAD_PROCESS": "Starting download process...",
+  "CK_NO_POSTS_FOUND_FOR_USER": "No posts found for this user.",
+  "CK_ERROR_DURING_DOWNLOAD": "Error during download: {error}",
+  "CK_NO_POST_FOUND_FOR_ID": "No post found for this ID."
 }

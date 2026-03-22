@@ -89,5 +89,14 @@
   "DOWNLOAD_SUCCESS_FROM": "Descarga exitosa desde {media_url}",
   "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS": "No se pudo descargar {media_url} después de {total} intentos totales de descarga.",
   "DATABASE_CLEARED": "Base de datos limpiada.",
-  "UPDATED_MAX_WORKERS": "max_workers actualizado a {new_max} (per_domain_limit={per_domain_limit})"
+  "UPDATED_MAX_WORKERS": "max_workers actualizado a {new_max} (per_domain_limit={per_domain_limit})",
+  "CK_FETCHING_USER_POSTS": "Obteniendo posts del usuario desde {api_url}",
+  "CK_END_OF_POSTS_AT_OFFSET": "Fin de los posts en el offset {offset}.",
+  "CK_ERROR_FETCHING_USER_POSTS": "Error al obtener los posts del usuario: {error}",
+  "CK_FETCHING_POST": "Obteniendo post desde {api_url}",
+  "CK_ERROR_FETCHING_POST": "Error al obtener el post: {error}",
+  "CK_STARTING_DOWNLOAD_PROCESS": "Iniciando proceso de descarga...",
+  "CK_NO_POSTS_FOUND_FOR_USER": "No se encontraron posts para este usuario.",
+  "CK_ERROR_DURING_DOWNLOAD": "Error durante la descarga: {error}",
+  "CK_NO_POST_FOUND_FOR_ID": "No se encontró ningún post para este ID."
 }

@@ -8,11 +8,30 @@ class CoomerKemonoAdapter:
         self.log_callback = log_callback
         self.tr = tr
 
+    def translate(self, key, **kwargs):
+        if callable(self.tr):
+            try:
+                return self.tr(key, **kwargs)
+            except TypeError:
+                text = self.tr(key)
+                if kwargs:
+                    try:
+                        return text.format(**kwargs)
+                    except Exception:
+                        return text
+                return text
+
+        if kwargs:
+            try:
+                return key.format(**kwargs)
+            except Exception:
+                return key
+        return key
+
     def log(self, message):
-        final_message = self.tr(message) if self.tr else message
         domain = getattr(self, "site_name", "coomer")
         if self.log_callback:
-            self.log_callback(domain, final_message)
+            self.log_callback(domain, message)
 
     def fetch_user_posts(
         self,
@@ -39,14 +58,16 @@ class CoomerKemonoAdapter:
             if query not in (None, "", 0, "0"):
                 url_query["q"] = query
             api_url += "?" + urlencode(url_query)
+
             self.site_name = "kemono" if "kemono" in site else "coomer"
+
             if log_fetching:
-                self.log(f"Fetching user posts from {api_url}")
+                self.log(self.translate("CK_FETCHING_USER_POSTS", api_url=api_url))
 
             try:
                 response = self.session.get(api_url, headers=self.headers)
                 if response.status_code == 400:
-                    self.log(f"End of posts at offset {offset}.")
+                    self.log(self.translate("CK_END_OF_POSTS_AT_OFFSET", offset=offset))
                     break
 
                 response.raise_for_status()
@@ -72,7 +93,7 @@ class CoomerKemonoAdapter:
                     break
 
             except Exception as e:
-                self.log(f"Error fetching user posts: {e}")
+                self.log(self.translate("CK_ERROR_FETCHING_USER_POSTS", error=e))
                 break
 
         if specific_post_id:
@@ -83,13 +104,14 @@ class CoomerKemonoAdapter:
     def fetch_single_post(self, site, post_id, service):
         self.site_name = "kemono" if "kemono" in site else "coomer"
         api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
-        self.log(f"Fetching post from {api_url}")
+        self.log(self.translate("CK_FETCHING_POST", api_url=api_url))
+
         try:
             response = self.session.get(api_url, headers=self.headers)
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.log(f"Error fetching post: {e}")
+            self.log(self.translate("CK_ERROR_FETCHING_POST", error=e))
             return None
 
     def extract_media_urls(self, post, site):

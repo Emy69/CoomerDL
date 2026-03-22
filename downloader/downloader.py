@@ -13,7 +13,7 @@ class Downloader(BaseApiDownloader):
             log_callback=self.log_callback,
             tr=self.tr,
         )
-        self.domain_name = "COOMER"
+        self.domain_name = "coomer"
 
     def fetch_user_posts(self, *args, **kwargs):
         kwargs.setdefault("cancel_event", self.cancel_requested)
@@ -54,7 +54,7 @@ class Downloader(BaseApiDownloader):
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0, only_first_page=False):
         try:
-            self.log("Starting download process...")
+            self.log("CK_STARTING_DOWNLOAD_PROCESS")
 
             posts = self.fetch_user_posts(
                 site,
@@ -67,7 +67,7 @@ class Downloader(BaseApiDownloader):
             )
 
             if not posts:
-                self.log("No posts found for this user.")
+                self.log("CK_NO_POSTS_FOUND_FOR_USER")
                 return
 
             if not download_all:
@@ -110,7 +110,7 @@ class Downloader(BaseApiDownloader):
                     future.result()
 
         except Exception as e:
-            self.log(f"Error during download: {e}")
+            self.log("CK_ERROR_DURING_DOWNLOAD", error=e)
         finally:
             self.shutdown_executor()
 
@@ -118,7 +118,7 @@ class Downloader(BaseApiDownloader):
         try:
             posts = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
             if not posts:
-                self.log("No post found for this ID.")
+                self.log("CK_NO_POST_FOUND_FOR_ID")
                 return
 
             current_post = posts[0]
@@ -163,6 +163,6 @@ class Downloader(BaseApiDownloader):
                     future.result()
 
         except Exception as e:
-            self.log(f"Error during download: {e}")
+            self.log("CK_ERROR_DURING_DOWNLOAD", error=e)
         finally:
             self.shutdown_executor()
