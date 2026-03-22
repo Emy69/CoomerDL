@@ -48,10 +48,7 @@ class SettingsDialog(QDialog):
         self.CONFIG_PATH = "resources/config/settings.json"
         self.COOKIES_PATH = "resources/config/cookies/simpcity.json"
 
-        self.languages = {
-            "English": "en",
-            "Español": "es",
-        }
+        self.languages = self._load_languages_map()
 
         self.settings_service = SettingsWindowService(
             config_path=self.CONFIG_PATH,
@@ -66,6 +63,22 @@ class SettingsDialog(QDialog):
         self.resize(920, 680)
 
         self._build_ui()
+    
+    def _load_languages_map(self):
+        available = self.parent_window.translation_service.get_available_languages()
+        languages = {
+            item["name"]: item["code"]
+            for item in available
+            if "name" in item and "code" in item
+        }
+
+        if not languages:
+            languages = {
+                "English": "en",
+                "Español": "es",
+            }
+
+        return languages
 
     # ------------------------------------------------------------
     # UI
@@ -546,7 +559,6 @@ class SettingsDialog(QDialog):
         self.tabs.setTabText(1, self.translate("Downloads"))
         self.tabs.setTabText(2, self.translate("Cookies"))
         self.tabs.setTabText(3, self.translate("Database"))
-        self.close_button.setText(self.translate("Close"))
         self.apply_language_button.setText(self.translate("Apply Language"))
         self.apply_downloads_button.setText(self.translate("Apply Download Settings"))
         self.cookies_info_label.setText(

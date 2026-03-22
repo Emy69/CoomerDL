@@ -1,0 +1,23 @@
+{
+  "File": "File",
+  "Settings": "Settings",
+  "About": "About",
+  "Patreons": "Patreons",
+  "URL_LABEL": "Website URL:",
+  "SELECT_FOLDER": "Select Folder",
+  "DOWNLOAD_IMAGES": "Download Images",
+  "DOWNLOAD_VIDEOS": "Download Videos",
+  "ONLY_THIS_URL": "Only this URL",
+  "AUTO_SCROLL_LOG": "Auto-scroll log",
+  "DOWNLOAD_COMPRESSED": "Download Compressed Files",
+  "DOWNLOAD": "Download",
+  "CANCEL_DOWNLOAD": "Cancel Download",
+  "GENERAL": "General",
+  "DOWNLOADS": "Downloads",
+  "COOKIES": "Cookies",
+  "DATABASE": "Database",
+  "LANGUAGE": "Language",
+  "APPLY_LANGUAGE": "Apply Language",
+  "SETTINGS_APPLIED": "Settings applied.",
+  "INVALID_URL": "Invalid URL"
+}

@@ -1,0 +1,23 @@
+{
+  "File": "Archivo",
+  "Settings": "Configuración",
+  "About": "Acerca de",
+  "Patreons": "Patreons",
+  "URL_LABEL": "URL de la página web:",
+  "SELECT_FOLDER": "Seleccionar Carpeta",
+  "DOWNLOAD_IMAGES": "Descargar Imágenes",
+  "DOWNLOAD_VIDEOS": "Descargar Vídeos",
+  "ONLY_THIS_URL": "Solo esta URL",
+  "AUTO_SCROLL_LOG": "Auto-scroll log",
+  "DOWNLOAD_COMPRESSED": "Descargar Comprimidos",
+  "DOWNLOAD": "Descargar",
+  "CANCEL_DOWNLOAD": "Cancelar Descarga",
+  "GENERAL": "General",
+  "DOWNLOADS": "Descargas",
+  "COOKIES": "Cookies",
+  "DATABASE": "Base de datos",
+  "LANGUAGE": "Idioma",
+  "APPLY_LANGUAGE": "Aplicar idioma",
+  "SETTINGS_APPLIED": "Configuración aplicada.",
+  "INVALID_URL": "URL no válida"
+}
