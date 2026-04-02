@@ -1,3 +1,5 @@
+import threading
+
 from downloader.bunkr import BunkrDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
@@ -69,7 +71,10 @@ class DownloaderFactory:
             download_compressed=self.frontend.get_download_compressed(),
             tr=self.frontend.get_tr(),
             max_workers=self.frontend.get_max_downloads(),
-            folder_structure=settings.get("folder_structure", "default")
+            folder_structure=settings.get("folder_structure", "default"),
+            max_retries=int(settings.get("max_retries", 3) or 3),
+            retry_interval=float(settings.get("retry_interval", 2.0) or 2.0),
+            rate_limit_interval=float(settings.get("rate_limit_interval", 0.0) or 0.0),
         )
         downloader.file_naming_mode = settings.get("file_naming_mode", 0)
         return downloader

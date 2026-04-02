@@ -35,7 +35,7 @@ from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
 from app.donors import DonorsModal
 
-VERSION = "V1.Beta"
+VERSION = "V1.1.0"
 MAX_LOG_LINES = None
 
 
