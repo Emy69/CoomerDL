@@ -34,6 +34,7 @@ from app.views.pyside.progress.progress_controller import ProgressController
 from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
 from app.donors import DonorsModal
+from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
 
 VERSION = "V1.1.0"
 MAX_LOG_LINES = None
@@ -111,6 +112,9 @@ class PySideMainWindow(QMainWindow):
         self._bind_events()
         self._create_default_downloader()
         self.update_ui_texts()
+
+        self.hide()
+        QTimer.singleShot(0, self.show_startup_community_dialog)
 
     # ------------------------------------------------------------------
     # UI
@@ -196,7 +200,27 @@ class PySideMainWindow(QMainWindow):
     def open_donors_modal(self):
         dialog = DonorsModal(self, self.tr)
         dialog.show_modal()
-        
+    
+    def show_startup_community_dialog(self):
+        should_show = self.settings_service.get("startup_show_community_message", True)
+
+        if not should_show:
+            self.show()
+            return
+
+        dialog = StartupCommunityDialog(
+            parent=self,
+            initial_language=self.app_state.language
+        )
+
+        if dialog.exec():
+            selected_language = dialog.selected_language()
+            self.save_language_preference(selected_language)
+            self.load_translations(selected_language)
+            self.update_ui_texts()
+
+        self.show()
+            
     def load_translations(self, language=None):
         target_language = language or self.app_state.language
         self.app_state.language = target_language
@@ -208,15 +232,15 @@ class PySideMainWindow(QMainWindow):
         self.translation_service.set_language(language)
 
     def update_ui_texts(self):
-        self.download_panel.url_label.setText(self.tr("URL de la página web:"))
-        self.download_panel.browse_button.setText(self.tr("Seleccionar Carpeta"))
-        self.download_panel.images_check.setText(self.tr("Descargar Imágenes"))
-        self.download_panel.videos_check.setText(self.tr("Descargar Vídeos"))
-        self.download_panel.only_this_url_check.setText(self.tr("Solo esta URL"))
-        self.download_panel.autoscroll_log_check.setText(self.tr("Auto-scroll log"))
-        self.download_panel.compressed_check.setText(self.tr("Descargar Comprimidos"))
-        self.download_panel.download_button.setText(self.tr("Descargar"))
-        self.download_panel.cancel_button.setText(self.tr("Cancelar Descarga"))
+        self.download_panel.url_label.setText(self.tr("URL_LABEL"))
+        self.download_panel.browse_button.setText(self.tr("SELECT_FOLDER"))
+        self.download_panel.images_check.setText(self.tr("DOWNLOAD_IMAGES"))
+        self.download_panel.videos_check.setText(self.tr("DOWNLOAD_VIDEOS"))
+        self.download_panel.only_this_url_check.setText(self.tr("ONLY_THIS_URL"))
+        self.download_panel.autoscroll_log_check.setText(self.tr("AUTO_SCROLL_LOG"))
+        self.download_panel.compressed_check.setText(self.tr("DOWNLOAD_COMPRESSED"))
+        self.download_panel.download_button.setText(self.tr("DOWNLOAD"))
+        self.download_panel.cancel_button.setText(self.tr("CANCEL_DOWNLOAD"))
 
         if hasattr(self, "file_menu"):
             self.file_menu.setTitle(self.tr("File"))
@@ -234,9 +258,12 @@ class PySideMainWindow(QMainWindow):
             if hasattr(self.progress_controller, "dialog") and self.progress_controller.dialog is not None:
                 self.progress_controller.dialog.tr = self.tr
                 self.progress_controller.dialog.retranslate_ui()
-        
+
         if hasattr(self, "download_panel") and self.download_panel is not None:
             self.download_panel.retranslate_ui()
+
+        self.setWindowTitle(f"Downloader [{self.version}]")
+        self.update_folder_label()
 
     def apply_runtime_settings(self, new_settings: dict):
         try:

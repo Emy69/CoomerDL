@@ -48,4 +48,23 @@ class TranslationService:
     def get_available_languages(self):
         manifest_path = os.path.join(self.locales_dir, "languages.json")
         manifest = self._load_json_file(manifest_path)
-        return manifest.get("languages", [])
+
+        languages = []
+
+        if isinstance(manifest, dict):
+            official = manifest.get("official", [])
+            community = manifest.get("community", [])
+
+            if isinstance(official, list):
+                languages.extend(official)
+
+            if isinstance(community, list):
+                languages.extend(community)
+
+        if not languages:
+            languages = [
+                {"code": "en", "name": "English"},
+                {"code": "es", "name": "Español"},
+            ]
+
+        return languages

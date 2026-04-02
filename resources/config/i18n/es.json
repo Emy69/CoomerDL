@@ -196,5 +196,10 @@
   "SETTINGS_TYPE_DELETE_DATABASE": "Para continuar, escribe exactamente: DELETE DATABASE",
   "SETTINGS_DELETE_DATABASE_TEXT_MISMATCH": "El texto ingresado no coincide con \"DELETE DATABASE\". Operación cancelada.",
   "SETTINGS_ENTIRE_DATABASE_DELETED": "Todos los registros de la base de datos fueron eliminados correctamente.",
-  "SETTINGS_ERROR_DELETING_ENTIRE_DATABASE": "Error al eliminar toda la base de datos: {error}"
+  "SETTINGS_ERROR_DELETING_ENTIRE_DATABASE": "Error al eliminar toda la base de datos: {error}",
+  "STARTUP_DIALOG_TITLE": "Bienvenida",
+  "STARTUP_WELCOME_TITLE": "Bienvenido a CoomerDL",
+  "STARTUP_CONTINUE_BUTTON": "Continuar",
+  "STARTUP_COMMUNITY_MESSAGE_BODY": "Gracias por seguir apoyando el proyecto.\n\nLa aplicación sigue evolucionando y algunas partes están siendo reorganizadas y mejoradas para hacerla más estable, más fácil de mantener y mejor preparada para futuras funciones.\n\nDurante este proceso algunas secciones pueden cambiar o recibir mejoras graduales.\n\nGracias por tu paciencia y por seguir usando la app.",
+  "STARTUP_DONT_SHOW_AGAIN": "No mostrar de nuevo"
 }
