@@ -235,6 +235,7 @@ class SettingsDialog(QDialog):
             self.translate("SETTINGS_DB_HEADER_DOWNLOADED_AT"),
         ])
         self.db_tree.setSelectionMode(self.db_tree.SelectionMode.ExtendedSelection)
+        self.db_tree.setUniformRowHeights(True)
         layout.addWidget(self.db_tree, 1)
 
         buttons_row = QHBoxLayout()
@@ -250,6 +251,10 @@ class SettingsDialog(QDialog):
         self.delete_users_button = QPushButton(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
         self.delete_users_button.clicked.connect(self._delete_selected_users)
         buttons_row.addWidget(self.delete_users_button)
+
+        self.delete_all_db_button = QPushButton(self.translate("SETTINGS_DELETE_ENTIRE_DATABASE"))
+        self.delete_all_db_button.clicked.connect(self._delete_entire_database)
+        buttons_row.addWidget(self.delete_all_db_button)
 
         buttons_row.addStretch(1)
         layout.addLayout(buttons_row)
@@ -381,7 +386,7 @@ class SettingsDialog(QDialog):
                     ])
                     no_post_item.addChild(file_item)
 
-        self.db_tree.expandToDepth(0)
+        self.db_tree.collapseAll()
 
     def _export_db(self):
         db_path = self._get_db_path()
@@ -472,6 +477,102 @@ class SettingsDialog(QDialog):
                 self,
                 self.translate("ERROR"),
                 self._t("SETTINGS_ERROR_DELETING_USERS", error=e)
+            )
+            
+    def _confirm_delete_database_text(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.translate("SETTINGS_DELETE_ENTIRE_DATABASE"))
+        dialog.setModal(True)
+        dialog.resize(520, 240)
+
+        layout = QVBoxLayout(dialog)
+
+        warning_title = QLabel(self.translate("SETTINGS_DELETE_DATABASE_WARNING_TITLE"))
+        warning_title.setStyleSheet("""
+            color: #ff4d4f;
+            font-size: 16px;
+            font-weight: 700;
+        """)
+        warning_title.setWordWrap(True)
+        layout.addWidget(warning_title)
+
+        warning_text = QLabel(self.translate("SETTINGS_DELETE_DATABASE_WARNING_TEXT"))
+        warning_text.setStyleSheet("""
+            color: #ff6b6b;
+            font-size: 13px;
+        """)
+        warning_text.setWordWrap(True)
+        layout.addWidget(warning_text)
+
+        instruction = QLabel(self.translate("SETTINGS_TYPE_DELETE_DATABASE"))
+        instruction.setWordWrap(True)
+        layout.addWidget(instruction)
+
+        input_edit = QLineEdit()
+        input_edit.setPlaceholderText("DELETE DATABASE")
+        layout.addWidget(input_edit)
+
+        buttons_row = QHBoxLayout()
+        buttons_row.addStretch(1)
+
+        cancel_button = QPushButton(self.translate("CANCEL"))
+        cancel_button.clicked.connect(dialog.reject)
+        buttons_row.addWidget(cancel_button)
+
+        confirm_button = QPushButton(self.translate("DELETE"))
+        confirm_button.clicked.connect(dialog.accept)
+        buttons_row.addWidget(confirm_button)
+
+        layout.addLayout(buttons_row)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+
+        return input_edit.text().strip() == "DELETE DATABASE"
+
+
+    def _delete_entire_database(self):
+        db_path = self._get_db_path()
+        if not self.database_settings_service.database_exists(db_path):
+            QMessageBox.warning(
+                self,
+                self.translate("WARNING"),
+                self.translate("SETTINGS_DATABASE_NOT_FOUND")
+            )
+            return
+
+        first_confirm = QMessageBox.question(
+            self,
+            self.translate("CONFIRM"),
+            self.translate("SETTINGS_CONFIRM_DELETE_ENTIRE_DATABASE"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if first_confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        typed_ok = self._confirm_delete_database_text()
+        if not typed_ok:
+            QMessageBox.warning(
+                self,
+                self.translate("WARNING"),
+                self.translate("SETTINGS_DELETE_DATABASE_TEXT_MISMATCH")
+            )
+            return
+
+        try:
+            self.database_settings_service.delete_all_downloads(db_path)
+            self.load_db_records()
+            QMessageBox.information(
+                self,
+                self.translate("SUCCESS"),
+                self.translate("SETTINGS_ENTIRE_DATABASE_DELETED")
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.translate("ERROR"),
+                self._t("SETTINGS_ERROR_DELETING_ENTIRE_DATABASE", error=e)
             )
 
     # ------------------------------------------------------------
@@ -626,6 +727,7 @@ class SettingsDialog(QDialog):
         self.reload_db_button.setText(self.translate("SETTINGS_RELOAD_DATABASE"))
         self.export_db_button.setText(self.translate("SETTINGS_EXPORT_DATABASE"))
         self.delete_users_button.setText(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
+        self.delete_all_db_button.setText(self.translate("SETTINGS_DELETE_ENTIRE_DATABASE"))
 
         self._reload_language_combo()
         self._reload_file_naming_combo()

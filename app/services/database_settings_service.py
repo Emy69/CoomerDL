@@ -25,18 +25,31 @@ class DatabaseSettingsService:
         conn.commit()
         conn.close()
 
+    def delete_all_downloads(self, db_path: str):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM downloads")
+        conn.commit()
+
+        try:
+            cursor.execute("VACUUM")
+        except Exception:
+            pass
+
+        conn.close()
+
     def export_database(self, db_path: str, export_path: str):
         shutil.copy(db_path, export_path)
 
     def get_file_type(self, file_path: str) -> str:
         ext = os.path.splitext(file_path)[1].lower()
-        if ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']:
+        if ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
             return "Image"
-        if ext in ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.flv', '.wmv', '.m4v']:
+        if ext in [".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".wmv", ".m4v"]:
             return "Video"
-        if ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
+        if ext in [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"]:
             return "Document"
-        if ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
+        if ext in [".zip", ".rar", ".7z", ".tar", ".gz"]:
             return "Compressed"
         return "Other"
 
@@ -46,8 +59,8 @@ class DatabaseSettingsService:
         if size < 1024:
             return f"{size} B"
         if size < 1024**2:
-            return f"{size/1024:.2f} KB"
-        return f"{size/1024**2:.2f} MB"
+            return f"{size / 1024:.2f} KB"
+        return f"{size / 1024**2:.2f} MB"
 
     def group_rows_for_tree(self, rows):
         usuarios = {}
@@ -71,8 +84,8 @@ class DatabaseSettingsService:
                 rec_id, media_url, file_path, file_size, user_id, post_id, downloaded_at = rec
                 item = {
                     "id": rec_id,
-                    "file_name": os.path.basename(file_path),
-                    "file_type": self.get_file_type(file_path),
+                    "file_name": os.path.basename(file_path) if file_path else "",
+                    "file_type": self.get_file_type(file_path or ""),
                     "size_str": self.format_size(file_size),
                     "downloaded_at": downloaded_at,
                 }

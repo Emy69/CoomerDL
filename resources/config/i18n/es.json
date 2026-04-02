@@ -188,5 +188,13 @@
   "DOWNLOAD_PANEL_ONLY_THIS_URL_TOOLTIP": "No paginar perfiles o hilos; descargar solo la URL actual.",
   "DOWNLOAD_PANEL_AUTOSCROLL_LOG": "Auto-scroll log",
   "DOWNLOAD_PANEL_DOWNLOAD": "Descargar",
-  "DOWNLOAD_PANEL_CANCEL_DOWNLOAD": "Cancelar Descarga"
+  "DOWNLOAD_PANEL_CANCEL_DOWNLOAD": "Cancelar Descarga",
+  "SETTINGS_DELETE_ENTIRE_DATABASE": "Eliminar toda la base de datos",
+  "SETTINGS_CONFIRM_DELETE_ENTIRE_DATABASE": "¿Seguro que deseas eliminar todos los registros de la base de datos? Esta acción afectará a todos los usuarios guardados.",
+  "SETTINGS_DELETE_DATABASE_WARNING_TITLE": "Advertencia: esta acción es irreversible",
+  "SETTINGS_DELETE_DATABASE_WARNING_TEXT": "Todo lo que elimines no se podrá recuperar. Se recomienda exportar la base de datos o guardar manualmente el archivo antes de continuar.",
+  "SETTINGS_TYPE_DELETE_DATABASE": "Para continuar, escribe exactamente: DELETE DATABASE",
+  "SETTINGS_DELETE_DATABASE_TEXT_MISMATCH": "El texto ingresado no coincide con \"DELETE DATABASE\". Operación cancelada.",
+  "SETTINGS_ENTIRE_DATABASE_DELETED": "Todos los registros de la base de datos fueron eliminados correctamente.",
+  "SETTINGS_ERROR_DELETING_ENTIRE_DATABASE": "Error al eliminar toda la base de datos: {error}"
 }

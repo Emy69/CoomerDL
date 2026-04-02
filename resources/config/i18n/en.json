@@ -188,5 +188,13 @@
   "DOWNLOAD_PANEL_ONLY_THIS_URL_TOOLTIP": "Do not paginate profiles or threads; download only the current URL.",
   "DOWNLOAD_PANEL_AUTOSCROLL_LOG": "Auto-scroll log",
   "DOWNLOAD_PANEL_DOWNLOAD": "Download",
-  "DOWNLOAD_PANEL_CANCEL_DOWNLOAD": "Cancel Download"
+  "DOWNLOAD_PANEL_CANCEL_DOWNLOAD": "Cancel Download",
+  "SETTINGS_DELETE_ENTIRE_DATABASE": "Delete Entire Database",
+  "SETTINGS_CONFIRM_DELETE_ENTIRE_DATABASE": "Are you sure you want to delete all records from the database? This action will affect all saved users.",
+  "SETTINGS_DELETE_DATABASE_WARNING_TITLE": "Warning: this action is irreversible",
+  "SETTINGS_DELETE_DATABASE_WARNING_TEXT": "Anything you delete cannot be recovered. It is strongly recommended to export the database or manually back up the file before continuing.",
+  "SETTINGS_TYPE_DELETE_DATABASE": "To continue, type exactly: DELETE DATABASE",
+  "SETTINGS_DELETE_DATABASE_TEXT_MISMATCH": "The entered text does not match \"DELETE DATABASE\". Operation cancelled.",
+  "SETTINGS_ENTIRE_DATABASE_DELETED": "All database records were deleted successfully.",
+  "SETTINGS_ERROR_DELETING_ENTIRE_DATABASE": "Error deleting the entire database: {error}"
 }
