@@ -58,7 +58,9 @@ The app now uses a **PySide6 / Qt** interface. The old Tkinter / CustomTkinter U
 4. Choose the content types you want
 5. Click **Download**
 
-![Usage GIF](https://github.com/Emy69/CoomerDL/blob/main/resources/screenshots/0627.gif)
+https://github.com/user-attachments/assets/f11a4681-4c6f-4797-a8a5-8eabe5e2cdfa
+
+
 
 ---
 
