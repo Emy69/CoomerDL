@@ -1,10 +1,12 @@
 import datetime
+from email.mime import text
 import os
 import subprocess
 import sys
 import threading
 
 from pathlib import Path
+import time
 from typing import Optional
 from PySide6.QtCore import QObject, Signal, Qt, QTimer
 from PySide6.QtGui import QAction
@@ -63,6 +65,7 @@ class QtSignals(QObject):
     global_progress = Signal(int, int)
     footer_speed = Signal(str)
     footer_eta = Signal(str)
+    footer_total_size = Signal(str)
     clear_logs = Signal()
     show_error_box = Signal(str, str)
 
@@ -108,6 +111,7 @@ class PySideMainWindow(QMainWindow):
         self.signals.global_progress.connect(self._apply_global_progress)
         self.signals.footer_speed.connect(self.footer_set_speed)
         self.signals.footer_eta.connect(self.footer_set_eta)
+        self.signals.footer_total_size.connect(self.footer_set_total_size)
         self.signals.clear_logs.connect(self._clear_logs)
         self.signals.show_error_box.connect(self._show_error_dialog)
 
@@ -115,6 +119,10 @@ class PySideMainWindow(QMainWindow):
         self._bind_events()
         self._create_default_downloader()
         self.update_ui_texts()
+        
+        self._smoothed_total_speed = 0.0
+        self._last_footer_activity_ts = 0.0
+        self._footer_hold_seconds = 1.0
 
         self.hide()
         QTimer.singleShot(0, self.show_startup_community_dialog)
@@ -337,6 +345,7 @@ class PySideMainWindow(QMainWindow):
         self.signals.global_progress.emit(0, 0)
         self.footer_set_speed("Speed: 0 KB/s")
         self.footer_set_eta("ETA: N/A")
+        self.footer_set_total_size("Total: 0 B")
         self.progress_controller.clear_all()
 
     def add_log_message_safe(self, domain_or_message: str, message: Optional[str] = None):
@@ -369,6 +378,15 @@ class PySideMainWindow(QMainWindow):
         if not hasattr(self, "_active_progress_lock"):
             self._active_progress_lock = threading.Lock()
 
+        if not hasattr(self, "_smoothed_total_speed"):
+            self._smoothed_total_speed = 0.0
+
+        if not hasattr(self, "_last_footer_activity_ts"):
+            self._last_footer_activity_ts = 0.0
+
+        if not hasattr(self, "_footer_hold_seconds"):
+            self._footer_hold_seconds = 0.8
+
         if file_id is None:
             if total and total > 0:
                 self.signals.global_progress.emit(int(downloaded), int(total))
@@ -389,6 +407,7 @@ class PySideMainWindow(QMainWindow):
         )
 
         progress_key = f"{file_id}|{file_path}" if file_path else str(file_id)
+        now = time.monotonic()
 
         with self._active_progress_lock:
             if total and total > 0 and int(downloaded) < int(total):
@@ -401,9 +420,23 @@ class PySideMainWindow(QMainWindow):
             else:
                 self._active_progress.pop(progress_key, None)
 
+            has_active_items = len(self._active_progress) > 0
+            if has_active_items:
+                self._last_footer_activity_ts = now
+
             total_speed = sum(
                 item["speed"] for item in self._active_progress.values()
                 if item["speed"] > 0
+            )
+
+            total_downloaded_bytes = sum(
+                max(0, item["downloaded"])
+                for item in self._active_progress.values()
+            )
+
+            total_bytes = sum(
+                max(0, item["total"])
+                for item in self._active_progress.values()
             )
 
             total_remaining_bytes = sum(
@@ -411,21 +444,40 @@ class PySideMainWindow(QMainWindow):
                 for item in self._active_progress.values()
             )
 
+        # Suavizado de velocidad para evitar saltos bruscos en archivos pequeños
         if total_speed > 0:
-            if total_speed < 1_048_576:
-                self.signals.footer_speed.emit(f"Speed: {total_speed / 1024:.2f} KB/s")
+            if self._smoothed_total_speed <= 0:
+                self._smoothed_total_speed = total_speed
             else:
-                self.signals.footer_speed.emit(f"Speed: {total_speed / 1_048_576:.2f} MB/s")
+                self._smoothed_total_speed = (self._smoothed_total_speed * 0.85) + (total_speed * 0.15)
+        else:
+            if now - self._last_footer_activity_ts > self._footer_hold_seconds:
+                self._smoothed_total_speed = 0.0
+
+        display_speed = self._smoothed_total_speed
+
+        if display_speed > 0:
+            if display_speed < 1_048_576:
+                self.signals.footer_speed.emit(f"Speed: {display_speed / 1024:.2f} KB/s")
+            else:
+                self.signals.footer_speed.emit(f"Speed: {display_speed / 1_048_576:.2f} MB/s")
         else:
             self.signals.footer_speed.emit("Speed: 0 KB/s")
 
-        if total_remaining_bytes > 0 and total_speed > 0:
-            global_eta = total_remaining_bytes / total_speed
+        if total_remaining_bytes > 0 and display_speed > 0:
+            global_eta = total_remaining_bytes / display_speed
             minutes = int(global_eta // 60)
             seconds = int(global_eta % 60)
             self.signals.footer_eta.emit(f"ETA: {minutes}m {seconds}s")
-        else:
+        elif now - self._last_footer_activity_ts > self._footer_hold_seconds:
             self.signals.footer_eta.emit("ETA: N/A")
+
+        if total_bytes > 0:
+            self.signals.footer_total_size.emit(
+                f"Total: {self._format_bytes(total_downloaded_bytes)} / {self._format_bytes(total_bytes)}"
+            )
+        elif now - self._last_footer_activity_ts > self._footer_hold_seconds:
+            self.signals.footer_total_size.emit("Total: 0 B")
 
         if status is not None:
             self.signals.footer_eta.emit(f"ETA: N/A | STATUS:{status}")
@@ -534,6 +586,7 @@ class PySideMainWindow(QMainWindow):
         self.footer_bar.progress_label.setText("0%")
         self.footer_set_speed("Speed: 0 KB/s")
         self.footer_set_eta("ETA: N/A")
+        self.footer_set_total_size("Total: 0 B")
 
     def _show_error_dialog(self, title: str, message: str):
         QMessageBox.critical(self, title, message)
@@ -565,3 +618,23 @@ class PySideMainWindow(QMainWindow):
         minutes = int(eta // 60)
         seconds = int(eta % 60)
         self.footer_set_eta(f"ETA: {minutes}m {seconds}s")
+        
+    def _format_bytes(self, num_bytes):
+        try:
+            value = float(num_bytes or 0)
+        except Exception:
+            value = 0.0
+
+        units = ["B", "KB", "MB", "GB", "TB"]
+        idx = 0
+
+        while value >= 1024 and idx < len(units) - 1:
+            value /= 1024.0
+            idx += 1
+
+        if idx == 0:
+            return f"{int(value)} {units[idx]}"
+        return f"{value:.2f} {units[idx]}"
+    
+    def footer_set_total_size(self, text: str):
+        self.footer_bar.total_size_label.setText(text)

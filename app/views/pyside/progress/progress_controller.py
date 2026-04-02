@@ -5,7 +5,7 @@ from app.views.pyside.progress.progress_dialog import ProgressDialog
 
 
 class ProgressSignals(QObject):
-    upsert_item = Signal(str, int, int, str)
+    upsert_item = Signal(str, object, object, str)
     remove_item = Signal(str)
     clear_all = Signal()
     toggle_dialog = Signal()
@@ -41,8 +41,11 @@ class ProgressController:
     def clear_all(self):
         self.signals.clear_all.emit()
 
-    def _upsert_item(self, packed_key: str, downloaded: int, total: int, eta_text: str):
+    def _upsert_item(self, packed_key: str, downloaded, total, eta_text: str):
         file_id, file_path = packed_key.split("|", 1)
+
+        downloaded = int(downloaded or 0)
+        total = int(total or 0)
 
         if packed_key not in self.items:
             widget = ProgressItemWidget(file_path)

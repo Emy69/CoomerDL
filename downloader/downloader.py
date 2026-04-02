@@ -8,7 +8,7 @@ import requests
 import threading
 import time
 import sqlite3
-
+import random
 
 class Downloader:
     def __init__(
@@ -81,6 +81,18 @@ class Downloader:
         self.subdomain_locks = defaultdict(threading.Lock)
         self.request_timeout = (10, 120)
         self.domain_name = "coomer"
+        
+        self.domain_error_state = defaultdict(
+            lambda: {
+                "burst_count": 0,
+                "last_error_ts": 0.0,
+                "cooldown_until": 0.0,
+            }
+        )
+        self.domain_error_lock = threading.Lock()
+        self.domain_error_window = 10.0
+        self.domain_error_threshold = 4
+        self.domain_cooldown_seconds = 8.0
 
         self.active_downloads = set()
         self.active_downloads_lock = threading.Lock()
@@ -277,6 +289,53 @@ class Downloader:
             eta=remaining_time,
         )
         return now
+    
+    def _compute_retry_delay(self, attempt_index):
+        base = max(float(self.retry_interval or 0), 0.1)
+        return (base * (attempt_index + 1)) + random.uniform(0.35, 1.15)
+
+    def _wait_for_domain_cooldown(self, domain):
+        while True:
+            if self.cancel_requested.is_set():
+                return False
+
+            with self.domain_error_lock:
+                cooldown_until = self.domain_error_state[domain]["cooldown_until"]
+
+            now = time.time()
+            remaining = cooldown_until - now
+            if remaining <= 0:
+                return True
+
+            sleep_for = min(remaining, 0.5)
+            time.sleep(sleep_for)
+
+    def _mark_domain_success(self, domain):
+        with self.domain_error_lock:
+            state = self.domain_error_state[domain]
+            state["burst_count"] = 0
+            state["last_error_ts"] = 0.0
+            state["cooldown_until"] = 0.0
+
+    def _mark_domain_error(self, domain, status_code):
+        if status_code not in (429, 500, 502, 503, 504):
+            return
+
+        now = time.time()
+        with self.domain_error_lock:
+            state = self.domain_error_state[domain]
+
+            if now - state["last_error_ts"] > self.domain_error_window:
+                state["burst_count"] = 0
+
+            state["burst_count"] += 1
+            state["last_error_ts"] = now
+
+            if state["burst_count"] >= self.domain_error_threshold:
+                state["cooldown_until"] = max(
+                    state["cooldown_until"],
+                    now + self.domain_cooldown_seconds,
+                )
 
     def safe_request(self, url, max_retries=None, headers=None):
         if max_retries is None:
@@ -299,6 +358,9 @@ class Downloader:
             if self.cancel_requested.is_set():
                 return None
 
+            if not self._wait_for_domain_cooldown(domain):
+                return None
+
             with self.domain_locks[domain]:
                 elapsed_time = time.time() - self.domain_last_request[domain]
                 if elapsed_time < self.rate_limit_interval:
@@ -306,7 +368,12 @@ class Downloader:
 
                 try:
                     self.domain_last_request[domain] = time.time()
-                    response = self.session.get(url, stream=True, headers=headers, timeout=self.request_timeout)
+                    response = self.session.get(
+                        url,
+                        stream=True,
+                        headers=headers,
+                        timeout=self.request_timeout,
+                    )
                     sc = response.status_code
 
                     if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
@@ -325,6 +392,10 @@ class Downloader:
                             if self.update_progress_callback:
                                 self.update_progress_callback(0, 0, status=f"Subdomain found: {found}")
 
+                            alt_domain = urlparse(alt_url).netloc
+                            if not self._wait_for_domain_cooldown(alt_domain):
+                                return None
+
                             response = self.session.get(
                                 alt_url,
                                 stream=True,
@@ -332,6 +403,7 @@ class Downloader:
                                 timeout=self.request_timeout,
                             )
                             response.raise_for_status()
+                            self._mark_domain_success(alt_domain)
                             return response
 
                         if self.update_progress_callback:
@@ -339,6 +411,7 @@ class Downloader:
                         return None
 
                     response.raise_for_status()
+                    self._mark_domain_success(domain)
                     return response
 
                 except requests.exceptions.ReadTimeout:
@@ -348,13 +421,15 @@ class Downloader:
                         total=max_retries + 1,
                         timeout=self.stream_read_timeout,
                     )
+
                     if attempt < max_retries:
-                        time.sleep(self.retry_interval)
+                        time.sleep(self._compute_retry_delay(attempt))
 
                 except requests.exceptions.RequestException as e:
                     status_code = getattr(e.response, "status_code", None)
 
                     if status_code in (429, 500, 502, 503, 504):
+                        self._mark_domain_error(domain, status_code)
                         self.log(
                             "HTTP_RETRY_REQUEST",
                             attempt=attempt + 1,
@@ -362,8 +437,9 @@ class Downloader:
                             status_code=status_code,
                             url=url,
                         )
+
                         if attempt < max_retries:
-                            time.sleep(self.retry_interval)
+                            time.sleep(self._compute_retry_delay(attempt))
 
                     elif status_code not in (403, 404):
                         url_display = getattr(e.request, "url", url)
@@ -376,8 +452,9 @@ class Downloader:
                             url=url_display,
                             error=e,
                         )
+
                         if attempt < max_retries:
-                            time.sleep(self.retry_interval)
+                            time.sleep(self._compute_retry_delay(attempt))
 
                     if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
                         self.log(
@@ -631,39 +708,67 @@ class Downloader:
         try:
             self.log("STARTING_DOWNLOAD_FROM", media_url=media_url)
 
-            for attempt in range(self.max_retries + 1):
-                if self.cancel_requested.is_set():
-                    if os.path.exists(tmp_path):
-                        try:
-                            os.remove(tmp_path)
-                        except Exception:
-                            pass
-                    self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
-                    return
+            response = self.safe_request(media_url, max_retries=self.max_retries)
 
-                response = self.safe_request(media_url, max_retries=self.max_retries)
+            if response is None:
+                self.log(
+                    "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
+                    media_url=media_url,
+                    total=self.max_retries + 1,
+                )
+                with self.file_lock:
+                    self.failed_files.append(media_url)
+                return
 
-                if response is None:
-                    if attempt < self.max_retries:
-                        self.log(
-                            "INITIAL_REQUEST_FAILED_RESUMING",
-                            media_url=media_url,
-                            retry_interval=self.retry_interval,
-                            attempt=attempt + 1,
-                            total=self.max_retries + 1,
-                        )
-                        time.sleep(self.retry_interval)
-                        continue
-                    break
+            total_size = int(response.headers.get("content-length", 0))
+            downloaded_size = 0
+            self.start_time = time.time()
+            last_emit_time = 0.0
 
-                try:
-                    total_size = int(response.headers.get("content-length", 0))
-                    downloaded_size = 0
-                    self.start_time = time.time()
-                    last_emit_time = 0.0
+            try:
+                with open(tmp_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=1048576):
+                        if self.cancel_requested.is_set():
+                            if os.path.exists(tmp_path):
+                                try:
+                                    os.remove(tmp_path)
+                                except Exception:
+                                    pass
+                            self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
+                            return
 
-                    with open(tmp_path, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=1048576):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            last_emit_time = self._emit_progress_update(
+                                downloaded_size=downloaded_size,
+                                total_size=total_size,
+                                download_id=download_id,
+                                file_path=tmp_path,
+                                start_time=self.start_time,
+                                last_emit_time=last_emit_time,
+                                force=False,
+                            )
+
+                while total_size and downloaded_size < total_size:
+                    resume_headers = self.headers.copy()
+                    resume_headers["Range"] = f"bytes={downloaded_size}-"
+                    self.log(
+                        "RESUMING_DOWNLOAD_AT_BYTE",
+                        downloaded_size=downloaded_size,
+                        media_url=media_url,
+                    )
+
+                    part_response = self.safe_request(
+                        media_url,
+                        max_retries=self.max_retries,
+                        headers=resume_headers,
+                    )
+                    if part_response is None:
+                        raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
+
+                    with open(tmp_path, "ab") as f:
+                        for chunk in part_response.iter_content(chunk_size=1048576):
                             if self.cancel_requested.is_set():
                                 if os.path.exists(tmp_path):
                                     try:
@@ -686,111 +791,62 @@ class Downloader:
                                     force=False,
                                 )
 
-                    while total_size and downloaded_size < total_size:
-                        resume_headers = self.headers.copy()
-                        resume_headers["Range"] = f"bytes={downloaded_size}-"
-                        self.log(
-                            "RESUMING_DOWNLOAD_AT_BYTE",
-                            downloaded_size=downloaded_size,
-                            media_url=media_url,
+                if total_size > 0 and downloaded_size != total_size:
+                    raise Exception(
+                        self._translate_text(
+                            "FINAL_SIZE_MISMATCH",
+                            expected=total_size,
+                            actual=downloaded_size,
                         )
-
-                        part_response = self.safe_request(
-                            media_url,
-                            max_retries=self.max_retries,
-                            headers=resume_headers,
-                        )
-                        if part_response is None:
-                            raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
-
-                        with open(tmp_path, "ab") as f:
-                            for chunk in part_response.iter_content(chunk_size=1048576):
-                                if self.cancel_requested.is_set():
-                                    if os.path.exists(tmp_path):
-                                        try:
-                                            os.remove(tmp_path)
-                                        except Exception:
-                                            pass
-                                    self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
-                                    return
-
-                                if chunk:
-                                    f.write(chunk)
-                                    downloaded_size += len(chunk)
-                                    last_emit_time = self._emit_progress_update(
-                                        downloaded_size=downloaded_size,
-                                        total_size=total_size,
-                                        download_id=download_id,
-                                        file_path=tmp_path,
-                                        start_time=self.start_time,
-                                        last_emit_time=last_emit_time,
-                                        force=False,
-                                    )
-
-                    if total_size > 0 and downloaded_size != total_size:
-                        raise Exception(
-                            self._translate_text(
-                                "FINAL_SIZE_MISMATCH",
-                                expected=total_size,
-                                actual=downloaded_size,
-                            )
-                        )
-
-                    self._emit_progress_update(
-                        downloaded_size=downloaded_size,
-                        total_size=total_size,
-                        download_id=download_id,
-                        file_path=tmp_path,
-                        start_time=self.start_time,
-                        last_emit_time=last_emit_time,
-                        force=True,
                     )
 
-                    with self.file_lock:
-                        if os.path.exists(final_path):
-                            os.remove(final_path)
-                        os.rename(tmp_path, final_path)
-                        self.completed_files += 1
+                self._emit_progress_update(
+                    downloaded_size=downloaded_size,
+                    total_size=total_size,
+                    download_id=download_id,
+                    file_path=tmp_path,
+                    start_time=self.start_time,
+                    last_emit_time=last_emit_time,
+                    force=True,
+                )
 
-                    self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
+                with self.file_lock:
+                    if os.path.exists(final_path):
+                        os.remove(final_path)
+                    os.rename(tmp_path, final_path)
+                    self.completed_files += 1
 
-                    if self.update_global_progress_callback:
-                        self.update_global_progress_callback(self.completed_files, self.total_files)
+                self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
 
-                    with self.db_lock:
-                        self.db_cursor.execute(
-                            """
-                            INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
-                            VALUES (?, ?, ?, ?, ?)
-                            """,
-                            (media_url, final_path, total_size, user_id, post_id),
-                        )
-                        self.db_connection.commit()
+                if self.update_global_progress_callback:
+                    self.update_global_progress_callback(self.completed_files, self.total_files)
 
-                    self.download_cache[media_url] = (final_path, total_size)
-                    return
+                with self.db_lock:
+                    self.db_cursor.execute(
+                        """
+                        INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (media_url, final_path, total_size, user_id, post_id),
+                    )
+                    self.db_connection.commit()
 
-                except Exception as e:
-                    if str(e) == "CANCELLATION_REQUESTED" or str(e) == self._translate_text("CANCELLATION_REQUESTED"):
-                        if os.path.exists(tmp_path):
-                            try:
-                                os.remove(tmp_path)
-                            except Exception:
-                                pass
-                        self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
-                        return
+                self.download_cache[media_url] = (final_path, total_size)
 
-                    if attempt < self.max_retries:
-                        time.sleep(self.retry_interval)
-                        continue
+            except Exception:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
 
-            self.log(
-                "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
-                media_url=media_url,
-                total=self.max_retries + 1,
-            )
-            with self.file_lock:
-                self.failed_files.append(media_url)
+                self.log(
+                    "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
+                    media_url=media_url,
+                    total=self.max_retries + 1,
+                )
+                with self.file_lock:
+                    self.failed_files.append(media_url)
 
         finally:
             with self.active_downloads_lock:

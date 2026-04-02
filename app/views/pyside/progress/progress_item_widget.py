@@ -1,6 +1,24 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar
 
 
+def format_bytes(num_bytes: int) -> str:
+    try:
+        value = float(num_bytes or 0)
+    except Exception:
+        value = 0.0
+
+    units = ["B", "KB", "MB", "GB", "TB"]
+    idx = 0
+
+    while value >= 1024 and idx < len(units) - 1:
+        value /= 1024.0
+        idx += 1
+
+    if idx == 0:
+        return f"{int(value)} {units[idx]}"
+    return f"{value:.2f} {units[idx]}"
+
+
 class ProgressItemWidget(QWidget):
     def __init__(self, file_path: str, parent=None):
         super().__init__(parent)
@@ -34,11 +52,17 @@ class ProgressItemWidget(QWidget):
         layout.addWidget(self.progress_bar)
 
         bottom = QHBoxLayout()
+
         self.percent_label = QLabel("0%")
+        self.size_label = QLabel("0 B / 0 B")
         self.eta_label = QLabel("ETA: N/A")
+
         bottom.addWidget(self.percent_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.size_label)
         bottom.addStretch(1)
         bottom.addWidget(self.eta_label)
+
         layout.addLayout(bottom)
 
     def update_progress(self, downloaded: int, total: int, eta_text: str = "ETA: N/A"):
@@ -49,4 +73,5 @@ class ProgressItemWidget(QWidget):
 
         self.progress_bar.setValue(percentage)
         self.percent_label.setText(f"{percentage}%")
+        self.size_label.setText(f"{format_bytes(downloaded)} / {format_bytes(total)}")
         self.eta_label.setText(eta_text)

@@ -37,6 +37,10 @@ class FooterBar(QWidget):
             }
         """)
 
+        self.total_size_label = QLabel("Total: 0 B")
+        self.total_size_label.setMinimumWidth(130)
+        self.total_size_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
         self.speed_label = QLabel("Speed: 0 KB/s")
         self.speed_label.setMinimumWidth(120)
         self.speed_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -66,6 +70,7 @@ class FooterBar(QWidget):
 
         layout.addWidget(self.eta_label, 0)
         layout.addWidget(self.progress_bar, 1)
+        layout.addWidget(self.total_size_label, 0)
         layout.addWidget(self.speed_label, 0)
         layout.addWidget(self.progress_label, 0)
         layout.addWidget(self.progress_details_button, 0)
