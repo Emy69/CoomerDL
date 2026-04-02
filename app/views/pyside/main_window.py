@@ -177,8 +177,8 @@ class PySideMainWindow(QMainWindow):
     def toggle_progress_details(self):
         self.progress_controller.toggle_dialog()
 
-    def remove_progress_bar(self, file_id):
-        self.progress_controller.remove_item(str(file_id))
+    def remove_progress_bar(self, item_key):
+        self.progress_controller.remove_item(str(item_key))
 
     def center_progress_details_frame(self):
         pass
