@@ -96,6 +96,9 @@ class PySideMainWindow(QMainWindow):
         self.settings = self.settings_service.load_settings()
         self.max_downloads = int(self.settings.get("max_downloads", 3))
         self.latest_release_url = None
+        
+        self._active_progress = {}
+        self._active_progress_lock = threading.Lock()
 
         # señales thread-safe
         self.signals = QtSignals()
@@ -322,6 +325,15 @@ class PySideMainWindow(QMainWindow):
         self.signals.set_cancel_enabled.emit(False)
 
     def clear_progress_bars(self):
+        if not hasattr(self, "_active_progress"):
+            self._active_progress = {}
+
+        if not hasattr(self, "_active_progress_lock"):
+            self._active_progress_lock = threading.Lock()
+
+        with self._active_progress_lock:
+            self._active_progress.clear()
+
         self.signals.global_progress.emit(0, 0)
         self.footer_set_speed("Speed: 0 KB/s")
         self.footer_set_eta("ETA: N/A")
@@ -351,34 +363,69 @@ class PySideMainWindow(QMainWindow):
             self.signals.log_message.emit(f"No se pudo exportar los logs: {e}")
 
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
+        if not hasattr(self, "_active_progress"):
+            self._active_progress = {}
+
+        if not hasattr(self, "_active_progress_lock"):
+            self._active_progress_lock = threading.Lock()
+
         if file_id is None:
             if total and total > 0:
                 self.signals.global_progress.emit(int(downloaded), int(total))
-        else:
-            eta_text = "ETA: N/A"
-            if eta is not None:
-                minutes = int(eta // 60)
-                seconds = int(eta % 60)
-                eta_text = f"ETA: {minutes}m {seconds}s"
+            return
 
-            self.progress_controller.update_item(
-                file_id=str(file_id),
-                file_path=str(file_path or file_id),
-                downloaded=int(downloaded),
-                total=int(total),
-                eta_text=eta_text,
-            )
-
-        if speed is not None:
-            if speed < 1_048_576:
-                self.signals.footer_speed.emit(f"Speed: {speed / 1024:.2f} KB/s")
-            else:
-                self.signals.footer_speed.emit(f"Speed: {speed / 1_048_576:.2f} MB/s")
-
-        if eta is not None:
+        eta_text = "ETA: N/A"
+        if eta is not None and eta > 0:
             minutes = int(eta // 60)
             seconds = int(eta % 60)
+            eta_text = f"ETA: {minutes}m {seconds}s"
+
+        self.progress_controller.update_item(
+            file_id=str(file_id),
+            file_path=str(file_path or file_id),
+            downloaded=int(downloaded),
+            total=int(total),
+            eta_text=eta_text,
+        )
+
+        progress_key = f"{file_id}|{file_path}" if file_path else str(file_id)
+
+        with self._active_progress_lock:
+            if total and total > 0 and int(downloaded) < int(total):
+                self._active_progress[progress_key] = {
+                    "downloaded": int(downloaded),
+                    "total": int(total),
+                    "speed": float(speed or 0.0),
+                    "eta": float(eta or 0.0),
+                }
+            else:
+                self._active_progress.pop(progress_key, None)
+
+            total_speed = sum(
+                item["speed"] for item in self._active_progress.values()
+                if item["speed"] > 0
+            )
+
+            total_remaining_bytes = sum(
+                max(0, item["total"] - item["downloaded"])
+                for item in self._active_progress.values()
+            )
+
+        if total_speed > 0:
+            if total_speed < 1_048_576:
+                self.signals.footer_speed.emit(f"Speed: {total_speed / 1024:.2f} KB/s")
+            else:
+                self.signals.footer_speed.emit(f"Speed: {total_speed / 1_048_576:.2f} MB/s")
+        else:
+            self.signals.footer_speed.emit("Speed: 0 KB/s")
+
+        if total_remaining_bytes > 0 and total_speed > 0:
+            global_eta = total_remaining_bytes / total_speed
+            minutes = int(global_eta // 60)
+            seconds = int(global_eta % 60)
             self.signals.footer_eta.emit(f"ETA: {minutes}m {seconds}s")
+        else:
+            self.signals.footer_eta.emit("ETA: N/A")
 
         if status is not None:
             self.signals.footer_eta.emit(f"ETA: N/A | STATUS:{status}")
