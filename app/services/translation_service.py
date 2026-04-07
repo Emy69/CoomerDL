@@ -3,7 +3,7 @@ import os
 
 
 class TranslationService:
-    def __init__(self, language="en", locales_dir="resources\config\i18n"):
+    def __init__(self, language="en", locales_dir="resources/config/i18n"):
         self.locales_dir = locales_dir
         self.language = language
         self.default_language = "en"
