@@ -1,6 +1,7 @@
 import threading
 
 from downloader.bunkr import BunkrDownloader
+from downloader.coomerfans import CoomerfansDownloader
 from downloader.downloader import Downloader
 from downloader.erome import EromeDownloader
 from downloader.jpg5 import Jpg5Downloader
@@ -87,4 +88,22 @@ class DownloaderFactory:
             tr=self.frontend.get_tr(),
             progress_manager=progress_manager,
             max_workers=self.frontend.get_max_downloads()
+        )
+
+    def create_coomerfans_downloader(self, is_profile_download=False):
+        return CoomerfansDownloader(
+            download_folder=self.frontend.get_download_folder(),
+            log_callback=self.frontend.log,
+            enable_widgets_callback=self.frontend.enable_widgets,
+            update_progress_callback=self.frontend.update_progress,
+            update_global_progress_callback=self.frontend.update_global_progress,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                "Referer": "https://coomerfans.com/"
+            },
+            download_images=self.frontend.get_download_images(),
+            download_videos=self.frontend.get_download_videos(),
+            is_profile_download=is_profile_download,
+            max_workers=self.frontend.get_max_downloads(),
+            tr=self.frontend.get_tr()
         )

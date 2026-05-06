@@ -6,5 +6,6 @@
     "retry_interval": 2.0,
     "file_naming_mode": 3,
     "theme": "Dark",
-    "startup_show_community_message": true
+    "startup_show_community_message": false,
+    "download_folder": "C:/Users/Jordan/Downloads/petitesaki/fansly"
 }
