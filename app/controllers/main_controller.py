@@ -175,6 +175,38 @@ class MainController:
                 daemon=True
             )
 
+        elif parsed.site_type == "coomerfans":
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_COOMERFANS"))
+            self.app.setup_coomerfans_downloader(is_profile_download=parsed.is_profile)
+            self.app.active_downloader = self.app.coomerfans_downloader
+
+            if parsed.is_post:
+                self.app.add_log_message_safe(self.app.tr("POST_URL"))
+                download_thread = threading.Thread(
+                    target=self.wrapped_download,
+                    args=(
+                        self.app.active_downloader.process_post_page,
+                        request.url,
+                        request.download_folder,
+                        request.download_images,
+                        request.download_videos,
+                    ),
+                    daemon=True
+                )
+            else:
+                self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
+                download_thread = threading.Thread(
+                    target=self.wrapped_download,
+                    args=(
+                        self.app.active_downloader.process_profile_page,
+                        request.url,
+                        request.download_folder,
+                        request.download_images,
+                        request.download_videos,
+                    ),
+                    daemon=True
+                )
+
         else:
             self.app.add_log_message_safe(self.app.tr("INVALID_URL"))
             self.app.enable_widgets()

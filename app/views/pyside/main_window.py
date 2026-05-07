@@ -508,6 +508,11 @@ class PySideMainWindow(QMainWindow):
             progress_manager=None
         )
 
+    def setup_coomerfans_downloader(self, is_profile_download=False):
+        self.coomerfans_downloader = self.downloader_factory.create_coomerfans_downloader(
+            is_profile_download=is_profile_download
+        )
+
     def _create_default_downloader(self):
         # opcional para compatibilidad con algunos settings runtime
         pass

@@ -99,6 +99,17 @@ class UrlService:
                 is_profile=True,
             )
 
+        if "coomerfans.com" in raw_url:
+            is_post = "/p/" in raw_url
+            is_profile = "/u/" in raw_url
+            return ParsedDownloadUrl(
+                original_url=raw_url,
+                parsed_url=parsed,
+                site_type="coomerfans",
+                is_post=is_post,
+                is_profile=is_profile,
+            )
+
         return ParsedDownloadUrl(
             original_url=raw_url,
             parsed_url=parsed,
