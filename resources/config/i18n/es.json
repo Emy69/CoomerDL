@@ -120,6 +120,7 @@
   "COOMERFANS_PROCESSING_PROFILE_URL": "Procesando URL del perfil: {url}",
   "COOMERFANS_PROFILE_DOWNLOAD_COMPLETE": "Descarga del perfil completada: {username}",
   "COOMERFANS_PROCESSING_PROFILE": "Procesando perfil: {username}",
+  "COOMERFANS_PROCESSING_POST": "Procesando post {post_id}: {url}",
   "COOMERFANS_ERROR_PROCESSING_PAGE": "Error al procesar página {page}: {error}",
   "COOMERFANS_ERROR_RESOLVING_PROFILE": "Error al resolver el perfil {url}: {error}",
   "COOMERFANS_ERROR_RESOLVING_POST": "Error al resolver el post {url}: {error}",

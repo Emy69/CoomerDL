@@ -155,7 +155,9 @@ class CoomerfansDownloader(BaseApiDownloader):
                 direct_download=self.direct_download,
             )
 
-            self._download_entries(resolved["media"], download_folder)
+            profile_folder = os.path.join(download_folder, resolved["folder_name"])
+            os.makedirs(profile_folder, exist_ok=True)
+            self._download_entries(resolved["media"], profile_folder)
             self.log("COOMERFANS_PROFILE_DOWNLOAD_COMPLETE", username=resolved["folder_name"])
 
         except Exception as e:

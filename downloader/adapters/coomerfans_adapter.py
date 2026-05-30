@@ -45,7 +45,7 @@ class CoomerfansAdapter:
         Handles both user profiles and individual posts.
         """
         path = urlparse(url).path
-        
+
         # Check if it's a user profile URL (e.g., /u/fansly/347884/petitesaki)
         if path.startswith("/u/"):
             return self._resolve_profile(url, download_images, download_videos, direct_download)
@@ -74,42 +74,42 @@ class CoomerfansAdapter:
                 service = "unknown"
                 user_id = "unknown"
                 username = "profile"
-            
+
             base_folder_name = self.clean_filename(f"{service}_{username}_{user_id}")
-            
+
             self.log("COOMERFANS_PROCESSING_PROFILE", url=profile_url, username=username)
-            
+
             media = []
             page = 1
             max_pages = 100  # Safety limit to prevent infinite loops
-            
+
             while page <= max_pages:
                 try:
                     if page == 1:
                         page_url = profile_url.split("?")[0]  # Remove existing query params
                     else:
                         page_url = profile_url.split("?")[0] + f"?page={page}"
-                    
+
                     soup = self._request_soup(page_url)
                     page_media = self._extract_profile_posts(soup, service, user_id, username)
-                    
+
                     if not page_media:
                         # No more posts found
                         break
-                    
+
                     media.extend(page_media)
                     page += 1
-                    
+
                 except Exception as e:
                     self.log("COOMERFANS_ERROR_PROCESSING_PAGE", page=page, error=e)
                     break
-            
+
             return {
                 "mode": "profile",
                 "folder_name": base_folder_name,
                 "media": media,
             }
-        
+
         except Exception as e:
             self.log("COOMERFANS_ERROR_RESOLVING_PROFILE", url=profile_url, error=e)
             return {
@@ -123,36 +123,22 @@ class CoomerfansAdapter:
         Looks for post containers and extracts media from each post.
         """
         media = []
-        
-        # Common post container selectors - adjust based on actual HTML structure
-        post_containers = soup.find_all("div", class_=re.compile("post|card|item", re.I))
-        
-        # If no results, try alternative selectors
-        if not post_containers:
-            post_containers = soup.find_all("a", href=re.compile(r"/p/\d+"))
-        
-        for container in post_containers:
+
+        seen_links = set()
+        for link in soup.find_all("a", href=re.compile(r"^/p/\d+")):
+            href = link.get("href")
+            if not href or href in seen_links:
+                continue
+            seen_links.add(href)
+
             try:
-                # Try to extract post link
-                post_link = None
-                if container.name == "a":
-                    post_link = container.get("href")
-                else:
-                    link = container.find("a", href=re.compile(r"/p/\d+"))
-                    if link:
-                        post_link = link.get("href")
-                
-                if post_link and not post_link.startswith("http"):
-                    post_link = urljoin("https://coomerfans.com", post_link)
-                
-                if post_link:
-                    post_media = self._resolve_post(post_link)
-                    media.extend(post_media.get("media", []))
-            
+                post_link = urljoin("https://coomerfans.com", href)
+                post_media = self._resolve_post(post_link)
+                media.extend(post_media.get("media", []))
             except Exception as e:
                 self.log("COOMERFANS_ERROR_EXTRACTING_POST", error=e)
                 continue
-        
+
         return media
 
     def _resolve_post(self, post_url, download_images=True, download_videos=True, direct_download=False):
@@ -170,30 +156,30 @@ class CoomerfansAdapter:
                 post_id = "unknown"
                 user_id = "unknown"
                 service = "unknown"
-            
+
             folder_name = self.clean_filename(f"{service}_post_{post_id}")
-            
+
             self.log("COOMERFANS_PROCESSING_POST", url=post_url, post_id=post_id)
-            
+
             soup = self._request_soup(post_url)
             media = []
-            
+
             # Extract images
             if download_images:
                 # Look for images in common containers
                 images = soup.find_all("img", src=re.compile(r"img\d+\.coomerfans\.com", re.I))
-                
+
                 for img in images:
                     src = img.get("src")
                     if src and not any(x in src.lower() for x in ["avatar", "profile", "logo", "icon"]):
                         if not src.startswith("http"):
                             src = urljoin(post_url, src)
-                        
+
                         if src:
                             filename = self.clean_filename(os.path.basename(src.split("?")[0]))
                             if not filename or filename == ".":
                                 filename = f"image_{post_id}.jpg"
-                            
+
                             media.append({
                                 "media_url": src,
                                 "post_id": post_id,
@@ -203,27 +189,27 @@ class CoomerfansAdapter:
                                 "resource_type": "Image",
                                 "filename": filename,
                             })
-            
+
             # Extract videos
             if download_videos:
                 videos = soup.find_all("video")
-                
+
                 for video in videos:
                     video_src = video.get("src")
-                    
+
                     if not video_src:
                         source = video.find("source")
                         if source:
                             video_src = source.get("src")
-                    
+
                     if video_src:
                         if not video_src.startswith("http"):
                             video_src = urljoin(post_url, video_src)
-                        
+
                         filename = self.clean_filename(os.path.basename(video_src.split("?")[0]))
                         if not filename or filename == ".":
                             filename = f"video_{post_id}.mp4"
-                        
+
                         media.append({
                             "media_url": video_src,
                             "post_id": post_id,
@@ -233,13 +219,13 @@ class CoomerfansAdapter:
                             "resource_type": "Video",
                             "filename": filename,
                         })
-            
+
             return {
                 "mode": "post",
                 "folder_name": folder_name,
                 "media": media,
             }
-        
+
         except Exception as e:
             self.log("COOMERFANS_ERROR_RESOLVING_POST", url=post_url, error=e)
             return {
@@ -253,23 +239,23 @@ class CoomerfansAdapter:
         Supports various HTML structures for media containers.
         """
         media = []
-        
+
         # Look for image links that point to the img1.coomerfans.com domain
         img_links = soup.find_all("a", href=re.compile(r"img\d+\.coomerfans\.com", re.I))
-        
+
         for link in img_links:
             href = link.get("href")
             if href and not href.startswith("http"):
                 href = urljoin(post_url, href)
-            
+
             if href and "coomerfans.com" in href.lower():
                 filename = self.clean_filename(os.path.basename(href.split("?")[0]))
                 if not filename:
                     filename = f"media_{post_id}.jpg"
-                
+
                 media.append({
                     "media_url": href,
                     "filename": filename,
                 })
-        
+
         return media
