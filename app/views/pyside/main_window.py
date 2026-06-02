@@ -38,7 +38,7 @@ from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
 
-VERSION = "V1.1.0"
+VERSION = "V1.2.1"
 MAX_LOG_LINES = None
 
 
@@ -510,7 +510,8 @@ class PySideMainWindow(QMainWindow):
 
     def setup_coomerfans_downloader(self, is_profile_download=False):
         self.coomerfans_downloader = self.downloader_factory.create_coomerfans_downloader(
-            is_profile_download=is_profile_download
+            is_profile_download=is_profile_download,
+            settings=self.settings,
         )
 
     def _create_default_downloader(self):

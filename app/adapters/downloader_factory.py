@@ -90,8 +90,9 @@ class DownloaderFactory:
             max_workers=self.frontend.get_max_downloads()
         )
 
-    def create_coomerfans_downloader(self, is_profile_download=False):
-        return CoomerfansDownloader(
+    def create_coomerfans_downloader(self, is_profile_download=False, settings=None):
+        settings = settings or {}
+        downloader = CoomerfansDownloader(
             download_folder=self.frontend.get_download_folder(),
             log_callback=self.frontend.log,
             enable_widgets_callback=self.frontend.enable_widgets,
@@ -105,5 +106,11 @@ class DownloaderFactory:
             download_videos=self.frontend.get_download_videos(),
             is_profile_download=is_profile_download,
             max_workers=self.frontend.get_max_downloads(),
-            tr=self.frontend.get_tr()
+            tr=self.frontend.get_tr(),
+            folder_structure=settings.get("folder_structure", "default"),
+            max_retries=int(settings.get("max_retries", 3) or 3),
+            retry_interval=float(settings.get("retry_interval", 2.0) or 2.0),
+            rate_limit_interval=float(settings.get("rate_limit_interval", 0.0) or 0.0),
         )
+        downloader.file_naming_mode = settings.get("file_naming_mode", 0)
+        return downloader

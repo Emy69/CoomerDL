@@ -23,6 +23,10 @@ class CoomerfansDownloader(BaseApiDownloader):
         tr=None,
         max_workers=5,
         download_folder="downloads",
+        folder_structure="default",
+        max_retries=3,
+        retry_interval=2.0,
+        rate_limit_interval=0.0,
     ):
         super().__init__(
             download_folder=download_folder,
@@ -36,6 +40,10 @@ class CoomerfansDownloader(BaseApiDownloader):
             download_videos=download_videos,
             download_compressed=False,
             tr=tr,
+            folder_structure=folder_structure,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
+            rate_limit_interval=rate_limit_interval,
         )
 
         self.language = language
@@ -73,41 +81,27 @@ class CoomerfansDownloader(BaseApiDownloader):
         if self.is_profile_download and self.enable_widgets_callback:
             self.enable_widgets_callback()
 
-    def _download_entries(self, media_entries, root_folder):
+    def _download_entries(self, media_entries, default_user_id=None):
         self.total_files = len(media_entries)
         self.completed_files = 0
         futures = []
 
         for entry in media_entries:
             media_url = entry["media_url"]
-            folder_name = entry.get("folder_name") or "coomerfans_post"
-            target_folder = os.path.join(root_folder, folder_name) if not os.path.isabs(folder_name) else folder_name
+            user_id = entry.get("user_id") or default_user_id or "coomerfans"
 
-            os.makedirs(target_folder, exist_ok=True)
+            kwargs = dict(
+                user_id=user_id,
+                post_id=entry.get("post_id"),
+                post_name=entry.get("title"),
+                post_time=entry.get("published"),
+                download_id=media_url,
+            )
 
             if self.download_mode == "queue":
-                self.process_media_element(
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=target_folder,
-                    forced_filename=entry.get("filename"),
-                )
+                self.process_media_element(media_url, **kwargs)
             else:
-                future = self.executor.submit(
-                    self.process_media_element,
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=target_folder,
-                    forced_filename=entry.get("filename"),
-                )
+                future = self.executor.submit(self.process_media_element, media_url, **kwargs)
                 futures.append(future)
 
         self.futures = futures
@@ -132,7 +126,7 @@ class CoomerfansDownloader(BaseApiDownloader):
                 direct_download=self.direct_download,
             )
 
-            self._download_entries(resolved["media"], base_folder)
+            self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
             self.log("COOMERFANS_POST_DOWNLOAD_COMPLETE", folder_name=resolved["folder_name"])
 
         except Exception as e:
@@ -155,9 +149,7 @@ class CoomerfansDownloader(BaseApiDownloader):
                 direct_download=self.direct_download,
             )
 
-            profile_folder = os.path.join(download_folder, resolved["folder_name"])
-            os.makedirs(profile_folder, exist_ok=True)
-            self._download_entries(resolved["media"], profile_folder)
+            self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
             self.log("COOMERFANS_PROFILE_DOWNLOAD_COMPLETE", username=resolved["folder_name"])
 
         except Exception as e:

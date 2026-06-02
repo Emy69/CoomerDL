@@ -123,6 +123,7 @@ class CoomerfansAdapter:
         Looks for post containers and extracts media from each post.
         """
         media = []
+        profile_folder = self.clean_filename(f"{service}_{username}_{user_id}")
 
         seen_links = set()
         for link in soup.find_all("a", href=re.compile(r"^/p/\d+")):
@@ -133,7 +134,7 @@ class CoomerfansAdapter:
 
             try:
                 post_link = urljoin("https://coomerfans.com", href)
-                post_media = self._resolve_post(post_link)
+                post_media = self._resolve_post(post_link, profile_user_id=profile_folder)
                 media.extend(post_media.get("media", []))
             except Exception as e:
                 self.log("COOMERFANS_ERROR_EXTRACTING_POST", error=e)
@@ -141,7 +142,7 @@ class CoomerfansAdapter:
 
         return media
 
-    def _resolve_post(self, post_url, download_images=True, download_videos=True, direct_download=False):
+    def _resolve_post(self, post_url, download_images=True, download_videos=True, direct_download=False, profile_user_id=None):
         """
         Resolves a single post and extracts media.
         URL format: /p/{post_id}/{user_id}/{service}
@@ -158,6 +159,7 @@ class CoomerfansAdapter:
                 service = "unknown"
 
             folder_name = self.clean_filename(f"{service}_post_{post_id}")
+            entry_user_id = profile_user_id or self.clean_filename(f"{service}_{user_id}")
 
             self.log("COOMERFANS_PROCESSING_POST", url=post_url, post_id=post_id)
 
@@ -176,18 +178,13 @@ class CoomerfansAdapter:
                             src = urljoin(post_url, src)
 
                         if src:
-                            filename = self.clean_filename(os.path.basename(src.split("?")[0]))
-                            if not filename or filename == ".":
-                                filename = f"image_{post_id}.jpg"
-
                             media.append({
                                 "media_url": src,
                                 "post_id": post_id,
                                 "title": folder_name,
                                 "published": "",
-                                "folder_name": folder_name,
+                                "user_id": entry_user_id,
                                 "resource_type": "Image",
-                                "filename": filename,
                             })
 
             # Extract videos
@@ -206,18 +203,13 @@ class CoomerfansAdapter:
                         if not video_src.startswith("http"):
                             video_src = urljoin(post_url, video_src)
 
-                        filename = self.clean_filename(os.path.basename(video_src.split("?")[0]))
-                        if not filename or filename == ".":
-                            filename = f"video_{post_id}.mp4"
-
                         media.append({
                             "media_url": video_src,
                             "post_id": post_id,
                             "title": folder_name,
                             "published": "",
-                            "folder_name": folder_name,
+                            "user_id": entry_user_id,
                             "resource_type": "Video",
-                            "filename": filename,
                         })
 
             return {
