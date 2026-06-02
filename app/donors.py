@@ -304,5 +304,28 @@ class DonorsModal(QDialog):
             dialog_geometry.moveCenter(available.center())
             self.move(dialog_geometry.topLeft())
 
+    def _stop_worker_thread(self):
+        thread = self.worker_thread
+        if thread is None:
+            return
+        try:
+            if thread.isRunning():
+                thread.quit()
+                if not thread.wait(3000):
+                    thread.terminate()
+                    thread.wait(1000)
+        except RuntimeError:
+            # Thread C++ object already deleted
+            pass
+        self.worker_thread = None
+
+    def closeEvent(self, event):
+        self._stop_worker_thread()
+        super().closeEvent(event)
+
+    def reject(self):
+        self._stop_worker_thread()
+        super().reject()
+
     def show_modal(self):
         self.exec()
