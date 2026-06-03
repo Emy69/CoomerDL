@@ -1,6 +1,4 @@
 PySide6
 beautifulsoup4
 requests
-pillow
-psutil
 cloudscraper
