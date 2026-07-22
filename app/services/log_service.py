@@ -13,6 +13,7 @@ class LogService:
     DOMAIN_COLORS = {
         "coomer": "#4FC3F7",
         "kemono": "#81C784",
+        "pawchive": "#A1887F",
         "erome": "#F48FB1",
         "bunkr": "#FFB74D",
         "simpcity": "#BA68C8",

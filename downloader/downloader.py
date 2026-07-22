@@ -504,6 +504,11 @@ class Downloader:
 
         return url
 
+    def get_domain_name(self, site):
+        if "pawchive" in site:
+            return "pawchive"
+        return "kemono" if "kemono" in site else "coomer"
+
     def fetch_user_posts(
         self,
         site,
@@ -518,7 +523,7 @@ class Downloader:
         all_posts = []
         offset = initial_offset
         user_id_encoded = quote_plus(user_id)
-        self.domain_name = "kemono" if "kemono" in site else "coomer"
+        self.domain_name = self.get_domain_name(site)
 
         while True:
             if self.cancel_requested.is_set():
@@ -571,7 +576,7 @@ class Downloader:
         return all_posts
 
     def fetch_single_post(self, site, post_id, service):
-        self.domain_name = "kemono" if "kemono" in site else "coomer"
+        self.domain_name = self.get_domain_name(site)
         api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
         self.log("CK_FETCHING_POST", api_url=api_url)
 
@@ -585,11 +590,15 @@ class Downloader:
 
     def process_post(self, post, site):
         base = f"https://{site}/"
+        if "pawchive" in site:
+            base = "https://file.pawchive.pw/"
 
         def _full(path):
             if not path:
                 return None
             p = path if str(path).startswith("/") else f"/{path}"
+            if "pawchive" in site and not p.startswith("/data/"):
+                p = f"/data{p}"
             return urljoin(base, p)
 
         media_urls = []
@@ -854,7 +863,7 @@ class Downloader:
 
     def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0, only_first_page=False):
         try:
-            self.domain_name = "kemono" if "kemono" in site else "coomer"
+            self.domain_name = self.get_domain_name(site)
             self.log("CK_STARTING_DOWNLOAD_PROCESS")
 
             posts = self.fetch_user_posts(
@@ -916,7 +925,7 @@ class Downloader:
 
     def download_single_post(self, site, post_id, service, user_id):
         try:
-            self.domain_name = "kemono" if "kemono" in site else "coomer"
+            self.domain_name = self.get_domain_name(site)
             posts = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
             if not posts:
                 self.log("CK_NO_POST_FOUND_FOR_ID")

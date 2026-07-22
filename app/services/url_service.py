@@ -66,7 +66,7 @@ class UrlService:
                 is_profile=not is_post,
             )
 
-        if parsed.netloc in ["coomer.st", "kemono.cr"]:
+        if parsed.netloc in ["coomer.st", "kemono.cr", "pawchive.pw"]:
             service, user, post = self.extract_ck_parameters(parsed)
             query, offset = self.extract_ck_query(parsed)
 

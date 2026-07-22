@@ -43,6 +43,7 @@ The app now uses a **PySide6 / Qt** interface. The old Tkinter / CustomTkinter U
 
 - [coomer.su](https://coomer.su/)
 - [kemono.su](https://kemono.su/)
+- [pawchive.pw](https://pawchive.pw/)
 - [erome.com](https://www.erome.com/)
 - [bunkr-albums.io](https://bunkr-albums.io/)
 - [simpcity.su](https://simpcity.su/)

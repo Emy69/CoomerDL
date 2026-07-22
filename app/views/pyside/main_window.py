@@ -38,7 +38,7 @@ from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
 
-VERSION = "V1.2.1"
+VERSION = "V1.2.2"
 MAX_LOG_LINES = None
 
 
