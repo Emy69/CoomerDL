@@ -1,4 +1,5 @@
 import datetime
+from collections import deque
 from email.mime import text
 import os
 import subprocess
@@ -37,9 +38,12 @@ from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
+from app.views.pyside.dialogs.site_status_dialog import SiteStatusDialog
+from app.services.site_status_service import SiteStatusService
 
-VERSION = "V1.2.2"
-MAX_LOG_LINES = None
+VERSION = "V1.2.3"
+MAX_LOG_LINES = 500
+LOG_FLUSH_INTERVAL_MS = 150
 
 
 class QtLineEditAdapter:
@@ -68,6 +72,7 @@ class QtSignals(QObject):
     footer_total_size = Signal(str)
     clear_logs = Signal()
     show_error_box = Signal(str, str)
+    site_status_ready = Signal(list)
 
 
 class PySideMainWindow(QMainWindow):
@@ -103,6 +108,13 @@ class PySideMainWindow(QMainWindow):
         self._active_progress = {}
         self._active_progress_lock = threading.Lock()
 
+        self._pending_log_lines = deque(maxlen=MAX_LOG_LINES * 4)
+        self._pending_log_lock = threading.Lock()
+        self._log_flush_timer = QTimer(self)
+        self._log_flush_timer.setInterval(LOG_FLUSH_INTERVAL_MS)
+        self._log_flush_timer.timeout.connect(self._flush_pending_logs)
+        self._log_flush_timer.start()
+
         # señales thread-safe
         self.signals = QtSignals()
         self.signals.log_message.connect(self._append_log)
@@ -114,6 +126,7 @@ class PySideMainWindow(QMainWindow):
         self.signals.footer_total_size.connect(self.footer_set_total_size)
         self.signals.clear_logs.connect(self._clear_logs)
         self.signals.show_error_box.connect(self._show_error_dialog)
+        self.signals.site_status_ready.connect(self._show_site_status_dialog)
 
         self._build_ui()
         self._bind_events()
@@ -166,6 +179,7 @@ class PySideMainWindow(QMainWindow):
         layout.addWidget(self.download_panel)
 
         self.log_panel = LogPanel(self)
+        self.log_panel.log_text.setMaximumBlockCount(MAX_LOG_LINES)
         layout.addWidget(self.log_panel, 1)
 
         self.footer_bar = FooterBar(self)
@@ -217,6 +231,7 @@ class PySideMainWindow(QMainWindow):
 
         if not should_show:
             self.show()
+            self.start_site_status_check()
             return
 
         dialog = StartupCommunityDialog(
@@ -231,6 +246,22 @@ class PySideMainWindow(QMainWindow):
             self.update_ui_texts()
 
         self.show()
+        self.start_site_status_check()
+
+    def start_site_status_check(self):
+        if not self.settings_service.get("show_site_status_warning", True):
+            return
+
+        def worker():
+            offline_sites = SiteStatusService().get_offline_sites()
+            if offline_sites:
+                self.signals.site_status_ready.emit(offline_sites)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_site_status_dialog(self, offline_sites):
+        dialog = SiteStatusDialog(self, self.tr, offline_sites)
+        dialog.exec()
             
     def load_translations(self, language=None):
         target_language = language or self.app_state.language
@@ -357,7 +388,8 @@ class PySideMainWindow(QMainWindow):
             final_message = message
 
         html = self.log_service.add_domain_log(domain, final_message)
-        self.signals.log_message.emit(html)
+        with self._pending_log_lock:
+            self._pending_log_lines.append(html)
 
     def export_logs(self):
         try:
@@ -555,21 +587,25 @@ class PySideMainWindow(QMainWindow):
     # slots UI
     # ------------------------------------------------------------------
     def _append_log(self, message: str):
-        self.log_panel.log_text.insertHtml(message)
-        self.log_panel.log_text.insertHtml("<br>")
+        with self._pending_log_lock:
+            self._pending_log_lines.append(message)
+
+    def _flush_pending_logs(self):
+        with self._pending_log_lock:
+            if not self._pending_log_lines:
+                return
+            pending = list(self._pending_log_lines)[-MAX_LOG_LINES:]
+            self._pending_log_lines.clear()
+
+        log_widget = self.log_panel.log_text
+        log_widget.setUpdatesEnabled(False)
+        for line in pending:
+            log_widget.appendHtml(line)
+        log_widget.setUpdatesEnabled(True)
 
         if bool(self.autoscroll_log_check.get()):
-            scrollbar = self.log_panel.log_text.verticalScrollBar()
+            scrollbar = log_widget.verticalScrollBar()
             scrollbar.setValue(scrollbar.maximum())
-
-        if MAX_LOG_LINES is not None:
-            doc = self.log_panel.log_text.document()
-            while doc.blockCount() > MAX_LOG_LINES:
-                cursor = self.log_panel.log_text.textCursor()
-                cursor.movePosition(cursor.Start)
-                cursor.select(cursor.BlockUnderCursor)
-                cursor.removeSelectedText()
-                cursor.deleteChar()
 
     def _set_download_enabled(self, enabled: bool):
         self.download_panel.download_button.setEnabled(enabled)

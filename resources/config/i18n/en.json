@@ -219,6 +219,12 @@
   "STARTUP_WELCOME_TITLE": "Welcome to CoomerDL",
   "STARTUP_CONTINUE_BUTTON": "Continue",
   "STARTUP_COMMUNITY_MESSAGE_BODY": "Thank you for continuing to support the project.\n\nThe application is still evolving, and some parts are being reorganized and improved to make it more stable, easier to maintain, and better prepared for future features.\n\nDuring this process, some sections may change or receive gradual improvements.\n\nThank you for your patience and for continuing to use the app.",
-  "STARTUP_DONT_SHOW_AGAIN": "Don't show again"
+  "STARTUP_DONT_SHOW_AGAIN": "Don't show again",
+  "SITE_STATUS_DIALOG_TITLE": "Site status",
+  "SITE_STATUS_TITLE": "Some sites are not responding",
+  "SITE_STATUS_DOWN_LINE": "{site} is not responding right now. You can use {alternative} instead.",
+  "SITE_STATUS_JPG5_NOTE": "Note: jpg5.su no longer exists.",
+  "SITE_STATUS_DONT_SHOW_AGAIN": "Don't show this warning again",
+  "SITE_STATUS_OK_BUTTON": "OK"
 
 }
