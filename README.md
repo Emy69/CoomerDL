@@ -22,7 +22,7 @@ Built with Python and a modern **PySide6 (Qt)** interface.
 | ~~kemono.cr~~ | ❌ Not working | The site blocks the app — use **pawchive.pw** instead |
 | ~~jpg5.su~~ | ❌ Not working | Downloads from this site currently fail |
 
-> **Note:** Sites marked ❌ no longer work with the app. Their URLs are still recognized, but downloads will fail.
+> **Note:** Sites marked ❌ no longer work with the app. If you paste one of their URLs, the app shows a message pointing you to the working alternative instead of attempting the download.
 
 ---
 
@@ -36,7 +36,7 @@ Grab the latest build from the [Releases page](https://github.com/Emy69/CoomerDL
 
 ### Option B — Run from source
 
-Requires **Python 3.10+** on **Windows 10/11**.
+Requires **Python 3.10+** on **Windows 10/11**. Dependencies (installed from `requirements.txt`): PySide6, requests, beautifulsoup4, and cloudscraper (only needed for SimpCity).
 
 ```bash
 git clone https://github.com/Emy69/CoomerDL.git
@@ -101,9 +101,9 @@ Downloaded files are organized into subfolders by type (`images`, `videos`, `doc
 Open **Settings** from the main window:
 
 - **General** — language selection
-- **Downloads** — max simultaneous downloads, retries, retry interval, file naming mode, folder structure
-- **Cookies** — SimpCity cookies (import, save, clear)
-- **Database** — browse, export, and manage download records
+- **Downloads** — max simultaneous downloads, retries, retry interval, file naming mode, folder structure (these apply to every supported site)
+- **Cookies** — SimpCity cookies (import, save, clear), with a status line showing how many cookies are stored and a built-in tutorial for extracting them from your browser
+- **Database** — browse download records grouped by user and post, search by user or file name, see totals (users, files, size), export the database, or delete records
 
 ### SimpCity cookies
 
