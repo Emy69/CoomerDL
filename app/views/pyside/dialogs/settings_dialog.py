@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontDatabase
 
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
@@ -194,12 +195,32 @@ class SettingsDialog(QDialog):
         self.cookies_info_label.setWordWrap(True)
         layout.addWidget(self.cookies_info_label)
 
+        self.cookies_status_label = QLabel("")
+        self.cookies_status_label.setStyleSheet("color: #bfbfbf;")
+        layout.addWidget(self.cookies_status_label)
+
+        tutorial_row = QHBoxLayout()
+        self.cookies_tutorial_button = QPushButton(self.translate("SETTINGS_COOKIES_SHOW_TUTORIAL"))
+        self.cookies_tutorial_button.setCheckable(True)
+        tutorial_row.addWidget(self.cookies_tutorial_button)
+        tutorial_row.addStretch(1)
+        layout.addLayout(tutorial_row)
+
         self.cookies_tutorial_label = QLabel(self.translate("SETTINGS_COOKIES_TUTORIAL"))
-        self.cookies_tutorial_label.setStyleSheet("color: #bfbfbf;")
+        self.cookies_tutorial_label.setStyleSheet("""
+            color: #bfbfbf;
+            background-color: rgba(255, 255, 255, 0.04);
+            border-radius: 6px;
+            padding: 10px;
+        """)
         self.cookies_tutorial_label.setWordWrap(True)
+        self.cookies_tutorial_label.setVisible(False)
+        self.cookies_tutorial_button.toggled.connect(self.cookies_tutorial_label.setVisible)
         layout.addWidget(self.cookies_tutorial_label)
 
         self.cookies_text = QTextEdit()
+        self.cookies_text.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        self.cookies_text.setPlaceholderText('{\n    "cookie_name": "cookie_value"\n}')
         self.cookies_text.setPlainText(self.cookies_settings_service.load_cookies_text())
         layout.addWidget(self.cookies_text, 1)
 
@@ -213,12 +234,33 @@ class SettingsDialog(QDialog):
         self.save_cookies_button.clicked.connect(self._save_cookies)
         buttons_row.addWidget(self.save_cookies_button)
 
+        buttons_row.addStretch(1)
+
         self.clear_cookies_button = QPushButton(self.translate("SETTINGS_CLEAR_COOKIES"))
+        self.clear_cookies_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7a2b2e;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                background-color: #a03236;
+            }
+        """)
         self.clear_cookies_button.clicked.connect(self._clear_cookies)
         buttons_row.addWidget(self.clear_cookies_button)
 
-        buttons_row.addStretch(1)
         layout.addLayout(buttons_row)
+
+        self._update_cookies_status()
+
+    def _update_cookies_status(self):
+        count = self.cookies_settings_service.count_cookies()
+        if count > 0:
+            self.cookies_status_label.setText(
+                self._t("SETTINGS_COOKIES_STATUS_COUNT", count=count)
+            )
+        else:
+            self.cookies_status_label.setText(self.translate("SETTINGS_COOKIES_STATUS_EMPTY"))
 
     def _build_database_tab(self):
         layout = QVBoxLayout(self.database_tab)
@@ -733,6 +775,7 @@ class SettingsDialog(QDialog):
         try:
             self.cookies_settings_service.save_cookies_text(cookies_text)
             self._reload_cookies_text()
+            self._update_cookies_status()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -759,6 +802,7 @@ class SettingsDialog(QDialog):
             content = self.cookies_settings_service.import_cookies_file(file_path)
             self.cookies_settings_service.save_cookies_text(content)
             self._reload_cookies_text()
+            self._update_cookies_status()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -783,6 +827,7 @@ class SettingsDialog(QDialog):
         try:
             self.cookies_settings_service.clear_cookies()
             self._reload_cookies_text()
+            self._update_cookies_status()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -815,6 +860,8 @@ class SettingsDialog(QDialog):
 
         self.cookies_info_label.setText(self.translate("SETTINGS_COOKIES_INFO"))
         self.cookies_tutorial_label.setText(self.translate("SETTINGS_COOKIES_TUTORIAL"))
+        self.cookies_tutorial_button.setText(self.translate("SETTINGS_COOKIES_SHOW_TUTORIAL"))
+        self._update_cookies_status()
         self.import_cookies_button.setText(self.translate("SETTINGS_IMPORT_COOKIES"))
         self.save_cookies_button.setText(self.translate("SETTINGS_SAVE_COOKIES"))
         self.clear_cookies_button.setText(self.translate("SETTINGS_CLEAR_COOKIES"))

@@ -161,6 +161,9 @@
   "SETTINGS_IMPORT_COOKIES": "Import Cookies",
   "SETTINGS_SAVE_COOKIES": "Save Cookies",
   "SETTINGS_CLEAR_COOKIES": "Clear Cookies",
+  "SETTINGS_COOKIES_SHOW_TUTORIAL": "How to get the cookies",
+  "SETTINGS_COOKIES_STATUS_COUNT": "Saved cookies: {count} entries",
+  "SETTINGS_COOKIES_STATUS_EMPTY": "No cookies saved.",
 
   "SETTINGS_DATABASE_INFO": "Browse, export, and manage downloaded records from the database.",
   "SETTINGS_DB_HEADER_ID": "ID",

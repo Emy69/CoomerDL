@@ -44,6 +44,20 @@ class CookiesSettingsService:
 
         return cookies_data
 
+    def count_cookies(self) -> int:
+        if not os.path.exists(self.cookies_path):
+            return 0
+
+        try:
+            with open(self.cookies_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, (dict, list)):
+                return len(data)
+        except Exception:
+            pass
+
+        return 0
+
     def clear_cookies(self):
         self.ensure_parent_dir()
         with open(self.cookies_path, "w", encoding="utf-8") as f:
