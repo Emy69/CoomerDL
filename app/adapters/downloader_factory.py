@@ -1,5 +1,3 @@
-import threading
-
 from downloader.bunkr import BunkrDownloader
 from downloader.coomerfans import CoomerfansDownloader
 from downloader.downloader import Downloader

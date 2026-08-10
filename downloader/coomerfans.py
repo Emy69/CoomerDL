@@ -1,4 +1,3 @@
-import os
 import datetime
 from pathlib import Path
 from concurrent.futures import as_completed
