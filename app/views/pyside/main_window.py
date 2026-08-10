@@ -36,7 +36,7 @@ from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
 
-VERSION = "V1.2.3"
+VERSION = "V1.2.4"
 MAX_LOG_LINES = 500
 LOG_FLUSH_INTERVAL_MS = 150
 
