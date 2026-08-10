@@ -3,6 +3,13 @@ import threading
 from app.models.download_request import DownloadRequest
 
 
+DEAD_SITES = {
+    "coomer.st": "coomerfans.com",
+    "kemono.cr": "pawchive.pw",
+    "jpg5.su": None,
+}
+
+
 class MainController:
     def __init__(self, app):
         self.app = app
@@ -39,6 +46,26 @@ class MainController:
 
         parsed = self.app.url_service.parse_download_url(request.url)
         download_thread = None
+
+        host = parsed.parsed_url.netloc.lower()
+        if host.startswith("www."):
+            host = host[4:]
+
+        if host in DEAD_SITES:
+            alternative = DEAD_SITES[host]
+            if alternative:
+                message = self.app.tr(
+                    "SITE_NO_LONGER_SUPPORTED_WITH_ALTERNATIVE",
+                    site=host,
+                    alternative=alternative,
+                )
+            else:
+                message = self.app.tr("SITE_NO_LONGER_SUPPORTED", site=host)
+
+            self.app.add_log_message_safe(message)
+            self.app.show_error(self.app.tr("ERROR"), message)
+            self.app.enable_widgets()
+            return
 
         if parsed.site_type == "erome":
             self.app.add_log_message_safe(self.app.tr("DOWNLOADING_EROME"))

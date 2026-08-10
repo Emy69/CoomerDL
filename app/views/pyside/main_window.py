@@ -1,15 +1,13 @@
 import datetime
 from collections import deque
-from email.mime import text
 import os
 import subprocess
 import sys
 import threading
 
-from pathlib import Path
 import time
 from typing import Optional
-from PySide6.QtCore import QObject, Signal, Qt, QTimer
+from PySide6.QtCore import QObject, Signal, QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -17,7 +15,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QHBoxLayout,
-    QPushButton,
     QFileDialog,
 )
 
@@ -38,8 +35,6 @@ from app.adapters.pyside_frontend_bridge import PySideFrontendBridge
 from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
-from app.views.pyside.dialogs.site_status_dialog import SiteStatusDialog
-from app.services.site_status_service import SiteStatusService
 
 VERSION = "V1.2.3"
 MAX_LOG_LINES = 500
@@ -72,7 +67,6 @@ class QtSignals(QObject):
     footer_total_size = Signal(str)
     clear_logs = Signal()
     show_error_box = Signal(str, str)
-    site_status_ready = Signal(list)
 
 
 class PySideMainWindow(QMainWindow):
@@ -126,7 +120,6 @@ class PySideMainWindow(QMainWindow):
         self.signals.footer_total_size.connect(self.footer_set_total_size)
         self.signals.clear_logs.connect(self._clear_logs)
         self.signals.show_error_box.connect(self._show_error_dialog)
-        self.signals.site_status_ready.connect(self._show_site_status_dialog)
 
         self._build_ui()
         self._bind_events()
@@ -246,23 +239,7 @@ class PySideMainWindow(QMainWindow):
             self.update_ui_texts()
 
         self.show()
-        self.start_site_status_check()
 
-    def start_site_status_check(self):
-        if not self.settings_service.get("show_site_status_warning", True):
-            return
-
-        def worker():
-            offline_sites = SiteStatusService().get_offline_sites()
-            if offline_sites:
-                self.signals.site_status_ready.emit(offline_sites)
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _show_site_status_dialog(self, offline_sites):
-        dialog = SiteStatusDialog(self, self.tr, offline_sites)
-        dialog.exec()
-            
     def load_translations(self, language=None):
         target_language = language or self.app_state.language
         self.app_state.language = target_language
@@ -332,9 +309,9 @@ class PySideMainWindow(QMainWindow):
                 except Exception:
                     pass
 
-            self.add_log_message_safe("Settings applied.")
+            self.add_log_message_safe(self.tr("RUNTIME_SETTINGS_APPLIED"))
         except Exception as e:
-            self.add_log_message_safe(f"Error applying settings: {e}")
+            self.add_log_message_safe(self.tr("ERROR_APPLYING_SETTINGS", error=e))
 
     def _bind_events(self):
         self.download_panel.browse_button.clicked.connect(self.select_folder)
@@ -399,9 +376,9 @@ class PySideMainWindow(QMainWindow):
                 download_videos_enabled=bool(self.download_videos_check.get()),
                 download_start_time=self.download_start_time,
             )
-            self.signals.log_message.emit(f"Logs exportados exitosamente a {log_file_path}")
+            self.signals.log_message.emit(self.tr("LOGS_EXPORTED_SUCCESSFULLY_TO", path=log_file_path))
         except Exception as e:
-            self.signals.log_message.emit(f"No se pudo exportar los logs: {e}")
+            self.signals.log_message.emit(self.tr("FAILED_TO_EXPORT_LOGS", error=e))
 
     def update_progress(self, downloaded, total, file_id=None, file_path=None, speed=None, eta=None, status=None):
         if not hasattr(self, "_active_progress"):
@@ -581,7 +558,7 @@ class PySideMainWindow(QMainWindow):
             else:
                 subprocess.Popen(["xdg-open", self.download_folder])
         else:
-            self.show_error(self.tr("Error"), self.tr("La carpeta no existe o no es válida."))
+            self.show_error(self.tr("ERROR"), self.tr("INVALID_DOWNLOAD_FOLDER"))
 
     # ------------------------------------------------------------------
     # slots UI

@@ -165,6 +165,12 @@
   "SETTINGS_COOKIES_STATUS_COUNT": "Cookies guardadas: {count} entradas",
   "SETTINGS_COOKIES_STATUS_EMPTY": "No hay cookies guardadas.",
 
+  "SITE_NO_LONGER_SUPPORTED_WITH_ALTERNATIVE": "{site} ya no funciona con la aplicación. Usa {alternative} en su lugar.",
+  "SITE_NO_LONGER_SUPPORTED": "{site} ya no funciona con la aplicación.",
+  "INVALID_DOWNLOAD_FOLDER": "La carpeta no existe o no es válida.",
+  "RUNTIME_SETTINGS_APPLIED": "Ajustes aplicados.",
+  "ERROR_APPLYING_SETTINGS": "Error al aplicar los ajustes: {error}",
+
   "SETTINGS_DATABASE_INFO": "Explora, exporta y administra los registros descargados desde la base de datos.",
   "SETTINGS_DB_HEADER_ID": "ID",
   "SETTINGS_DB_HEADER_FILE_NAME": "Nombre del archivo",
