@@ -11,7 +11,8 @@ class DatabaseSettingsService:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, media_url, file_path, file_size, user_id, post_id, downloaded_at FROM downloads"
+            "SELECT id, media_url, file_path, file_size, user_id, post_id, downloaded_at "
+            "FROM downloads ORDER BY user_id, post_id, id"
         )
         rows = cursor.fetchall()
         conn.close()
@@ -21,7 +22,10 @@ class DatabaseSettingsService:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         for uid in user_ids:
-            cursor.execute("DELETE FROM downloads WHERE user_id = ?", (uid,))
+            if uid is None:
+                cursor.execute("DELETE FROM downloads WHERE user_id IS NULL")
+            else:
+                cursor.execute("DELETE FROM downloads WHERE user_id = ?", (uid,))
         conn.commit()
         conn.close()
 
@@ -60,7 +64,18 @@ class DatabaseSettingsService:
             return f"{size} B"
         if size < 1024**2:
             return f"{size / 1024:.2f} KB"
-        return f"{size / 1024**2:.2f} MB"
+        if size < 1024**3:
+            return f"{size / 1024**2:.2f} MB"
+        return f"{size / 1024**3:.2f} GB"
+
+    def build_summary(self, rows):
+        users = {rec[4] for rec in rows}
+        total_size = sum(rec[3] or 0 for rec in rows)
+        return {
+            "users": len(users),
+            "files": len(rows),
+            "size_str": self.format_size(total_size),
+        }
 
     def group_rows_for_tree(self, rows):
         usuarios = {}

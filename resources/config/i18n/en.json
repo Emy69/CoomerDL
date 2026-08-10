@@ -171,6 +171,10 @@
   "SETTINGS_RELOAD_DATABASE": "Reload Database",
   "SETTINGS_EXPORT_DATABASE": "Export Database",
   "SETTINGS_DELETE_SELECTED_USERS": "Delete Selected Users",
+  "SETTINGS_DB_SEARCH_PLACEHOLDER": "Search by user or file name...",
+  "SETTINGS_DB_SUMMARY": "Users: {users}  |  Files: {files}  |  Total size: {size}",
+  "SETTINGS_DB_EMPTY": "No download records yet.",
+  "SETTINGS_DB_UNKNOWN_USER": "Unknown user",
 
   "SETTINGS_ERROR_LOADING_DATABASE": "Error loading database: {error}",
   "SETTINGS_NO_POST": "No Post",

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
     QTextEdit,
     QFileDialog,
+    QHeaderView,
 )
 
 from PySide6.QtCore import Qt
@@ -223,7 +224,14 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self.database_tab)
 
         self.database_info_label = QLabel(self.translate("SETTINGS_DATABASE_INFO"))
+        self.database_info_label.setWordWrap(True)
         layout.addWidget(self.database_info_label)
+
+        self.db_search_edit = QLineEdit()
+        self.db_search_edit.setClearButtonEnabled(True)
+        self.db_search_edit.setPlaceholderText(self.translate("SETTINGS_DB_SEARCH_PLACEHOLDER"))
+        self.db_search_edit.textChanged.connect(self._filter_db_tree)
+        layout.addWidget(self.db_search_edit)
 
         self.db_tree = QTreeWidget()
         self.db_tree.setColumnCount(5)
@@ -236,7 +244,20 @@ class SettingsDialog(QDialog):
         ])
         self.db_tree.setSelectionMode(self.db_tree.SelectionMode.ExtendedSelection)
         self.db_tree.setUniformRowHeights(True)
+        self.db_tree.setAlternatingRowColors(True)
+
+        header = self.db_tree.header()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+
         layout.addWidget(self.db_tree, 1)
+
+        self.db_summary_label = QLabel("")
+        self.db_summary_label.setStyleSheet("color: #bfbfbf;")
+        layout.addWidget(self.db_summary_label)
 
         buttons_row = QHBoxLayout()
 
@@ -248,15 +269,25 @@ class SettingsDialog(QDialog):
         self.export_db_button.clicked.connect(self._export_db)
         buttons_row.addWidget(self.export_db_button)
 
+        buttons_row.addStretch(1)
+
         self.delete_users_button = QPushButton(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
         self.delete_users_button.clicked.connect(self._delete_selected_users)
         buttons_row.addWidget(self.delete_users_button)
 
         self.delete_all_db_button = QPushButton(self.translate("SETTINGS_DELETE_ENTIRE_DATABASE"))
+        self.delete_all_db_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7a2b2e;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                background-color: #a03236;
+            }
+        """)
         self.delete_all_db_button.clicked.connect(self._delete_entire_database)
         buttons_row.addWidget(self.delete_all_db_button)
 
-        buttons_row.addStretch(1)
         layout.addLayout(buttons_row)
 
         self.load_db_records()
@@ -334,11 +365,36 @@ class SettingsDialog(QDialog):
             return self.downloader.db_path
         return "resources/config/downloads.db"
 
+    def _make_db_file_item(self, item):
+        return QTreeWidgetItem([
+            str(item["id"]),
+            item["file_name"],
+            self.translate(item["file_type"]),
+            item["size_str"],
+            str(item["downloaded_at"]),
+        ])
+
+    def _update_db_summary(self, rows):
+        if not rows:
+            self.db_summary_label.setText(self.translate("SETTINGS_DB_EMPTY"))
+            return
+
+        summary = self.database_settings_service.build_summary(rows)
+        self.db_summary_label.setText(
+            self._t(
+                "SETTINGS_DB_SUMMARY",
+                users=summary["users"],
+                files=summary["files"],
+                size=summary["size_str"],
+            )
+        )
+
     def load_db_records(self):
         db_path = self._get_db_path()
 
         if not self.database_settings_service.database_exists(db_path):
             self.db_tree.clear()
+            self._update_db_summary([])
             return
 
         try:
@@ -355,38 +411,73 @@ class SettingsDialog(QDialog):
         self.db_tree.clear()
 
         for user_entry in payload:
-            user_item = QTreeWidgetItem([user_entry["user"]])
+            user_name = user_entry["user"]
+            display_name = str(user_name) if user_name else self.translate("SETTINGS_DB_UNKNOWN_USER")
+
+            user_item = QTreeWidgetItem([display_name])
+            user_item.setData(0, Qt.ItemDataRole.UserRole, user_name)
             self.db_tree.addTopLevelItem(user_item)
 
             for post_id, items in user_entry["posts"].items():
-                post_item = QTreeWidgetItem([post_id])
+                post_item = QTreeWidgetItem([str(post_id)])
                 user_item.addChild(post_item)
 
                 for item in items:
-                    file_item = QTreeWidgetItem([
-                        str(item["id"]),
-                        item["file_name"],
-                        self.translate(item["file_type"]),
-                        item["size_str"],
-                        str(item["downloaded_at"]),
-                    ])
-                    post_item.addChild(file_item)
+                    post_item.addChild(self._make_db_file_item(item))
 
             if user_entry["no_post"]:
                 no_post_item = QTreeWidgetItem([self.translate("SETTINGS_NO_POST")])
                 user_item.addChild(no_post_item)
 
                 for item in user_entry["no_post"]:
-                    file_item = QTreeWidgetItem([
-                        str(item["id"]),
-                        item["file_name"],
-                        self.translate(item["file_type"]),
-                        item["size_str"],
-                        str(item["downloaded_at"]),
-                    ])
-                    no_post_item.addChild(file_item)
+                    no_post_item.addChild(self._make_db_file_item(item))
 
         self.db_tree.collapseAll()
+        self._update_db_summary(rows)
+
+        if self.db_search_edit.text().strip():
+            self._filter_db_tree(self.db_search_edit.text())
+
+    def _filter_db_tree(self, text):
+        text = (text or "").strip().lower()
+
+        for i in range(self.db_tree.topLevelItemCount()):
+            user_item = self.db_tree.topLevelItem(i)
+            user_match = text in user_item.text(0).lower()
+            user_has_visible_children = False
+
+            for j in range(user_item.childCount()):
+                post_item = user_item.child(j)
+                post_has_visible_files = False
+
+                for k in range(post_item.childCount()):
+                    file_item = post_item.child(k)
+                    file_match = (
+                        not text
+                        or user_match
+                        or text in file_item.text(1).lower()
+                    )
+                    file_item.setHidden(not file_match)
+                    post_has_visible_files = post_has_visible_files or file_match
+
+                post_visible = post_has_visible_files or user_match
+                post_item.setHidden(bool(text) and not post_visible)
+                post_item.setExpanded(bool(text) and post_has_visible_files and not user_match)
+                user_has_visible_children = user_has_visible_children or post_visible
+
+            user_visible = user_match or user_has_visible_children
+            user_item.setHidden(bool(text) and not user_visible)
+            user_item.setExpanded(bool(text) and user_visible)
+
+        if not text:
+            self.db_tree.collapseAll()
+
+    def _refresh_downloader_cache(self):
+        if self.downloader is not None and hasattr(self.downloader, "load_download_cache"):
+            try:
+                self.downloader.load_download_cache()
+            except Exception:
+                pass
 
     def _export_db(self):
         db_path = self._get_db_path()
@@ -442,12 +533,15 @@ class SettingsDialog(QDialog):
             return
 
         user_ids = []
+        user_labels = []
         for item in selected_items:
             parent = item.parent()
             if parent is None:
-                user_ids.append(item.text(0))
+                uid = item.data(0, Qt.ItemDataRole.UserRole)
+                if uid not in user_ids:
+                    user_ids.append(uid)
+                    user_labels.append(item.text(0))
 
-        user_ids = list(dict.fromkeys(user_ids))
         if not user_ids:
             QMessageBox.warning(
                 self,
@@ -459,13 +553,14 @@ class SettingsDialog(QDialog):
         confirm = QMessageBox.question(
             self,
             self.translate("CONFIRM"),
-            self._t("SETTINGS_CONFIRM_DELETE_USERS", users=", ".join(user_ids))
+            self._t("SETTINGS_CONFIRM_DELETE_USERS", users=", ".join(user_labels))
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return
 
         try:
             self.database_settings_service.delete_users(db_path, user_ids)
+            self._refresh_downloader_cache()
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -562,6 +657,7 @@ class SettingsDialog(QDialog):
 
         try:
             self.database_settings_service.delete_all_downloads(db_path)
+            self._refresh_downloader_cache()
             self.load_db_records()
             QMessageBox.information(
                 self,
@@ -724,6 +820,7 @@ class SettingsDialog(QDialog):
         self.clear_cookies_button.setText(self.translate("SETTINGS_CLEAR_COOKIES"))
 
         self.database_info_label.setText(self.translate("SETTINGS_DATABASE_INFO"))
+        self.db_search_edit.setPlaceholderText(self.translate("SETTINGS_DB_SEARCH_PLACEHOLDER"))
         self.reload_db_button.setText(self.translate("SETTINGS_RELOAD_DATABASE"))
         self.export_db_button.setText(self.translate("SETTINGS_EXPORT_DATABASE"))
         self.delete_users_button.setText(self.translate("SETTINGS_DELETE_SELECTED_USERS"))
