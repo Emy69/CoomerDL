@@ -1,5 +1,3 @@
-import datetime
-from pathlib import Path
 from concurrent.futures import as_completed
 
 from downloader.core.base_api_downloader import BaseApiDownloader
@@ -48,7 +46,6 @@ class CoomerfansDownloader(BaseApiDownloader):
         self.language = language
         self.is_profile_download = is_profile_download
         self.direct_download = direct_download
-        self.log_messages = []
 
         self.adapter = CoomerfansAdapter(
             session=self.session,
@@ -64,13 +61,6 @@ class CoomerfansDownloader(BaseApiDownloader):
         else:
             final_message = message
 
-        self.log_messages.append(final_message)
-        if self.log_callback:
-            self.log_callback(self.domain_name, final_message)
-
-    def log(self, message, **kwargs):
-        final_message = self._translate_text(message, **kwargs)
-        self.log_messages.append(final_message)
         if self.log_callback:
             self.log_callback(self.domain_name, final_message)
 
@@ -133,7 +123,6 @@ class CoomerfansDownloader(BaseApiDownloader):
         finally:
             if not self.is_profile_download and self.enable_widgets_callback:
                 self.enable_widgets_callback()
-            self.export_logs()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
@@ -156,23 +145,3 @@ class CoomerfansDownloader(BaseApiDownloader):
         finally:
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
-            self.export_logs()
-
-    def export_logs(self):
-        log_folder = "resources/config/logs/"
-        Path(log_folder).mkdir(parents=True, exist_ok=True)
-        log_file_path = Path(log_folder) / f"log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        try:
-            with open(log_file_path, "w", encoding="utf-8") as file:
-                file.write("\n".join(self.log_messages))
-            if self.log_callback:
-                self.log_callback(
-                    self.domain_name,
-                    self._translate_text("LOGS_EXPORTED_SUCCESSFULLY_TO", path=log_file_path),
-                )
-        except Exception as e:
-            if self.log_callback:
-                self.log_callback(
-                    self.domain_name,
-                    self._translate_text("FAILED_TO_EXPORT_LOGS", error=e),
-                )
