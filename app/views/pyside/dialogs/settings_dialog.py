@@ -159,7 +159,6 @@ class SettingsDialog(QDialog):
         self.folder_structure_combo = QComboBox()
         self.folder_structure_combo.addItems(["default", "post_number"])
         self.folder_structure_combo.setCurrentText(self.settings.get("folder_structure", "default"))
-        self.folder_structure_combo.currentTextChanged.connect(self.refresh_structure_preview)
         self.folder_structure_label = QLabel(self.translate("SETTINGS_FOLDER_STRUCTURE"))
         layout.addRow(self.folder_structure_label, self.folder_structure_combo)
 
@@ -180,7 +179,6 @@ class SettingsDialog(QDialog):
             self.settings.get("file_naming_mode", 0)
         )
         self.file_naming_combo.setCurrentText(current_naming_label)
-        self.file_naming_combo.currentTextChanged.connect(self.refresh_structure_preview)
         self.file_naming_label = QLabel(self.translate("SETTINGS_FILE_NAMING_MODE"))
         layout.addRow(self.file_naming_label, self.file_naming_combo)
 
@@ -363,41 +361,6 @@ class SettingsDialog(QDialog):
 
     def _reload_cookies_text(self):
         self.cookies_text.setPlainText(self.cookies_settings_service.load_cookies_text())
-
-    def build_structure_preview_payload(self):
-        temp_settings = dict(self.settings)
-        temp_settings["folder_structure"] = self.folder_structure_combo.currentText()
-        temp_settings["file_naming_mode"] = (
-            self.download_settings_service.NAMING_MODE_LABEL_TO_VALUE.get(
-                self.file_naming_combo.currentText(),
-                0
-            )
-        )
-        return self.structure_preview_service.build_preview_payload(temp_settings)
-
-    def refresh_structure_preview(self):
-        if not hasattr(self, "structure_tree"):
-            return
-        if not hasattr(self, "structure_preview_service"):
-            return
-
-        payload = self.build_structure_preview_payload()
-        self.structure_tree.clear()
-
-        root_item = QTreeWidgetItem([payload["root"]])
-        self.structure_tree.addTopLevelItem(root_item)
-        self._populate_structure_nodes(root_item, payload)
-        self.structure_tree.expandAll()
-
-    def _populate_structure_nodes(self, parent_item, payload):
-        for folder in payload.get("folders", []):
-            folder_item = QTreeWidgetItem([folder["name"]])
-            parent_item.addChild(folder_item)
-            self._populate_structure_nodes(folder_item, folder)
-
-        for file_name in payload.get("files", []):
-            file_item = QTreeWidgetItem([file_name])
-            parent_item.addChild(file_item)
 
     # ------------------------------------------------------------
     # Database
@@ -755,8 +718,6 @@ class SettingsDialog(QDialog):
                 if hasattr(self.parent_window, "max_downloads"):
                     self.parent_window.max_downloads = parsed_values["max_downloads"]
 
-            self.refresh_structure_preview()
-
             QMessageBox.information(
                 self,
                 self.translate("SUCCESS"),
@@ -885,6 +846,3 @@ class SettingsDialog(QDialog):
         ])
 
         self.load_db_records()
-
-        if hasattr(self, "structure_tree"):
-            self.refresh_structure_preview()

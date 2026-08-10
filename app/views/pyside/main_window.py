@@ -97,7 +97,6 @@ class PySideMainWindow(QMainWindow):
         self.download_start_time = None
         self.settings = self.settings_service.load_settings()
         self.max_downloads = int(self.settings.get("max_downloads", 3))
-        self.latest_release_url = None
         
         self._active_progress = {}
         self._active_progress_lock = threading.Lock()
@@ -123,7 +122,6 @@ class PySideMainWindow(QMainWindow):
 
         self._build_ui()
         self._bind_events()
-        self._create_default_downloader()
         self.update_ui_texts()
         
         self._smoothed_total_speed = 0.0
@@ -288,27 +286,6 @@ class PySideMainWindow(QMainWindow):
         try:
             self.settings = new_settings
             self.max_downloads = int(new_settings.get("max_downloads", 3) or 3)
-
-            if hasattr(self, "default_downloader") and self.default_downloader:
-                dd = self.default_downloader
-                dd.max_workers = self.max_downloads
-                dd.folder_structure = new_settings.get("folder_structure", "default")
-
-                try:
-                    dd.file_naming_mode = int(new_settings.get("file_naming_mode", 0) or 0)
-                except Exception:
-                    pass
-
-                try:
-                    dd.max_retries = int(new_settings.get("max_retries", 3) or 3)
-                except Exception:
-                    pass
-
-                try:
-                    dd.retry_interval = float(new_settings.get("retry_interval", 2.0) or 2.0)
-                except Exception:
-                    pass
-
             self.add_log_message_safe(self.tr("RUNTIME_SETTINGS_APPLIED"))
         except Exception as e:
             self.add_log_message_safe(self.tr("ERROR_APPLYING_SETTINGS", error=e))
@@ -523,9 +500,6 @@ class PySideMainWindow(QMainWindow):
             settings=self.settings,
         )
 
-    def _create_default_downloader(self):
-        # opcional para compatibilidad con algunos settings runtime
-        pass
 
     # ------------------------------------------------------------------
     # acciones
