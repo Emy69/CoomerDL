@@ -59,7 +59,7 @@ class MainController:
                     daemon=True
                 )
             else:
-                self.app.add_log_message_safe("bunkr", self.app.tr("PROFILE_URL"))
+                self.app.add_log_message_safe("erome", self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(

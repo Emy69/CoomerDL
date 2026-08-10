@@ -20,7 +20,7 @@ class BaseApiDownloader:
         update_progress_callback=None,
         update_global_progress_callback=None,
         headers=None,
-        max_retries=999999,
+        max_retries=3,
         retry_interval=1.0,
         stream_read_timeout=10,
         download_images=True,
