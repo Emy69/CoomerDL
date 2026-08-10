@@ -1,5 +1,5 @@
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
 from urllib.parse import urlparse
 import os
@@ -7,6 +7,7 @@ import re
 import requests
 import threading
 import time
+import zlib
 import sqlite3
 
 
@@ -154,6 +155,11 @@ class BaseApiDownloader:
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
             self.log("ALL_DOWNLOADS_COMPLETED_OR_CANCELLED")
+            with self.db_lock:
+                try:
+                    self.db_connection.close()
+                except Exception:
+                    pass
 
     def set_download_mode(self, mode, max_workers):
         if mode == "queue":
@@ -197,7 +203,7 @@ class BaseApiDownloader:
             return f"{sanitized}_{attachment_index}{extension}"
         elif mode == 1:
             sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
-            short_hash = f"{hash(media_url) & 0xFFFF:04x}"
+            short_hash = f"{zlib.crc32(media_url.encode('utf-8')) & 0xFFFF:04x}"
             return f"{sanitized_post}_{attachment_index}_{short_hash}{extension}"
         elif mode == 2:
             sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
@@ -205,7 +211,7 @@ class BaseApiDownloader:
         elif mode == 3:
             sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
             sanitized_time = sanitize(post_time or "")
-            short_hash = f"{hash(media_url) & 0xFFFF:04x}"
+            short_hash = f"{zlib.crc32(media_url.encode('utf-8')) & 0xFFFF:04x}"
             return f"{sanitized_time} - {sanitized_post}_{attachment_index}_{short_hash}{extension}"
 
         return sanitize(name_no_ext) + extension
