@@ -13,8 +13,22 @@ class DownloaderFactory:
         self.frontend = frontend_bridge
         self.app = app
 
+    def _get_settings(self):
+        return getattr(self.app, "settings", None) or {}
+
+    def _retry_settings(self):
+        settings = self._get_settings()
+        return {
+            "max_retries": int(settings.get("max_retries", 3) or 3),
+            "retry_interval": float(settings.get("retry_interval", 2.0) or 2.0),
+        }
+
+    def _apply_naming_mode(self, downloader):
+        downloader.file_naming_mode = self._get_settings().get("file_naming_mode", 0)
+        return downloader
+
     def create_erome_downloader(self, is_profile_download=False):
-        return EromeDownloader(
+        downloader = EromeDownloader(
             enable_widgets_callback=self.frontend.enable_widgets,
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
@@ -27,21 +41,26 @@ class DownloaderFactory:
             download_videos=self.frontend.get_download_videos(),
             is_profile_download=is_profile_download,
             max_workers=self.frontend.get_max_downloads(),
-            tr=self.frontend.get_tr()
+            tr=self.frontend.get_tr(),
+            **self._retry_settings(),
         )
+        return self._apply_naming_mode(downloader)
 
     def create_simpcity_downloader(self):
-        return SimpCity(
+        downloader = SimpCity(
             download_folder=self.frontend.get_download_folder(),
             log_callback=self.frontend.log,
             enable_widgets_callback=self.frontend.enable_widgets,
             update_progress_callback=self.frontend.update_progress,
             update_global_progress_callback=self.frontend.update_global_progress,
-            tr=self.frontend.get_tr()
+            tr=self.frontend.get_tr(),
+            max_workers=self.frontend.get_max_downloads(),
+            **self._retry_settings(),
         )
+        return self._apply_naming_mode(downloader)
 
     def create_bunkr_downloader(self):
-        return BunkrDownloader(
+        downloader = BunkrDownloader(
             download_folder=self.frontend.get_download_folder(),
             log_callback=self.frontend.log,
             enable_widgets_callback=self.frontend.enable_widgets,
@@ -53,7 +72,9 @@ class DownloaderFactory:
             },
             max_workers=self.frontend.get_max_downloads(),
             tr=self.frontend.get_tr(),
+            **self._retry_settings(),
         )
+        return self._apply_naming_mode(downloader)
 
     def create_general_downloader(self, settings):
         downloader = Downloader(
@@ -87,7 +108,8 @@ class DownloaderFactory:
             log_callback=self.frontend.log,
             tr=self.frontend.get_tr(),
             progress_manager=progress_manager,
-            max_workers=self.frontend.get_max_downloads()
+            max_workers=self.frontend.get_max_downloads(),
+            **self._retry_settings(),
         )
 
     def create_coomerfans_downloader(self, is_profile_download=False, settings=None):

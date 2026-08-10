@@ -16,6 +16,8 @@ class Jpg5Downloader(BaseApiDownloader):
         update_progress_callback=None,
         update_global_progress_callback=None,
         max_workers=3,
+        max_retries=3,
+        retry_interval=1.0,
     ):
         super().__init__(
             download_folder=carpeta_destino,
@@ -27,6 +29,8 @@ class Jpg5Downloader(BaseApiDownloader):
             download_videos=False,
             download_compressed=False,
             tr=tr,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
         self.url = url
         self.progress_manager = progress_manager

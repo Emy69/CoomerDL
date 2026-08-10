@@ -23,6 +23,8 @@ class EromeDownloader(BaseApiDownloader):
         tr=None,
         max_workers=5,
         download_folder="downloads",
+        max_retries=3,
+        retry_interval=1.0,
     ):
         super().__init__(
             download_folder=download_folder,
@@ -36,6 +38,8 @@ class EromeDownloader(BaseApiDownloader):
             download_videos=download_videos,
             download_compressed=False,
             tr=tr,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
 
         self.language = language

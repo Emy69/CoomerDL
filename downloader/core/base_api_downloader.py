@@ -561,8 +561,11 @@ class BaseApiDownloader:
 
         self.max_workers = new_max
 
+        # wait=False: this runs on the UI thread when settings are applied
+        # mid-download; waiting would freeze the interface until every
+        # queued file finishes. In-flight tasks drain on the old executor.
         if self.executor:
-            self.executor.shutdown(wait=True)
+            self.executor.shutdown(wait=False)
 
         self.executor = ThreadPoolExecutor(max_workers=new_max)
         self.rate_limit = Semaphore(new_max)

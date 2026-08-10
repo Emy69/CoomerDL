@@ -15,6 +15,8 @@ class SimpCity(BaseApiDownloader):
         update_progress_callback=None,
         update_global_progress_callback=None,
         tr=None,
+        max_retries=3,
+        retry_interval=1.0,
     ):
         super().__init__(
             download_folder=download_folder,
@@ -27,6 +29,8 @@ class SimpCity(BaseApiDownloader):
             download_images=True,
             download_videos=True,
             download_compressed=True,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
 
         self.adapter = SimpCityAdapter(
