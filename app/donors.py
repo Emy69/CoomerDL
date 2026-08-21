@@ -37,10 +37,12 @@ class DonorsWorker(QObject):
             response.raise_for_status()
             donors = response.json()
             self.finished.emit(donors if isinstance(donors, list) else [])
+        except json.JSONDecodeError as exc:
+            # Must come first: requests' JSONDecodeError subclasses both
+            # json.JSONDecodeError and RequestException
+            self.error.emit(f"json:{exc}")
         except requests.exceptions.RequestException as exc:
             self.error.emit(f"request:{exc}")
-        except json.JSONDecodeError as exc:
-            self.error.emit(f"json:{exc}")
         except Exception as exc:
             self.error.emit(f"unknown:{exc}")
 
@@ -187,9 +189,6 @@ class DonorsModal(QDialog):
             return
 
         self._donor_pixmaps = {
-            "gold": self._load_icon_pixmap("gold.png"),
-            "silver": self._load_icon_pixmap("silver.png"),
-            "bronze": self._load_icon_pixmap("bronze.png"),
             "default": self._load_icon_pixmap("default.png"),
         }
 
@@ -285,9 +284,6 @@ class DonorsModal(QDialog):
             row = (index // columns) + 1
             col = index % columns
             self.grid_layout.addWidget(card, row, col)
-
-    def update_donor_data(self, new_donors):
-        self._show_donors(new_donors)
 
     def _center_window(self):
         if self.parent is not None:

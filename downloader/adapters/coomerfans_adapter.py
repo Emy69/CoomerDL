@@ -1,4 +1,3 @@
-import os
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -30,36 +29,12 @@ class CoomerfansAdapter:
     def clean_filename(filename):
         return re.sub(r'[<>:"/\\|?*]', "_", str(filename).split("?")[0])
 
-    def can_handle(self, url: str) -> bool:
-        host = urlparse(url).netloc.lower()
-        return "coomerfans" in host
-
     def _request_soup(self, url):
         response = self.session.get(url, headers=self.headers, timeout=20)
         response.raise_for_status()
         return BeautifulSoup(response.text, "html.parser")
 
-    def resolve_url(self, url, download_images=True, download_videos=True, direct_download=False):
-        """
-        Resolves a coomerfans URL and returns media data.
-        Handles both user profiles and individual posts.
-        """
-        path = urlparse(url).path
-
-        # Check if it's a user profile URL (e.g., /u/fansly/347884/petitesaki)
-        if path.startswith("/u/"):
-            return self._resolve_profile(url, download_images, download_videos, direct_download)
-        # Check if it's a post URL (e.g., /p/77803830/347884/fansly)
-        elif path.startswith("/p/"):
-            return self._resolve_post(url, download_images, download_videos, direct_download)
-        else:
-            self.log("COOMERFANS_UNKNOWN_URL_TYPE", url=url)
-            return {
-                "folder_name": "coomerfans_unknown",
-                "media": [],
-            }
-
-    def _resolve_profile(self, profile_url, download_images=True, download_videos=True, direct_download=False):
+    def _resolve_profile(self, profile_url, download_images=True, download_videos=True):
         """
         Resolves a user profile page and collects all posts.
         URL format: /u/{service}/{user_id}/{username}?page={page}
@@ -82,6 +57,7 @@ class CoomerfansAdapter:
             media = []
             page = 1
             max_pages = 100  # Safety limit to prevent infinite loops
+            seen_post_links = set()
 
             while page <= max_pages:
                 try:
@@ -91,10 +67,20 @@ class CoomerfansAdapter:
                         page_url = profile_url.split("?")[0] + f"?page={page}"
 
                     soup = self._request_soup(page_url)
-                    page_media = self._extract_profile_posts(soup, service, user_id, username)
+                    posts_before = len(seen_post_links)
+                    page_media = self._extract_profile_posts(
+                        soup,
+                        service,
+                        user_id,
+                        username,
+                        download_images,
+                        download_videos,
+                        seen_post_links,
+                    )
 
-                    if not page_media:
-                        # No more posts found
+                    if len(seen_post_links) == posts_before:
+                        # No new posts: end reached, or the site clamps
+                        # out-of-range pages to the last one
                         break
 
                     media.extend(page_media)
@@ -117,7 +103,7 @@ class CoomerfansAdapter:
                 "media": [],
             }
 
-    def _extract_profile_posts(self, soup, service, user_id, username):
+    def _extract_profile_posts(self, soup, service, user_id, username, download_images=True, download_videos=True, seen_links=None):
         """
         Extracts post links from a profile page.
         Looks for post containers and extracts media from each post.
@@ -125,7 +111,8 @@ class CoomerfansAdapter:
         media = []
         profile_folder = self.clean_filename(f"{service}_{username}_{user_id}")
 
-        seen_links = set()
+        if seen_links is None:
+            seen_links = set()
         for link in soup.find_all("a", href=re.compile(r"^/p/\d+")):
             href = link.get("href")
             if not href or href in seen_links:
@@ -134,7 +121,12 @@ class CoomerfansAdapter:
 
             try:
                 post_link = urljoin("https://coomerfans.com", href)
-                post_media = self._resolve_post(post_link, profile_user_id=profile_folder)
+                post_media = self._resolve_post(
+                    post_link,
+                    download_images=download_images,
+                    download_videos=download_videos,
+                    profile_user_id=profile_folder,
+                )
                 media.extend(post_media.get("media", []))
             except Exception as e:
                 self.log("COOMERFANS_ERROR_EXTRACTING_POST", error=e)
@@ -142,7 +134,7 @@ class CoomerfansAdapter:
 
         return media
 
-    def _resolve_post(self, post_url, download_images=True, download_videos=True, direct_download=False, profile_user_id=None):
+    def _resolve_post(self, post_url, download_images=True, download_videos=True, profile_user_id=None):
         """
         Resolves a single post and extracts media.
         URL format: /p/{post_id}/{user_id}/{service}
@@ -165,6 +157,7 @@ class CoomerfansAdapter:
 
             soup = self._request_soup(post_url)
             media = []
+            seen_urls = set()
 
             # Extract images
             if download_images:
@@ -177,7 +170,8 @@ class CoomerfansAdapter:
                         if not src.startswith("http"):
                             src = urljoin(post_url, src)
 
-                        if src:
+                        if src and src not in seen_urls:
+                            seen_urls.add(src)
                             media.append({
                                 "media_url": src,
                                 "post_id": post_id,
@@ -203,6 +197,9 @@ class CoomerfansAdapter:
                         if not video_src.startswith("http"):
                             video_src = urljoin(post_url, video_src)
 
+                        if video_src in seen_urls:
+                            continue
+                        seen_urls.add(video_src)
                         media.append({
                             "media_url": video_src,
                             "post_id": post_id,
@@ -224,30 +221,3 @@ class CoomerfansAdapter:
                 "folder_name": "coomerfans_post",
                 "media": [],
             }
-
-    def _extract_direct_media(self, soup, post_url, post_id):
-        """
-        Extracts media URLs directly from page elements.
-        Supports various HTML structures for media containers.
-        """
-        media = []
-
-        # Look for image links that point to the img1.coomerfans.com domain
-        img_links = soup.find_all("a", href=re.compile(r"img\d+\.coomerfans\.com", re.I))
-
-        for link in img_links:
-            href = link.get("href")
-            if href and not href.startswith("http"):
-                href = urljoin(post_url, href)
-
-            if href and "coomerfans.com" in href.lower():
-                filename = self.clean_filename(os.path.basename(href.split("?")[0]))
-                if not filename:
-                    filename = f"media_{post_id}.jpg"
-
-                media.append({
-                    "media_url": href,
-                    "filename": filename,
-                })
-
-        return media

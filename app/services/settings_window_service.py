@@ -29,7 +29,9 @@ class SettingsWindowService:
                 merged = dict(self.DEFAULT_SETTINGS)
                 merged.update(data)
                 return merged
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (OSError, ValueError):
+            # OSError covers missing/unreadable files; ValueError covers
+            # json.JSONDecodeError and UnicodeDecodeError
             return dict(self.DEFAULT_SETTINGS)
 
     def save_settings(self, settings: dict):
@@ -65,16 +67,3 @@ class SettingsWindowService:
         load_translations_func(selected_language_code)
         update_ui_texts_func()
         return True, "LANGUAGE_APPLIED_SUCCESS"
-
-    def center_window(self, window, width, height):
-        try:
-            screen = window.screen()
-            if screen is not None:
-                geometry = screen.availableGeometry()
-                x = geometry.x() + (geometry.width() - width) // 2
-                y = geometry.y() + (geometry.height() - height) // 2
-                window.resize(width, height)
-                window.move(x, y)
-                return
-        except Exception:
-            pass

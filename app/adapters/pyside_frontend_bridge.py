@@ -21,9 +21,6 @@ class PySideFrontendBridge(FrontendBridge):
     def update_global_progress(self, completed_files, total_files):
         self.app.update_global_progress(completed_files, total_files)
 
-    def show_error(self, title: str, message: str):
-        self.app.show_error(title, message)
-
     def get_download_folder(self) -> str:
         return self.app.download_folder
 

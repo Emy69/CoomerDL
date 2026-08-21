@@ -15,13 +15,17 @@ class MainController:
         self.app = app
 
     def build_request_from_ui(self) -> DownloadRequest:
+        url = self.app.url_entry.get().strip()
+        if url and "://" not in url:
+            # Scheme-less URLs would parse with an empty host, bypassing
+            # both the dead-site check and the host-based routing.
+            url = "https://" + url
+
         return DownloadRequest(
-            url=self.app.url_entry.get().strip(),
+            url=url,
             download_folder=self.app.download_folder,
             download_images=bool(self.app.download_images_check.get()),
             download_videos=bool(self.app.download_videos_check.get()),
-            download_compressed=bool(self.app.download_compressed_check.get()),
-            max_downloads=getattr(self.app, "max_downloads", 3),
             only_this_url=bool(self.app.only_this_url_check.get()),
         )
 
@@ -47,12 +51,14 @@ class MainController:
         parsed = self.app.url_service.parse_download_url(request.url)
         download_thread = None
 
-        host = parsed.parsed_url.netloc.lower()
-        if host.startswith("www."):
-            host = host[4:]
+        host = parsed.host
+        dead_site = next(
+            (d for d in DEAD_SITES if host == d or host.endswith("." + d)),
+            None,
+        )
 
-        if host in DEAD_SITES:
-            alternative = DEAD_SITES[host]
+        if dead_site:
+            alternative = DEAD_SITES[dead_site]
             if alternative:
                 message = self.app.tr(
                     "SITE_NO_LONGER_SUPPORTED_WITH_ALTERNATIVE",
@@ -77,6 +83,7 @@ class MainController:
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
+                        self.app.active_downloader,
                         self.app.active_downloader.process_album_page,
                         request.url,
                         request.download_folder,
@@ -90,6 +97,7 @@ class MainController:
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
+                        self.app.active_downloader,
                         self.app.active_downloader.process_profile_page,
                         request.url,
                         request.download_folder,
@@ -108,14 +116,14 @@ class MainController:
                 self.app.add_log_message_safe(self.app.tr("POST_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader.descargar_post_bunkr, request.url),
+                    args=(self.app.bunkr_downloader, self.app.bunkr_downloader.descargar_post_bunkr, request.url),
                     daemon=True
                 )
             else:
                 self.app.add_log_message_safe("bunkr", self.app.tr("PROFILE_URL"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),
+                    args=(self.app.bunkr_downloader, self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),
                     daemon=True
                 )
 
@@ -124,7 +132,7 @@ class MainController:
             self.app.setup_general_downloader()
             self.app.active_downloader = self.app.general_downloader
 
-            site = f"{parsed.parsed_url.netloc}"
+            site = parsed.host
             service = parsed.service
             user = parsed.user
             post = parsed.post
@@ -159,7 +167,15 @@ class MainController:
                 self.app.add_log_message_safe(self.app.tr("DOWNLOADING_SINGLE_POST"))
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
-                    args=(self.start_ck_post_download, site, service, user, post),
+                    args=(
+                        self.app.active_downloader,
+                        self.start_ck_post_download,
+                        self.app.active_downloader,
+                        site,
+                        service,
+                        user,
+                        post,
+                    ),
                     daemon=True
                 )
             else:
@@ -167,7 +183,9 @@ class MainController:
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
+                        self.app.active_downloader,
                         self.start_ck_profile_download,
+                        self.app.active_downloader,
                         site,
                         service,
                         user,
@@ -186,6 +204,7 @@ class MainController:
             download_thread = threading.Thread(
                 target=self.wrapped_download,
                 args=(
+                    self.app.active_downloader,
                     self.app.active_downloader.download_images_from_simpcity,
                     request.url,
                     not request.only_this_url,
@@ -198,7 +217,7 @@ class MainController:
             self.app.setup_jpg5_downloader()
             download_thread = threading.Thread(
                 target=self.wrapped_download,
-                args=(self.app.active_downloader.descargar_imagenes,),
+                args=(self.app.active_downloader, self.app.active_downloader.descargar_imagenes),
                 daemon=True
             )
 
@@ -212,6 +231,7 @@ class MainController:
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
+                        self.app.active_downloader,
                         self.app.active_downloader.process_post_page,
                         request.url,
                         request.download_folder,
@@ -225,6 +245,7 @@ class MainController:
                 download_thread = threading.Thread(
                     target=self.wrapped_download,
                     args=(
+                        self.app.active_downloader,
                         self.app.active_downloader.process_profile_page,
                         request.url,
                         request.download_folder,
@@ -241,18 +262,21 @@ class MainController:
 
         if download_thread:
             download_thread.start()
-            self.app.app_state.current_download_thread = download_thread
 
-    def wrapped_download(self, download_method, *args):
+    def wrapped_download(self, downloader, download_method, *args):
         try:
             download_method(*args)
+        except Exception as e:
+            self.app.add_log_message_safe(self.app.tr("DOWNLOAD_THREAD_ERROR", error=e))
         finally:
-            self.app.active_downloader = None
+            # Only clear if a newer download has not replaced it already
+            if self.app.active_downloader is downloader:
+                self.app.active_downloader = None
             self.app.enable_widgets()
-            self.app.export_logs()
+            self.app.export_logs(downloader)
 
-    def start_ck_profile_download(self, site, service, user, query, download_all, initial_offset, only_this_url=False):
-        download_info = self.app.active_downloader.download_media(
+    def start_ck_profile_download(self, downloader, site, service, user, query, download_all, initial_offset, only_this_url=False):
+        download_info = downloader.download_media(
             site,
             user,
             service,
@@ -267,8 +291,8 @@ class MainController:
             )
         return download_info
 
-    def start_ck_post_download(self, site, service, user, post):
-        download_info = self.app.active_downloader.download_single_post(site, post, service, user)
+    def start_ck_post_download(self, downloader, site, service, user, post):
+        download_info = downloader.download_single_post(site, post, service, user)
         if download_info:
             self.app.add_log_message_safe(
                 self.app.tr("DOWNLOAD_INFO", download_info=download_info)

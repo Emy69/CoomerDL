@@ -119,6 +119,3 @@ class StartupCommunityDialog(QDialog):
 
     def selected_language(self):
         return self.current_language
-
-    def dont_show_again(self):
-        return self._dont_show_again

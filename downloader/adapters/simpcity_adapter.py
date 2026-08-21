@@ -57,15 +57,19 @@ class SimpCityAdapter:
             cookies = json.load(f)
 
         if isinstance(cookies, dict):
-            cookies = [cookies]
+            if "name" in cookies and "value" in cookies:
+                # single browser-export cookie object
+                cookies = [cookies]
+            else:
+                # plain name -> value mapping, the format the settings
+                # dialog placeholder suggests
+                for name, value in cookies.items():
+                    self.scraper.cookies.set(name, str(value))
+                return
 
         for c in cookies:
             if isinstance(c, dict) and "name" in c and "value" in c:
                 self.scraper.cookies.set(c["name"], c["value"])
-
-    def can_handle(self, url: str):
-        host = urlparse(url).netloc.lower()
-        return "simpcity" in host
 
     def fetch_page(self, url):
         response = self.scraper.get(url, timeout=20)

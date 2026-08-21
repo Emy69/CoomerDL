@@ -1,7 +1,7 @@
 import os
 import re
 import uuid
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -33,22 +33,10 @@ class EromeAdapter:
     def clean_filename(filename):
         return re.sub(r'[<>:"/\\|?*]', "_", str(filename).split("?")[0])
 
-    def can_handle(self, url: str) -> bool:
-        host = urlparse(url).netloc.lower()
-        return "erome" in host
-
     def _request_soup(self, url):
         response = self.session.get(url, headers=self.headers, timeout=20)
         response.raise_for_status()
         return BeautifulSoup(response.text, "html.parser")
-
-    def resolve_url(self, url, download_images=True, download_videos=True, direct_download=False):
-        soup = self._request_soup(url)
-
-        if soup.find("h1", class_="username") or "/a/" not in url:
-            return self._resolve_profile(url, soup, download_images, download_videos, direct_download)
-
-        return self._resolve_album(url, soup, download_images, download_videos, direct_download)
 
     def _resolve_profile(self, profile_url, soup=None, download_images=True, download_videos=True, direct_download=False):
         soup = soup or self._request_soup(profile_url)

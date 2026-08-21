@@ -1,6 +1,6 @@
 import hashlib
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -51,10 +51,6 @@ class BunkrAdapter:
         folder_name = f"{default_name}_{url_hash}"
         return self.clean_filename(folder_name)
 
-    def can_handle(self, url: str) -> bool:
-        host = urlparse(url).netloc.lower()
-        return "bunkr" in host
-
     def resolve_url(self, url: str):
         if "/f/" in url:
             return self._resolve_f_url(url)
@@ -83,7 +79,7 @@ class BunkrAdapter:
                 "media": [],
             }
 
-        intermediate_url = first_anchor["href"]
+        intermediate_url = urljoin(url, first_anchor["href"])
         soup2 = self._request_soup(intermediate_url)
 
         p_tag = soup2.find("p", class_="mt-3 text-center")
@@ -107,7 +103,7 @@ class BunkrAdapter:
                 "media": [],
             }
 
-        final_download_url = download_anchor["href"]
+        final_download_url = urljoin(intermediate_url, download_anchor["href"])
         folder_name = self.get_consistent_folder_name(url, "bunkr_post")
 
         return {
@@ -219,7 +215,7 @@ class BunkrAdapter:
                 src = img_tag.get("src")
                 if src:
                     media.append({
-                        "media_url": src,
+                        "media_url": urljoin(post_url, src),
                         "title": "bunkr_post",
                         "post_id": None,
                         "published": "",
@@ -236,7 +232,7 @@ class BunkrAdapter:
             if not download_page_link or "href" not in download_page_link.attrs:
                 continue
 
-            video_page_url = download_page_link["href"]
+            video_page_url = urljoin(post_url, download_page_link["href"])
 
             try:
                 video_page_soup = self._request_soup(video_page_url)
@@ -248,7 +244,7 @@ class BunkrAdapter:
                 )
                 if download_link and download_link.get("href"):
                     media.append({
-                        "media_url": download_link["href"],
+                        "media_url": urljoin(video_page_url, download_link["href"]),
                         "title": "bunkr_post",
                         "post_id": None,
                         "published": "",

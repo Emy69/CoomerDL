@@ -79,39 +79,26 @@ class EromeDownloader(BaseApiDownloader):
 
             os.makedirs(target_folder, exist_ok=True)
 
-            if self.download_mode == "queue":
-                self.process_media_element(
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=target_folder,
-                    forced_filename=entry.get("filename"),
-                )
-            else:
-                future = self.executor.submit(
-                    self.process_media_element,
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=target_folder,
-                    forced_filename=entry.get("filename"),
-                )
-                futures.append(future)
+            future = self.executor.submit(
+                self.process_media_element,
+                media_url,
+                user_id=None,
+                post_id=entry.get("post_id"),
+                post_name=entry.get("title"),
+                post_time=entry.get("published"),
+                download_id=media_url,
+                target_folder=target_folder,
+                forced_filename=entry.get("filename"),
+            )
+            futures.append(future)
 
         self.futures = futures
 
-        if self.download_mode == "multi":
-            for future in as_completed(futures):
-                if self.cancel_requested.is_set():
-                    self.log("EROME_CANCELLING_REMAINING_DOWNLOADS")
-                    break
-                future.result()
+        for future in as_completed(futures):
+            if self.cancel_requested.is_set():
+                self.log("EROME_CANCELLING_REMAINING_DOWNLOADS")
+                break
+            future.result()
 
     def process_album_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
@@ -132,8 +119,7 @@ class EromeDownloader(BaseApiDownloader):
         except Exception as e:
             self.log("EROME_ERROR_ACCESSING_PAGE", page_url=page_url, status_code=str(e))
         finally:
-            if not self.is_profile_download and self.enable_widgets_callback:
-                self.enable_widgets_callback()
+            self.shutdown_executor()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
@@ -154,5 +140,4 @@ class EromeDownloader(BaseApiDownloader):
         except Exception as e:
             self.log("EROME_ERROR_ACCESSING_PAGE", page_url=url, status_code=str(e))
         finally:
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
+            self.shutdown_executor()

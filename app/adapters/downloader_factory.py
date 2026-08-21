@@ -99,13 +99,12 @@ class DownloaderFactory:
         downloader.file_naming_mode = settings.get("file_naming_mode", 0)
         return downloader
 
-    def create_jpg5_downloader(self, url, progress_manager=None):
+    def create_jpg5_downloader(self, url):
         return Jpg5Downloader(
             url=url,
             carpeta_destino=self.frontend.get_download_folder(),
             log_callback=self.frontend.log,
             tr=self.frontend.get_tr(),
-            progress_manager=progress_manager,
             max_workers=self.frontend.get_max_downloads(),
             **self._retry_settings(),
         )

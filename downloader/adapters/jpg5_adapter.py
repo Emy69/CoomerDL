@@ -24,10 +24,6 @@ class Jpg5Adapter:
         if self.log_callback:
             self.log_callback(self.site_name, message)
 
-    def can_handle(self, url: str) -> bool:
-        host = urlparse(url).netloc.lower()
-        return "jpg5" in host
-
     def _request_soup(self, url):
         response = self.session.get(url, headers=self.headers, timeout=20)
         response.raise_for_status()

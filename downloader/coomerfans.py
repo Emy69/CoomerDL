@@ -16,7 +16,6 @@ class CoomerfansDownloader(BaseApiDownloader):
         headers=None,
         language="en",
         is_profile_download=False,
-        direct_download=False,
         tr=None,
         max_workers=5,
         download_folder="downloads",
@@ -45,7 +44,6 @@ class CoomerfansDownloader(BaseApiDownloader):
 
         self.language = language
         self.is_profile_download = is_profile_download
-        self.direct_download = direct_download
 
         self.adapter = CoomerfansAdapter(
             session=self.session,
@@ -87,20 +85,16 @@ class CoomerfansDownloader(BaseApiDownloader):
                 download_id=media_url,
             )
 
-            if self.download_mode == "queue":
-                self.process_media_element(media_url, **kwargs)
-            else:
-                future = self.executor.submit(self.process_media_element, media_url, **kwargs)
-                futures.append(future)
+            future = self.executor.submit(self.process_media_element, media_url, **kwargs)
+            futures.append(future)
 
         self.futures = futures
 
-        if self.download_mode == "multi":
-            for future in as_completed(futures):
-                if self.cancel_requested.is_set():
-                    self.log("COOMERFANS_CANCELLING_REMAINING_DOWNLOADS")
-                    break
-                future.result()
+        for future in as_completed(futures):
+            if self.cancel_requested.is_set():
+                self.log("COOMERFANS_CANCELLING_REMAINING_DOWNLOADS")
+                break
+            future.result()
 
     def process_post_page(self, page_url, base_folder, download_images=True, download_videos=True):
         try:
@@ -112,7 +106,6 @@ class CoomerfansDownloader(BaseApiDownloader):
                 page_url,
                 download_images=download_images,
                 download_videos=download_videos,
-                direct_download=self.direct_download,
             )
 
             self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
@@ -121,8 +114,7 @@ class CoomerfansDownloader(BaseApiDownloader):
         except Exception as e:
             self.log("COOMERFANS_ERROR_ACCESSING_PAGE", page_url=page_url, status_code=str(e))
         finally:
-            if not self.is_profile_download and self.enable_widgets_callback:
-                self.enable_widgets_callback()
+            self.shutdown_executor()
 
     def process_profile_page(self, url, download_folder, download_images, download_videos):
         try:
@@ -134,7 +126,6 @@ class CoomerfansDownloader(BaseApiDownloader):
                 url,
                 download_images=download_images,
                 download_videos=download_videos,
-                direct_download=self.direct_download,
             )
 
             self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
@@ -143,5 +134,4 @@ class CoomerfansDownloader(BaseApiDownloader):
         except Exception as e:
             self.log("COOMERFANS_ERROR_ACCESSING_PAGE", page_url=url, status_code=str(e))
         finally:
-            if self.enable_widgets_callback:
-                self.enable_widgets_callback()
+            self.shutdown_executor()

@@ -6,7 +6,6 @@ from app.views.pyside.progress.progress_dialog import ProgressDialog
 
 class ProgressSignals(QObject):
     upsert_item = Signal(str, object, object, str)
-    remove_item = Signal(str)
     clear_all = Signal()
     toggle_dialog = Signal()
 
@@ -21,7 +20,6 @@ class ProgressController:
         self.items = {}
 
         self.signals.upsert_item.connect(self._upsert_item)
-        self.signals.remove_item.connect(self._remove_item)
         self.signals.clear_all.connect(self._clear_all)
         self.signals.toggle_dialog.connect(self._toggle_dialog)
 
@@ -34,9 +32,6 @@ class ProgressController:
     def update_item(self, file_id: str, file_path: str, downloaded: int, total: int, eta_text: str):
         packed_key = self._make_key(str(file_id), str(file_path))
         self.signals.upsert_item.emit(packed_key, downloaded, total, eta_text)
-
-    def remove_item(self, item_key: str):
-        self.signals.remove_item.emit(str(item_key))
 
     def clear_all(self):
         self.signals.clear_all.emit()

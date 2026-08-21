@@ -23,7 +23,6 @@ class Downloader:
         headers=None,
         max_retries=3,
         retry_interval=1.0,
-        stream_read_timeout=10,
         download_images=True,
         download_videos=True,
         download_compressed=True,
@@ -43,16 +42,13 @@ class Downloader:
             "Accept": "text/css",
         }
 
-        self.media_counter = 0
         self.session = requests.Session()
         self.max_workers = max_workers
         self.per_domain_limit = 6
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
-        self.rate_limit = Semaphore(self.max_workers)
         self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
         self.domain_last_request = defaultdict(float)
         self.rate_limit_interval = rate_limit_interval
-        self.download_mode = "multi"
 
         self.video_extensions = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".wmv", ".m4v")
         self.image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff")
@@ -68,15 +64,13 @@ class Downloader:
         self.completed_files = 0
         self.skipped_files = []
         self.failed_files = []
-        self.start_time = None
         self.tr = tr
         self.shutdown_called = False
         self.folder_structure = folder_structure
-        self.failed_retry_count = {}
         self.max_retries = max_retries
         self.retry_interval = retry_interval
-        self.stream_read_timeout = stream_read_timeout
         self.file_lock = threading.Lock()
+        self.counter_lock = threading.Lock()
         self.post_attachment_counter = defaultdict(int)
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
@@ -161,39 +155,6 @@ class Downloader:
 
     def sanitize_filename(self, filename):
         return re.sub(r'[<>:"/\\\\|?*]', "_", filename)
-
-    def set_download_mode(self, mode, max_workers):
-        if mode == "queue":
-            max_workers = 1
-
-        self.download_mode = mode
-        self.max_workers = max_workers
-
-        if self.executor:
-            self.executor.shutdown(wait=True)
-
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.rate_limit = Semaphore(max_workers)
-        self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
-
-        self.log(
-            "UPDATED_DOWNLOAD_MODE",
-            mode=mode,
-            max_workers=max_workers,
-            per_domain_limit=self.per_domain_limit,
-        )
-
-    def set_retry_settings(self, max_retries, retry_interval):
-        try:
-            max_retries = int(max_retries)
-        except (TypeError, ValueError):
-            max_retries = 0
-
-        if max_retries < 0:
-            max_retries = 0
-
-        self.max_retries = max_retries
-        self.retry_interval = retry_interval
 
     def request_cancel(self):
         self.cancel_requested.set()
@@ -420,7 +381,7 @@ class Downloader:
                         "READ_TIMEOUT_RETRY",
                         attempt=attempt + 1,
                         total=max_retries + 1,
-                        timeout=self.stream_read_timeout,
+                        timeout=self.request_timeout[1],
                     )
 
                     if attempt < max_retries:
@@ -540,7 +501,7 @@ class Downloader:
                 self.log("CK_FETCHING_USER_POSTS", api_url=api_url)
 
             try:
-                response = self.session.get(api_url, headers=self.headers)
+                response = self.session.get(api_url, headers=self.headers, timeout=self.request_timeout)
                 if response.status_code == 400:
                     self.log("CK_END_OF_POSTS_AT_OFFSET", offset=offset)
                     break
@@ -575,19 +536,6 @@ class Downloader:
             return [post for post in all_posts if post["id"] == specific_post_id]
 
         return all_posts
-
-    def fetch_single_post(self, site, post_id, service):
-        self.domain_name = self.get_domain_name(site)
-        api_url = f"https://{site}/api/v1/{service}/post/{post_id}"
-        self.log("CK_FETCHING_POST", api_url=api_url)
-
-        try:
-            response = self.session.get(api_url, headers=self.headers)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            self.log("CK_ERROR_FETCHING_POST", error=e)
-            return None
 
     def process_post(self, post, site):
         base = f"https://{site}/"
@@ -676,8 +624,9 @@ class Downloader:
             return
 
         if post_id:
-            self.post_attachment_counter[post_id] += 1
-            attachment_index = self.post_attachment_counter[post_id]
+            with self.counter_lock:
+                self.post_attachment_counter[post_id] += 1
+                attachment_index = self.post_attachment_counter[post_id]
         else:
             attachment_index = 1
 
@@ -732,7 +681,7 @@ class Downloader:
 
             total_size = int(response.headers.get("content-length", 0))
             downloaded_size = 0
-            self.start_time = time.time()
+            start_time = time.time()
             last_emit_time = 0.0
 
             try:
@@ -755,11 +704,12 @@ class Downloader:
                                 total_size=total_size,
                                 download_id=download_id,
                                 file_path=tmp_path,
-                                start_time=self.start_time,
+                                start_time=start_time,
                                 last_emit_time=last_emit_time,
                                 force=False,
                             )
 
+                zero_progress_rounds = 0
                 while total_size and downloaded_size < total_size:
                     resume_headers = self.headers.copy()
                     resume_headers["Range"] = f"bytes={downloaded_size}-"
@@ -777,7 +727,16 @@ class Downloader:
                     if part_response is None:
                         raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
 
-                    with open(tmp_path, "ab") as f:
+                    if part_response.status_code == 200:
+                        # Server ignored the Range header and sent the full file again
+                        downloaded_size = 0
+                        open_mode = "wb"
+                    else:
+                        open_mode = "ab"
+
+                    bytes_before_round = downloaded_size
+
+                    with open(tmp_path, open_mode) as f:
                         for chunk in part_response.iter_content(chunk_size=1048576):
                             if self.cancel_requested.is_set():
                                 if os.path.exists(tmp_path):
@@ -796,10 +755,17 @@ class Downloader:
                                     total_size=total_size,
                                     download_id=download_id,
                                     file_path=tmp_path,
-                                    start_time=self.start_time,
+                                    start_time=start_time,
                                     last_emit_time=last_emit_time,
                                     force=False,
                                 )
+
+                    if downloaded_size == bytes_before_round:
+                        zero_progress_rounds += 1
+                        if zero_progress_rounds >= 3:
+                            raise Exception("RESUME_NO_PROGRESS")
+                    else:
+                        zero_progress_rounds = 0
 
                 if total_size > 0 and downloaded_size != total_size:
                     raise Exception(
@@ -815,7 +781,7 @@ class Downloader:
                     total_size=total_size,
                     download_id=download_id,
                     file_path=tmp_path,
-                    start_time=self.start_time,
+                    start_time=start_time,
                     last_emit_time=last_emit_time,
                     force=True,
                 )
@@ -890,34 +856,23 @@ class Downloader:
 
             futures = []
             for entry in media_entries:
-                if self.download_mode == "queue":
-                    self.process_media_element(
-                        entry["media_url"],
-                        user_id,
-                        post_id=entry["post_id"],
-                        post_name=entry["title"],
-                        post_time=entry["published"],
-                        download_id=entry["media_url"],
-                    )
-                else:
-                    future = self.executor.submit(
-                        self.process_media_element,
-                        entry["media_url"],
-                        user_id,
-                        entry["post_id"],
-                        entry["title"],
-                        entry["published"],
-                        entry["media_url"],
-                    )
-                    futures.append(future)
+                future = self.executor.submit(
+                    self.process_media_element,
+                    entry["media_url"],
+                    user_id,
+                    entry["post_id"],
+                    entry["title"],
+                    entry["published"],
+                    entry["media_url"],
+                )
+                futures.append(future)
 
             self.futures = futures
 
-            if self.download_mode == "multi":
-                for future in as_completed(futures):
-                    if self.cancel_requested.is_set():
-                        break
-                    future.result()
+            for future in as_completed(futures):
+                if self.cancel_requested.is_set():
+                    break
+                future.result()
 
         except Exception as e:
             self.log("CK_ERROR_DURING_DOWNLOAD", error=e)
@@ -952,45 +907,28 @@ class Downloader:
             futures = []
 
             for media_url in deduped_media_urls:
-                if self.download_mode == "queue":
-                    self.process_media_element(
-                        media_url,
-                        user_id,
-                        post_id=current_post_id,
-                        post_name=title,
-                        post_time=published_time,
-                        download_id=media_url,
-                    )
-                else:
-                    future = self.executor.submit(
-                        self.process_media_element,
-                        media_url,
-                        user_id,
-                        current_post_id,
-                        title,
-                        published_time,
-                        media_url,
-                    )
-                    futures.append(future)
+                future = self.executor.submit(
+                    self.process_media_element,
+                    media_url,
+                    user_id,
+                    current_post_id,
+                    title,
+                    published_time,
+                    media_url,
+                )
+                futures.append(future)
 
             self.futures = futures
 
-            if self.download_mode == "multi":
-                for future in as_completed(futures):
-                    if self.cancel_requested.is_set():
-                        break
-                    future.result()
+            for future in as_completed(futures):
+                if self.cancel_requested.is_set():
+                    break
+                future.result()
 
         except Exception as e:
             self.log("CK_ERROR_DURING_DOWNLOAD", error=e)
         finally:
             self.shutdown_executor()
-
-    def clear_database(self):
-        with self.db_lock:
-            self.db_cursor.execute("DELETE FROM downloads")
-            self.db_connection.commit()
-        self.log("DATABASE_CLEARED")
 
     def update_max_downloads(self, new_max):
         try:
@@ -1004,10 +942,11 @@ class Downloader:
         self.max_workers = new_max
 
         if self.executor:
-            self.executor.shutdown(wait=True)
+            # wait=False: blocking here would freeze the UI thread while
+            # in-flight downloads finish; they drain on the old executor.
+            self.executor.shutdown(wait=False)
 
         self.executor = ThreadPoolExecutor(max_workers=new_max)
-        self.rate_limit = Semaphore(new_max)
         self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
 
         self.log(

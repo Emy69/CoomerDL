@@ -23,7 +23,6 @@ class BaseApiDownloader:
         headers=None,
         max_retries=3,
         retry_interval=1.0,
-        stream_read_timeout=10,
         download_images=True,
         download_videos=True,
         download_compressed=True,
@@ -46,11 +45,9 @@ class BaseApiDownloader:
         self.max_workers = max_workers
         self.per_domain_limit = 2
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
-        self.rate_limit = Semaphore(self.max_workers)
         self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
         self.domain_last_request = defaultdict(float)
         self.rate_limit_interval = rate_limit_interval
-        self.download_mode = "multi"
 
         self.video_extensions = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".wmv", ".m4v")
         self.image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff")
@@ -66,15 +63,13 @@ class BaseApiDownloader:
         self.completed_files = 0
         self.skipped_files = []
         self.failed_files = []
-        self.start_time = None
         self.tr = tr
         self.shutdown_called = False
         self.folder_structure = folder_structure
-        self.failed_retry_count = {}
         self.max_retries = max_retries
         self.retry_interval = retry_interval
-        self.stream_read_timeout = stream_read_timeout
         self.file_lock = threading.Lock()
+        self.counter_lock = threading.Lock()
         self.post_attachment_counter = defaultdict(int)
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
@@ -160,31 +155,6 @@ class BaseApiDownloader:
                     self.db_connection.close()
                 except Exception:
                     pass
-
-    def set_download_mode(self, mode, max_workers):
-        if mode == "queue":
-            max_workers = 1
-
-        self.download_mode = mode
-        self.max_workers = max_workers
-
-        if self.executor:
-            self.executor.shutdown(wait=True)
-
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.rate_limit = Semaphore(max_workers)
-        self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
-
-        self.log(
-            "UPDATED_DOWNLOAD_MODE",
-            mode=mode,
-            max_workers=max_workers,
-            per_domain_limit=self.per_domain_limit,
-        )
-
-    def set_retry_settings(self, max_retries, retry_interval):
-        self.max_retries = max_retries
-        self.retry_interval = retry_interval
 
     def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1, post_time=None):
         base_name = os.path.basename(media_url).split("?")[0]
@@ -302,7 +272,7 @@ class BaseApiDownloader:
                             "READ_TIMEOUT_RETRY",
                             attempt=attempt + 1,
                             total=max_retries + 1,
-                            timeout=self.stream_read_timeout,
+                            timeout=self.request_timeout[1],
                         )
                         time.sleep(self.retry_interval)
 
@@ -386,8 +356,9 @@ class BaseApiDownloader:
             return
 
         if post_id:
-            self.post_attachment_counter[post_id] += 1
-            attachment_index = self.post_attachment_counter[post_id]
+            with self.counter_lock:
+                self.post_attachment_counter[post_id] += 1
+                attachment_index = self.post_attachment_counter[post_id]
         else:
             attachment_index = 1
 
@@ -418,44 +389,77 @@ class BaseApiDownloader:
 
         self.log("STARTING_DOWNLOAD_FROM", media_url=media_url)
 
-        for attempt in range(self.max_retries + 1):
-            if self.cancel_requested.is_set():
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-                self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
-                return
+        response = self.safe_request(media_url, max_retries=self.max_retries)
 
-            response = self.safe_request(media_url, max_retries=self.max_retries)
+        if response is None:
+            self.log(
+                "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
+                media_url=media_url,
+                total=self.max_retries + 1,
+            )
+            with self.file_lock:
+                self.failed_files.append(media_url)
+            return
 
-            if response is None:
-                if attempt < self.max_retries:
-                    self.log(
-                        "INITIAL_REQUEST_FAILED_RESUMING",
-                        media_url=media_url,
-                        retry_interval=self.retry_interval,
-                        attempt=attempt + 1,
-                        total=self.max_retries + 1,
-                    )
-                    time.sleep(self.retry_interval)
-                    continue
-                break
+        try:
+            total_size = int(response.headers.get("content-length", 0))
+            downloaded_size = 0
+            start_time = time.time()
 
-            try:
-                total_size = int(response.headers.get("content-length", 0))
-                downloaded_size = 0
-                self.start_time = time.time()
+            with open(tmp_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1048576):
+                    if self.cancel_requested.is_set():
+                        raise Exception("CANCELLATION_REQUESTED")
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_size += len(chunk)
+                        if self.update_progress_callback:
+                            elapsed_time = time.time() - start_time
+                            speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
+                            remaining_time = (total_size - downloaded_size) / speed if speed > 0 and total_size > 0 else 0
+                            self.update_progress_callback(
+                                downloaded_size,
+                                total_size,
+                                file_id=download_id,
+                                file_path=tmp_path,
+                                speed=speed,
+                                eta=remaining_time,
+                            )
 
-                with open(tmp_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=1048576):
+            zero_progress_rounds = 0
+            while total_size and downloaded_size < total_size:
+                resume_headers = self.headers.copy()
+                resume_headers["Range"] = f"bytes={downloaded_size}-"
+                self.log(
+                    "RESUMING_DOWNLOAD_AT_BYTE",
+                    downloaded_size=downloaded_size,
+                    media_url=media_url,
+                )
+
+                part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
+                if part_response is None:
+                    raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
+
+                if part_response.status_code == 200:
+                    # Server ignored the Range header and sent the full file again
+                    downloaded_size = 0
+                    open_mode = "wb"
+                else:
+                    open_mode = "ab"
+
+                bytes_before_round = downloaded_size
+
+                with open(tmp_path, open_mode) as f:
+                    for chunk in part_response.iter_content(chunk_size=1048576):
                         if self.cancel_requested.is_set():
                             raise Exception("CANCELLATION_REQUESTED")
                         if chunk:
                             f.write(chunk)
                             downloaded_size += len(chunk)
                             if self.update_progress_callback:
-                                elapsed_time = time.time() - self.start_time
+                                elapsed_time = time.time() - start_time
                                 speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 and total_size > 0 else 0
                                 self.update_progress_callback(
                                     downloaded_size,
                                     total_size,
@@ -465,96 +469,63 @@ class BaseApiDownloader:
                                     eta=remaining_time,
                                 )
 
-                while total_size and downloaded_size < total_size:
-                    resume_headers = self.headers.copy()
-                    resume_headers["Range"] = f"bytes={downloaded_size}-"
-                    self.log(
-                        "RESUMING_DOWNLOAD_AT_BYTE",
-                        downloaded_size=downloaded_size,
-                        media_url=media_url,
+                if downloaded_size == bytes_before_round:
+                    zero_progress_rounds += 1
+                    if zero_progress_rounds >= 3:
+                        raise Exception("RESUME_NO_PROGRESS")
+                else:
+                    zero_progress_rounds = 0
+
+            if total_size > 0 and downloaded_size != total_size:
+                raise Exception(
+                    self._translate_text(
+                        "FINAL_SIZE_MISMATCH",
+                        expected=total_size,
+                        actual=downloaded_size,
                     )
+                )
 
-                    part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
-                    if part_response is None:
-                        raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
+            with self.file_lock:
+                if os.path.exists(final_path):
+                    os.remove(final_path)
+                os.rename(tmp_path, final_path)
+                self.completed_files += 1
 
-                    with open(tmp_path, "ab") as f:
-                        for chunk in part_response.iter_content(chunk_size=1048576):
-                            if self.cancel_requested.is_set():
-                                raise Exception("CANCELLATION_REQUESTED")
-                            if chunk:
-                                f.write(chunk)
-                                downloaded_size += len(chunk)
-                                if self.update_progress_callback:
-                                    elapsed_time = time.time() - self.start_time
-                                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
-                                    self.update_progress_callback(
-                                        downloaded_size,
-                                        total_size,
-                                        file_id=download_id,
-                                        file_path=tmp_path,
-                                        speed=speed,
-                                        eta=remaining_time,
-                                    )
+            self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
 
-                if total_size > 0 and downloaded_size != total_size:
-                    raise Exception(
-                        self._translate_text(
-                            "FINAL_SIZE_MISMATCH",
-                            expected=total_size,
-                            actual=downloaded_size,
-                        )
-                    )
+            if self.update_global_progress_callback:
+                self.update_global_progress_callback(self.completed_files, self.total_files)
 
-                with self.file_lock:
-                    if os.path.exists(final_path):
-                        os.remove(final_path)
-                    os.rename(tmp_path, final_path)
-                    self.completed_files += 1
+            with self.db_lock:
+                self.db_cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (media_url, final_path, total_size, user_id, post_id),
+                )
+                self.db_connection.commit()
 
-                self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
+            self.download_cache[media_url] = (final_path, total_size)
 
-                if self.update_global_progress_callback:
-                    self.update_global_progress_callback(self.completed_files, self.total_files)
+        except Exception as e:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
 
-                with self.db_lock:
-                    self.db_cursor.execute(
-                        """
-                        INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
-                        VALUES (?, ?, ?, ?, ?)
-                        """,
-                        (media_url, final_path, total_size, user_id, post_id),
-                    )
-                    self.db_connection.commit()
-
-                self.download_cache[media_url] = (final_path, total_size)
+            if str(e) == "CANCELLATION_REQUESTED" or str(e) == self._translate_text("CANCELLATION_REQUESTED"):
+                self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
                 return
 
-            except Exception as e:
-                if str(e) == "CANCELLATION_REQUESTED" or str(e) == self._translate_text("CANCELLATION_REQUESTED"):
-                    if os.path.exists(tmp_path):
-                        os.remove(tmp_path)
-                    self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)
-                    return
-
-                if attempt < self.max_retries:
-                    time.sleep(self.retry_interval)
-                    continue
-
-        self.log(
-            "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
-            media_url=media_url,
-            total=self.max_retries + 1,
-        )
-        with self.file_lock:
-            self.failed_files.append(media_url)
-
-    def clear_database(self):
-        with self.db_lock:
-            self.db_cursor.execute("DELETE FROM downloads")
-            self.db_connection.commit()
-        self.log("DATABASE_CLEARED")
+            self.log(
+                "FAILED_TO_DOWNLOAD_AFTER_ATTEMPTS",
+                media_url=media_url,
+                total=self.max_retries + 1,
+            )
+            with self.file_lock:
+                self.failed_files.append(media_url)
 
     def update_max_downloads(self, new_max):
         try:
@@ -574,7 +545,6 @@ class BaseApiDownloader:
             self.executor.shutdown(wait=False)
 
         self.executor = ThreadPoolExecutor(max_workers=new_max)
-        self.rate_limit = Semaphore(new_max)
         self.domain_locks = defaultdict(lambda: Semaphore(self.per_domain_limit))
 
         self.log(

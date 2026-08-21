@@ -6,37 +6,15 @@ from downloader.adapters.bunkr_adapter import BunkrAdapter
 
 
 class BunkrDownloader(BaseApiDownloader):
-    def __init__(self, *args, translations=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.translations = translations or {}
         self.adapter = BunkrAdapter(
             session=self.session,
             headers=self.headers,
             log_callback=self.log_callback,
-            tr=self._translate_message,
+            tr=self._translate_text,
         )
         self.domain_name = "bunkr"
-
-    def _translate_message(self, key, **kwargs):
-        if callable(self.tr):
-            try:
-                return self.tr(key, **kwargs)
-            except TypeError:
-                text = self.tr(key)
-                if kwargs:
-                    try:
-                        return text.format(**kwargs)
-                    except Exception:
-                        return text
-                return text
-
-        text = self.translations.get(key, key)
-        if kwargs:
-            try:
-                return text.format(**kwargs)
-            except Exception:
-                return text
-        return text
 
     def descargar_post_bunkr(self, url_post):
         try:
@@ -55,28 +33,17 @@ class BunkrDownloader(BaseApiDownloader):
 
             for entry in media_entries:
                 media_url = entry["media_url"]
-                if self.download_mode == "queue":
-                    self.process_media_element(
-                        media_url,
-                        user_id=None,
-                        post_id=entry["post_id"],
-                        post_name=entry["title"],
-                        post_time=entry["published"],
-                        download_id=media_url,
-                        target_folder=target_folder,
-                    )
-                else:
-                    future = self.executor.submit(
-                        self.process_media_element,
-                        media_url,
-                        user_id=None,
-                        post_id=entry["post_id"],
-                        post_name=entry["title"],
-                        post_time=entry["published"],
-                        download_id=media_url,
-                        target_folder=target_folder,
-                    )
-                    futures.append(future)
+                future = self.executor.submit(
+                    self.process_media_element,
+                    media_url,
+                    user_id=None,
+                    post_id=entry["post_id"],
+                    post_name=entry["title"],
+                    post_time=entry["published"],
+                    download_id=media_url,
+                    target_folder=target_folder,
+                )
+                futures.append(future)
 
             self.futures = futures
 
@@ -107,28 +74,17 @@ class BunkrDownloader(BaseApiDownloader):
 
             for entry in media_entries:
                 media_url = entry["media_url"]
-                if self.download_mode == "queue":
-                    self.process_media_element(
-                        media_url,
-                        user_id=None,
-                        post_id=entry["post_id"],
-                        post_name=entry["title"],
-                        post_time=entry["published"],
-                        download_id=media_url,
-                        target_folder=target_folder,
-                    )
-                else:
-                    future = self.executor.submit(
-                        self.process_media_element,
-                        media_url,
-                        user_id=None,
-                        post_id=entry["post_id"],
-                        post_name=entry["title"],
-                        post_time=entry["published"],
-                        download_id=media_url,
-                        target_folder=target_folder,
-                    )
-                    futures.append(future)
+                future = self.executor.submit(
+                    self.process_media_element,
+                    media_url,
+                    user_id=None,
+                    post_id=entry["post_id"],
+                    post_name=entry["title"],
+                    post_time=entry["published"],
+                    download_id=media_url,
+                    target_folder=target_folder,
+                )
+                futures.append(future)
 
             self.futures = futures
 
@@ -141,6 +97,3 @@ class BunkrDownloader(BaseApiDownloader):
             self.log("BUNKR_ERROR_PROCESSING_PROFILE", url=url_perfil, error=e)
         finally:
             self.shutdown_executor()
-
-    def set_max_downloads(self, max_downloads):
-        self.update_max_downloads(max_downloads)

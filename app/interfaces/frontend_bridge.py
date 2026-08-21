@@ -19,10 +19,6 @@ class FrontendBridge(ABC):
         pass
 
     @abstractmethod
-    def show_error(self, title: str, message: str):
-        pass
-
-    @abstractmethod
     def get_download_folder(self) -> str:
         pass
 

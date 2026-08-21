@@ -57,30 +57,18 @@ class SimpCity(BaseApiDownloader):
             for entry in media_entries:
                 media_url = entry["media_url"]
 
-                if self.download_mode == "queue":
-                    self.process_media_element(
-                        media_url,
-                        user_id=None,
-                        post_id=entry.get("post_id"),
-                        post_name=entry.get("title"),
-                        post_time=entry.get("published"),
-                        download_id=media_url,
-                        target_folder=target_folder,
-                        forced_filename=entry.get("filename"),
-                    )
-                else:
-                    future = self.executor.submit(
-                        self.process_media_element,
-                        media_url,
-                        user_id=None,
-                        post_id=entry.get("post_id"),
-                        post_name=entry.get("title"),
-                        post_time=entry.get("published"),
-                        download_id=media_url,
-                        target_folder=target_folder,
-                        forced_filename=entry.get("filename"),
-                    )
-                    futures.append(future)
+                future = self.executor.submit(
+                    self.process_media_element,
+                    media_url,
+                    user_id=None,
+                    post_id=entry.get("post_id"),
+                    post_name=entry.get("title"),
+                    post_time=entry.get("published"),
+                    download_id=media_url,
+                    target_folder=target_folder,
+                    forced_filename=entry.get("filename"),
+                )
+                futures.append(future)
 
             self.futures = futures
 

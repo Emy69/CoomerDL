@@ -10,7 +10,6 @@ class Jpg5Downloader(BaseApiDownloader):
         self,
         url,
         carpeta_destino,
-        progress_manager,
         log_callback=None,
         tr=None,
         update_progress_callback=None,
@@ -33,7 +32,6 @@ class Jpg5Downloader(BaseApiDownloader):
             retry_interval=retry_interval,
         )
         self.url = url
-        self.progress_manager = progress_manager
         self.adapter = Jpg5Adapter(
             session=self.session,
             headers=self.headers,
@@ -43,34 +41,23 @@ class Jpg5Downloader(BaseApiDownloader):
         self.domain_name = "jpg5"
 
     def descargar_imagenes(self):
-        os.makedirs(self.download_folder, exist_ok=True)
+        try:
+            os.makedirs(self.download_folder, exist_ok=True)
 
-        resolved = self.adapter.resolve_gallery(self.url)
-        media_entries = resolved["media"]
+            resolved = self.adapter.resolve_gallery(self.url)
+            media_entries = resolved["media"]
 
-        self.total_files = len(media_entries)
-        self.completed_files = 0
-        futures = []
+            self.total_files = len(media_entries)
+            self.completed_files = 0
+            futures = []
 
-        for entry in media_entries:
-            media_url = entry["media_url"]
+            for entry in media_entries:
+                media_url = entry["media_url"]
 
-            if self.cancel_requested.is_set():
-                self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
-                return
+                if self.cancel_requested.is_set():
+                    self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
+                    return
 
-            if self.download_mode == "queue":
-                self.process_media_element(
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=self.download_folder,
-                    forced_filename=entry.get("filename"),
-                )
-            else:
                 future = self.executor.submit(
                     self.process_media_element,
                     media_url,
@@ -84,12 +71,15 @@ class Jpg5Downloader(BaseApiDownloader):
                 )
                 futures.append(future)
 
-        self.futures = futures
+            self.futures = futures
 
-        for future in as_completed(futures):
-            if self.cancel_requested.is_set():
-                self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
-                break
-            future.result()
+            for future in as_completed(futures):
+                if self.cancel_requested.is_set():
+                    self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
+                    break
+                future.result()
 
-        self.shutdown_executor()
+        except Exception as e:
+            self.log("JPG5_ERROR_PROCESSING_GALLERY", url=self.url, error=e)
+        finally:
+            self.shutdown_executor()

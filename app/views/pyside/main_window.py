@@ -142,8 +142,6 @@ class PySideMainWindow(QMainWindow):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        top_row = QHBoxLayout()
-
         menu_bar = self.menuBar()
 
         self.file_menu = menu_bar.addMenu("File")
@@ -190,12 +188,6 @@ class PySideMainWindow(QMainWindow):
     def toggle_progress_details(self):
         self.progress_controller.toggle_dialog()
 
-    def remove_progress_bar(self, item_key):
-        self.progress_controller.remove_item(str(item_key))
-
-    def center_progress_details_frame(self):
-        pass
-    
     def open_settings_dialog(self):
         dialog = SettingsDialog(
             parent=self,
@@ -222,7 +214,6 @@ class PySideMainWindow(QMainWindow):
 
         if not should_show:
             self.show()
-            self.start_site_status_check()
             return
 
         dialog = StartupCommunityDialog(
@@ -269,7 +260,7 @@ class PySideMainWindow(QMainWindow):
             self.support_action.setText(self.tr("Patreons"))
 
         if hasattr(self, "footer_bar") and hasattr(self.footer_bar, "progress_details_button"):
-            self.footer_bar.progress_details_button.setToolTip(self.tr("Progress Details"))
+            self.footer_bar.progress_details_button.setToolTip(self.tr("PROGRESS_DETAILS"))
 
         if hasattr(self, "progress_controller") and self.progress_controller is not None:
             if hasattr(self.progress_controller, "dialog") and self.progress_controller.dialog is not None:
@@ -308,6 +299,10 @@ class PySideMainWindow(QMainWindow):
 
     def prepare_download_ui(self):
         self.download_start_time = datetime.datetime.now()
+        # Captured on the GUI thread; export_logs runs on the worker thread
+        # and must not touch live widgets.
+        self._download_images_at_start = bool(self.download_images_check.get())
+        self._download_videos_at_start = bool(self.download_videos_check.get())
         self.log_service.clear_runtime()
         self.signals.set_download_enabled.emit(False)
         self.signals.set_cancel_enabled.emit(True)
@@ -345,12 +340,12 @@ class PySideMainWindow(QMainWindow):
         with self._pending_log_lock:
             self._pending_log_lines.append(html)
 
-    def export_logs(self):
+    def export_logs(self, active_downloader=None):
         try:
             log_file_path = self.log_service.export_logs(
-                active_downloader=self.active_downloader,
-                download_images_enabled=bool(self.download_images_check.get()),
-                download_videos_enabled=bool(self.download_videos_check.get()),
+                active_downloader=active_downloader if active_downloader is not None else self.active_downloader,
+                download_images_enabled=getattr(self, "_download_images_at_start", True),
+                download_videos_enabled=getattr(self, "_download_videos_at_start", True),
                 download_start_time=self.download_start_time,
             )
             self.signals.log_message.emit(self.tr("LOGS_EXPORTED_SUCCESSFULLY_TO", path=log_file_path))
@@ -372,6 +367,9 @@ class PySideMainWindow(QMainWindow):
 
         if not hasattr(self, "_footer_hold_seconds"):
             self._footer_hold_seconds = 0.8
+
+        if status is not None:
+            self.signals.footer_eta.emit(f"ETA: N/A | STATUS:{status}")
 
         if file_id is None:
             if total and total > 0:
@@ -465,9 +463,6 @@ class PySideMainWindow(QMainWindow):
         elif now - self._last_footer_activity_ts > self._footer_hold_seconds:
             self.signals.footer_total_size.emit("Total: 0 B")
 
-        if status is not None:
-            self.signals.footer_eta.emit(f"ETA: N/A | STATUS:{status}")
-
     def update_global_progress(self, completed_files, total_files):
         self.signals.global_progress.emit(int(completed_files), int(total_files))
 
@@ -490,8 +485,7 @@ class PySideMainWindow(QMainWindow):
 
     def setup_jpg5_downloader(self):
         self.active_downloader = self.downloader_factory.create_jpg5_downloader(
-            self.url_entry.get().strip(),
-            progress_manager=None
+            self.url_entry.get().strip()
         )
 
     def setup_coomerfans_downloader(self, is_profile_download=False):
@@ -511,7 +505,7 @@ class PySideMainWindow(QMainWindow):
         self.main_controller.cancel_download()
 
     def select_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, self.tr("Seleccionar Carpeta"), self.download_folder or "")
+        folder = QFileDialog.getExistingDirectory(self, self.tr("SELECT_FOLDER"), self.download_folder or "")
         if folder:
             self.download_folder = folder
             self.app_state.download_folder = folder
@@ -593,25 +587,6 @@ class PySideMainWindow(QMainWindow):
     def footer_set_eta(self, text: str):
         self.footer_bar.eta_label.setText(text)
 
-    def footer_set_speed_from_value(self, speed):
-        if speed is None:
-            self.footer_set_speed("Speed: 0 KB/s")
-            return
-
-        if speed < 1_048_576:
-            self.footer_set_speed(f"Speed: {speed / 1024:.2f} KB/s")
-        else:
-            self.footer_set_speed(f"Speed: {speed / 1_048_576:.2f} MB/s")
-
-    def footer_set_eta_from_value(self, eta):
-        if eta is None:
-            self.footer_set_eta("ETA: N/A")
-            return
-
-        minutes = int(eta // 60)
-        seconds = int(eta % 60)
-        self.footer_set_eta(f"ETA: {minutes}m {seconds}s")
-        
     def _format_bytes(self, num_bytes):
         try:
             value = float(num_bytes or 0)
