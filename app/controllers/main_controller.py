@@ -262,6 +262,7 @@ class MainController:
 
         if download_thread:
             download_thread.start()
+            self.app.download_thread = download_thread
 
     def wrapped_download(self, downloader, download_method, *args):
         try:

@@ -232,5 +232,6 @@
   "Video": "Video",
   "Document": "Documento",
   "Compressed": "Comprimido",
-  "Other": "Otro"
+  "Other": "Otro",
+  "EXIT_DOWNLOAD_IN_PROGRESS": "Aún hay una descarga en curso o cancelándose. Si cierras ahora se interrumpirá. ¿Cerrar de todos modos?"
 }

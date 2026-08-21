@@ -94,6 +94,7 @@ class PySideMainWindow(QMainWindow):
         self.progress_controller = ProgressController(self)
         # runtime
         self.active_downloader = None
+        self.download_thread = None
         self.download_start_time = None
         self.settings = self.settings_service.load_settings()
         self.max_downloads = int(self.settings.get("max_downloads", 3))
@@ -503,6 +504,31 @@ class PySideMainWindow(QMainWindow):
 
     def cancel_download(self):
         self.main_controller.cancel_download()
+
+    def closeEvent(self, event):
+        # The download threads are daemons: closing the window kills them
+        # mid-write, so warn while one is still running or still cancelling.
+        thread_alive = self.download_thread is not None and self.download_thread.is_alive()
+
+        if self.active_downloader is not None or thread_alive:
+            reply = QMessageBox.question(
+                self,
+                self.tr("CONFIRM"),
+                self.tr("EXIT_DOWNLOAD_IN_PROGRESS"),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if reply != QMessageBox.Yes:
+                event.ignore()
+                return
+
+            if self.active_downloader is not None:
+                try:
+                    self.active_downloader.request_cancel()
+                except Exception:
+                    pass
+
+        event.accept()
 
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, self.tr("SELECT_FOLDER"), self.download_folder or "")
