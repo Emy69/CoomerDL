@@ -233,5 +233,7 @@
   "Document": "Documento",
   "Compressed": "Comprimido",
   "Other": "Otro",
-  "EXIT_DOWNLOAD_IN_PROGRESS": "Aún hay una descarga en curso o cancelándose. Si cierras ahora se interrumpirá. ¿Cerrar de todos modos?"
+  "EXIT_DOWNLOAD_IN_PROGRESS": "Aún hay una descarga en curso o cancelándose. Si cierras ahora se interrumpirá. ¿Cerrar de todos modos?",
+  "COOMERFANS_CACHE_SUMMARY": "Perfil procesado: {cached} posts reutilizados de la caché, {scraped} procesados nuevos",
+  "EROME_CACHE_SUMMARY": "Perfil procesado: {cached} álbumes reutilizados de la caché, {scraped} procesados nuevos"
 }

@@ -233,5 +233,7 @@
   "Document": "Document",
   "Compressed": "Compressed",
   "Other": "Other",
-  "EXIT_DOWNLOAD_IN_PROGRESS": "A download is still in progress or still being cancelled. If you close now it will be interrupted. Close anyway?"
+  "EXIT_DOWNLOAD_IN_PROGRESS": "A download is still in progress or still being cancelled. If you close now it will be interrupted. Close anyway?",
+  "COOMERFANS_CACHE_SUMMARY": "Profile processed: {cached} posts reused from cache, {scraped} newly scraped",
+  "EROME_CACHE_SUMMARY": "Profile processed: {cached} albums reused from cache, {scraped} newly scraped"
 }

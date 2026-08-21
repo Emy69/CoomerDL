@@ -5,11 +5,14 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from downloader.adapters.resolution_cache import ResolutionCache
+
 
 class EromeAdapter:
     site_name = "erome"
 
-    def __init__(self, session, headers=None, log_callback=None, tr=None):
+    def __init__(self, session, headers=None, log_callback=None, tr=None,
+                 should_cancel=None, cache_db_path="resources/config/downloads.db"):
         self.session = session
         self.headers = {
             k: str(v).encode("ascii", "ignore").decode("ascii")
@@ -20,6 +23,10 @@ class EromeAdapter:
         }
         self.log_callback = log_callback
         self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
+        self.should_cancel = should_cancel
+        self._album_cache = ResolutionCache("erome_album_cache", db_path=cache_db_path)
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def log(self, message, **kwargs):
         if kwargs:
@@ -32,6 +39,9 @@ class EromeAdapter:
     @staticmethod
     def clean_filename(filename):
         return re.sub(r'[<>:"/\\|?*]', "_", str(filename).split("?")[0])
+
+    def _cancelled(self):
+        return callable(self.should_cancel) and self.should_cancel()
 
     def _request_soup(self, url):
         response = self.session.get(url, headers=self.headers, timeout=20)
@@ -47,8 +57,13 @@ class EromeAdapter:
 
         media = []
         album_links = soup.find_all("a", class_="album-link")
+        self._cache_hits = 0
+        self._cache_misses = 0
 
         for album_link in album_links:
+            if self._cancelled():
+                break
+
             href = album_link.get("href")
             if not href:
                 continue
@@ -67,11 +82,85 @@ class EromeAdapter:
             except Exception as e:
                 self.log("EROME_ERROR_RESOLVING_ALBUM", url=album_url, error=e)
 
+        if self._cache_hits or self._cache_misses:
+            self.log(
+                "EROME_CACHE_SUMMARY",
+                cached=self._cache_hits,
+                scraped=self._cache_misses,
+            )
+
         return {
             "mode": "profile",
             "folder_name": base_folder_name,
             "media": media,
         }
+
+    def _scrape_album_media(self, soup, album_url):
+        """
+        Scrapes every video and image of an album page, regardless of the
+        current download filters, so the result can be cached and reused
+        with any filter combination.
+        Returns a list of {"media_url", "resource_type", "filename"} dicts.
+        """
+        items = []
+        seen_urls = set()
+
+        for video in soup.find_all("video"):
+            source = video.find("source")
+            if not source:
+                continue
+            src = source.get("src")
+            if not src:
+                continue
+
+            abs_video_src = urljoin(album_url, src)
+            if abs_video_src in seen_urls:
+                continue
+            seen_urls.add(abs_video_src)
+
+            items.append({
+                "media_url": abs_video_src,
+                "resource_type": "Video",
+                "filename": self.clean_filename(os.path.basename(abs_video_src.split("?")[0])),
+            })
+
+        for div in soup.select("div.img"):
+            img = (
+                div.find("img", attrs={"data-src": True})
+                or div.find("img", attrs={"src": True})
+            )
+            if not img:
+                continue
+
+            raw_src = img.get("data-src") or img.get("src")
+            if not raw_src:
+                continue
+
+            abs_img_src = urljoin(album_url, raw_src)
+            lower_src = abs_img_src.lower()
+
+            if lower_src.startswith("data:"):
+                continue
+            if any(x in lower_src for x in ["/avatar/", "/users/", "/profile/", "/static/", "/assets/", "/images/"]):
+                continue
+            if any(x in lower_src for x in ["bg.jpg", "background", "avatar", "cover", "logo", "icon", "banner", "profile"]):
+                continue
+            if abs_img_src in seen_urls:
+                continue
+
+            seen_urls.add(abs_img_src)
+
+            filename = os.path.basename(abs_img_src.split("?")[0])
+            if not filename:
+                filename = f"image_{uuid.uuid4().hex[:8]}.jpg"
+
+            items.append({
+                "media_url": abs_img_src,
+                "resource_type": "Image",
+                "filename": self.clean_filename(filename),
+            })
+
+        return items
 
     def _resolve_album(
         self,
@@ -82,9 +171,25 @@ class EromeAdapter:
         direct_download=False,
         inherited_base_folder=None,
     ):
-        soup = soup or self._request_soup(album_url)
+        cached = None
+        if soup is None:
+            cached = self._album_cache.load(album_url)
+            if not (isinstance(cached, dict) and isinstance(cached.get("items"), list)):
+                cached = None
 
-        album_title = soup.find("h1").text if soup.find("h1") else self.tr("EROME_UNKNOWN_ALBUM")
+        if cached is None:
+            self._cache_misses += 1
+            soup = soup or self._request_soup(album_url)
+            album_title = soup.find("h1").text if soup.find("h1") else self.tr("EROME_UNKNOWN_ALBUM")
+            cached = {
+                "album_title": album_title,
+                "items": self._scrape_album_media(soup, album_url),
+            }
+            self._album_cache.store(album_url, cached)
+        else:
+            self._cache_hits += 1
+
+        album_title = cached.get("album_title") or self.tr("EROME_UNKNOWN_ALBUM")
         album_folder_name = self.clean_filename(album_title)
 
         if direct_download and inherited_base_folder:
@@ -95,72 +200,22 @@ class EromeAdapter:
             effective_folder = album_folder_name
 
         media = []
-        seen_urls = set()
+        for item in cached["items"]:
+            resource_type = item.get("resource_type")
+            if resource_type == "Video" and not download_videos:
+                continue
+            if resource_type == "Image" and not download_images:
+                continue
 
-        if download_videos:
-            for video in soup.find_all("video"):
-                source = video.find("source")
-                if not source:
-                    continue
-                src = source.get("src")
-                if not src:
-                    continue
-
-                abs_video_src = urljoin(album_url, src)
-                if abs_video_src in seen_urls:
-                    continue
-                seen_urls.add(abs_video_src)
-
-                media.append({
-                    "media_url": abs_video_src,
-                    "post_id": None,
-                    "title": album_folder_name,
-                    "published": "",
-                    "folder_name": effective_folder,
-                    "resource_type": "Video",
-                    "filename": self.clean_filename(os.path.basename(abs_video_src.split("?")[0])),
-                })
-
-        if download_images:
-            for div in soup.select("div.img"):
-                img = (
-                    div.find("img", attrs={"data-src": True})
-                    or div.find("img", attrs={"src": True})
-                )
-                if not img:
-                    continue
-
-                raw_src = img.get("data-src") or img.get("src")
-                if not raw_src:
-                    continue
-
-                abs_img_src = urljoin(album_url, raw_src)
-                lower_src = abs_img_src.lower()
-
-                if lower_src.startswith("data:"):
-                    continue
-                if any(x in lower_src for x in ["/avatar/", "/users/", "/profile/", "/static/", "/assets/", "/images/"]):
-                    continue
-                if any(x in lower_src for x in ["bg.jpg", "background", "avatar", "cover", "logo", "icon", "banner", "profile"]):
-                    continue
-                if abs_img_src in seen_urls:
-                    continue
-
-                seen_urls.add(abs_img_src)
-
-                filename = os.path.basename(abs_img_src.split("?")[0])
-                if not filename:
-                    filename = f"image_{uuid.uuid4().hex[:8]}.jpg"
-
-                media.append({
-                    "media_url": abs_img_src,
-                    "post_id": None,
-                    "title": album_folder_name,
-                    "published": "",
-                    "folder_name": effective_folder,
-                    "resource_type": "Image",
-                    "filename": self.clean_filename(filename),
-                })
+            media.append({
+                "media_url": item.get("media_url"),
+                "post_id": None,
+                "title": album_folder_name,
+                "published": "",
+                "folder_name": effective_folder,
+                "resource_type": resource_type,
+                "filename": item.get("filename"),
+            })
 
         return {
             "mode": "album",
