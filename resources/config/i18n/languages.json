@@ -9,5 +9,7 @@
       "name": "Español"
     }
   ],
-  "community": []
+  "community": [
+    { "code": "tr", "name": "Türkçe" }
+  ]
 }
