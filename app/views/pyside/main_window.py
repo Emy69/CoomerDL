@@ -1,14 +1,15 @@
 import datetime
 from collections import deque
 import os
+import re
 import subprocess
 import sys
 import threading
 
 import time
 from typing import Optional
-from PySide6.QtCore import QObject, Signal, QTimer
-from PySide6.QtGui import QAction
+from PySide6.QtCore import QObject, Signal, QTimer, Qt
+from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -20,6 +21,12 @@ from PySide6.QtWidgets import (
 
 from app.controllers.main_controller import MainController
 from app.models.app_state import AppState
+from app.models.profile_session import (
+    MAX_PROFILES_PER_SESSION,
+    ProfileQueueItem,
+    ProfileStatus,
+    TERMINAL_STATUSES,
+)
 from app.services.settings_service import SettingsService
 from app.services.translation_service import TranslationService
 from app.services.log_service import LogService
@@ -101,6 +108,9 @@ class PySideMainWindow(QMainWindow):
         self.download_thread = None
         self.download_start_time = None
         self._session_active = False
+        self._session_is_ui_bound = False
+        # In-memory only: the profile list is never persisted nor restored.
+        self.profile_queue = []
         self.settings = self.settings_service.load_settings()
         self.max_downloads = int(self.settings.get("max_downloads", 3))
         
@@ -126,6 +136,9 @@ class PySideMainWindow(QMainWindow):
         self.signals.clear_logs.connect(self._clear_logs)
         self.signals.show_error_box.connect(self._show_error_dialog)
         self.signals.reset_progress.connect(self.clear_progress_bars)
+        self.signals.session_item_status.connect(self._on_session_item_status)
+        self.signals.session_progress.connect(self._on_session_progress)
+        self.signals.session_finished.connect(self._on_session_finished)
 
         self._build_ui()
         self._bind_events()
@@ -277,6 +290,12 @@ class PySideMainWindow(QMainWindow):
         if hasattr(self, "download_panel") and self.download_panel is not None:
             self.download_panel.retranslate_ui()
 
+            for index, item in enumerate(self.profile_queue):
+                if index < self.download_panel.queue_list.count():
+                    self.download_panel.queue_list.item(index).setText(
+                        self._queue_row_text(item.url, item.status.value)
+                    )
+
         self.setWindowTitle(f"Downloader [{self.version}]")
         self.update_folder_label()
 
@@ -292,6 +311,14 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.browse_button.clicked.connect(self.select_folder)
         self.download_panel.download_button.clicked.connect(self.start_download)
         self.download_panel.cancel_button.clicked.connect(self.cancel_download)
+        self.download_panel.add_to_list_button.clicked.connect(self.add_urls_to_list)
+        self.download_panel.remove_from_list_button.clicked.connect(self.remove_selected_from_list)
+
+        self._queue_delete_shortcut = QShortcut(
+            QKeySequence(Qt.Key_Delete), self.download_panel.queue_list
+        )
+        self._queue_delete_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self._queue_delete_shortcut.activated.connect(self.remove_selected_from_list)
         self.download_panel.folder_label.linkActivated.connect(lambda _: self.open_download_folder())
         self.download_panel.folder_label.mousePressEvent = lambda event: self.open_download_folder()
 
@@ -526,10 +553,185 @@ class PySideMainWindow(QMainWindow):
     # acciones
     # ------------------------------------------------------------------
     def start_download(self):
-        self.main_controller.start_download()
+        self._clear_terminal_queue_items()
+
+        pending = [
+            item for item in self.profile_queue
+            if item.status is ProfileStatus.PENDING
+        ]
+
+        if not pending:
+            # Empty list: the classic single-URL flow, unchanged.
+            self._session_is_ui_bound = False
+            self.main_controller.start_download()
+            return
+
+        if self.url_entry.get().strip():
+            # A URL is sitting in the input: it only joins the session if
+            # it fits the limit. Starting while silently dropping it is
+            # not allowed, so on any rejection the session does not start.
+            if not self.add_urls_to_list():
+                return
+
+        self._session_is_ui_bound = True
+        self.main_controller.start_session(self.profile_queue)
 
     def cancel_download(self):
         self.main_controller.cancel_download()
+
+    # ------------------------------------------------------------------
+    # lista de perfiles (solo en memoria)
+    # ------------------------------------------------------------------
+    def _queue_key(self, url: str) -> str:
+        return url.rstrip("/")
+
+    def _queue_row_text(self, url: str, status_value: str) -> str:
+        status_text = self.tr("PROFILE_STATUS_" + status_value.upper())
+        return f"[{status_text}] {url}"
+
+    def _update_queue_visibility(self):
+        has_items = len(self.profile_queue) > 0
+        self.download_panel.queue_list.setVisible(has_items)
+        self.download_panel.remove_from_list_button.setVisible(has_items)
+
+    def _clear_terminal_queue_items(self):
+        # A finished session already reported its result; its rows make
+        # room as soon as the user builds a new list.
+        for index in range(len(self.profile_queue) - 1, -1, -1):
+            if self.profile_queue[index].status in TERMINAL_STATUSES:
+                del self.profile_queue[index]
+                self.download_panel.queue_list.takeItem(index)
+        self._update_queue_visibility()
+
+    def add_urls_to_list(self) -> bool:
+        raw_text = self.url_entry.get()
+        tokens = [token for token in re.split(r"\s+", raw_text.strip()) if token]
+
+        if not tokens:
+            self.show_error(self.tr("ERROR"), self.tr("PLEASE_ENTER_VALID_URL"))
+            return False
+
+        self._clear_terminal_queue_items()
+
+        existing_keys = {self._queue_key(item.url) for item in self.profile_queue}
+        leftovers = []
+        rejected_lines = []
+        hit_limit = False
+
+        for token in tokens:
+            url, reason = self.main_controller.validate_profile_url(token)
+
+            if reason:
+                leftovers.append(token)
+                rejected_lines.append(f"{token}: {reason}")
+                continue
+
+            key = self._queue_key(url)
+            if key in existing_keys:
+                leftovers.append(token)
+                rejected_lines.append(f"{token}: {self.tr('URL_ALREADY_IN_LIST')}")
+                continue
+
+            if len(self.profile_queue) >= MAX_PROFILES_PER_SESSION:
+                hit_limit = True
+                leftovers.append(token)
+                continue
+
+            existing_keys.add(key)
+            item = ProfileQueueItem(url=url)
+            self.profile_queue.append(item)
+            self.download_panel.queue_list.addItem(
+                self._queue_row_text(item.url, item.status.value)
+            )
+
+        self.download_panel.url_input.setText(" ".join(leftovers))
+        self._update_queue_visibility()
+
+        if leftovers:
+            message_parts = []
+            if hit_limit:
+                message_parts.append(
+                    self.tr("FREE_PROFILE_LIMIT_INFO", max=MAX_PROFILES_PER_SESSION)
+                )
+            if rejected_lines:
+                message_parts.append(
+                    self.tr("URLS_NOT_ADDED") + "\n" + "\n".join(rejected_lines)
+                )
+            message_parts.append(self.tr("URLS_LEFT_IN_INPUT"))
+
+            QMessageBox.information(
+                self,
+                self.tr("PROFILE_LIMIT_TITLE") if hit_limit else self.tr("WARNING"),
+                "\n\n".join(message_parts),
+            )
+
+        return not leftovers
+
+    def remove_selected_from_list(self):
+        if self._session_active:
+            return
+
+        row = self.download_panel.queue_list.currentRow()
+        if row < 0 or row >= len(self.profile_queue):
+            return
+        if self.profile_queue[row].status is not ProfileStatus.PENDING:
+            return
+
+        del self.profile_queue[row]
+        self.download_panel.queue_list.takeItem(row)
+        self._update_queue_visibility()
+
+    def _on_session_item_status(self, index: int, status_value: str, reason: str):
+        # Single-URL sessions are not bound to the visible list.
+        if not self._session_is_ui_bound:
+            return
+        if index < 0 or index >= len(self.profile_queue):
+            return
+        if index >= self.download_panel.queue_list.count():
+            return
+
+        row_item = self.download_panel.queue_list.item(index)
+        row_item.setText(self._queue_row_text(self.profile_queue[index].url, status_value))
+        row_item.setToolTip(reason or "")
+
+    def _on_session_progress(self, current: int, total: int):
+        label = self.download_panel.session_progress_label
+        label.setText(self.tr("PROFILE_X_OF_Y", current=current, total=total))
+        label.setVisible(total > 1)
+
+    def _on_session_finished(self, summary):
+        self.download_panel.session_progress_label.setVisible(False)
+
+        if not isinstance(summary, dict) or summary.get("total", 0) <= 1:
+            return
+
+        lines = [
+            self.tr(
+                "SESSION_SUMMARY_COMPLETED",
+                completed=summary.get("completed", 0),
+                total=summary.get("total", 0),
+            )
+        ]
+
+        failed = summary.get("failed") or []
+        if failed:
+            lines.append("")
+            lines.append(self.tr("SESSION_SUMMARY_FAILED_HEADER"))
+            for url, reason in failed:
+                lines.append(f"- {url}: {reason}" if reason else f"- {url}")
+
+        cancelled = summary.get("cancelled") or []
+        if cancelled:
+            lines.append("")
+            lines.append(self.tr("SESSION_SUMMARY_CANCELLED_HEADER"))
+            for url in cancelled:
+                lines.append(f"- {url}")
+
+        QMessageBox.information(
+            self,
+            self.tr("SESSION_SUMMARY_TITLE"),
+            "\n".join(lines),
+        )
 
     def closeEvent(self, event):
         # The download threads are daemons: closing the window kills them
@@ -610,6 +812,8 @@ class PySideMainWindow(QMainWindow):
 
     def _set_download_enabled(self, enabled: bool):
         self.download_panel.download_button.setEnabled(enabled)
+        self.download_panel.add_to_list_button.setEnabled(enabled)
+        self.download_panel.remove_from_list_button.setEnabled(enabled)
 
     def _set_cancel_enabled(self, enabled: bool):
         self.download_panel.cancel_button.setEnabled(enabled)
