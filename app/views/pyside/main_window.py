@@ -67,6 +67,10 @@ class QtSignals(QObject):
     footer_total_size = Signal(str)
     clear_logs = Signal()
     show_error_box = Signal(str, str)
+    session_item_status = Signal(int, str, str)
+    session_progress = Signal(int, int)
+    session_finished = Signal(object)
+    reset_progress = Signal()
 
 
 class PySideMainWindow(QMainWindow):
@@ -96,6 +100,7 @@ class PySideMainWindow(QMainWindow):
         self.active_downloader = None
         self.download_thread = None
         self.download_start_time = None
+        self._session_active = False
         self.settings = self.settings_service.load_settings()
         self.max_downloads = int(self.settings.get("max_downloads", 3))
         
@@ -120,6 +125,7 @@ class PySideMainWindow(QMainWindow):
         self.signals.footer_total_size.connect(self.footer_set_total_size)
         self.signals.clear_logs.connect(self._clear_logs)
         self.signals.show_error_box.connect(self._show_error_dialog)
+        self.signals.reset_progress.connect(self.clear_progress_bars)
 
         self._build_ui()
         self._bind_events()
@@ -310,8 +316,28 @@ class PySideMainWindow(QMainWindow):
         self.signals.clear_logs.emit()
 
     def enable_widgets(self):
+        # Downloaders re-enable widgets on their own when each profile
+        # finishes (shutdown_executor); while a session is active only
+        # the session runner may do it, once, at session close.
+        if self._session_active:
+            return
         self.signals.set_download_enabled.emit(True)
         self.signals.set_cancel_enabled.emit(False)
+
+    def set_session_active(self, active: bool):
+        self._session_active = bool(active)
+
+    def notify_session_item_changed(self, index: int, status_value: str, reason: str):
+        self.signals.session_item_status.emit(int(index), str(status_value), str(reason or ""))
+
+    def notify_session_progress(self, current: int, total: int):
+        self.signals.session_progress.emit(int(current), int(total))
+
+    def notify_session_finished(self, summary):
+        self.signals.session_finished.emit(summary)
+
+    def reset_progress_between_profiles(self):
+        self.signals.reset_progress.emit()
 
     def clear_progress_bars(self):
         if not hasattr(self, "_active_progress"):
@@ -521,6 +547,10 @@ class PySideMainWindow(QMainWindow):
             if reply != QMessageBox.Yes:
                 event.ignore()
                 return
+
+            # Flag the session first so the runner does not start another
+            # profile while the app is closing.
+            self.main_controller.request_session_cancel()
 
             if self.active_downloader is not None:
                 try:
