@@ -237,6 +237,7 @@
   "COOMERFANS_CACHE_SUMMARY": "Profile processed: {cached} posts reused from cache, {scraped} newly scraped",
   "EROME_CACHE_SUMMARY": "Profile processed: {cached} albums reused from cache, {scraped} newly scraped",
   "ADD_TO_LIST": "Add to list",
+  "ADD_TO_LIST_SHORT": "Add",
   "REMOVE_FROM_LIST": "Remove selected",
   "PROFILE_X_OF_Y": "Profile {current} of {total}",
   "SESSION_PROFILE_LOG": "Profile {current} of {total}: {url}",

@@ -237,6 +237,7 @@
   "COOMERFANS_CACHE_SUMMARY": "Perfil procesado: {cached} posts reutilizados de la caché, {scraped} procesados nuevos",
   "EROME_CACHE_SUMMARY": "Perfil procesado: {cached} álbumes reutilizados de la caché, {scraped} procesados nuevos",
   "ADD_TO_LIST": "Agregar a la lista",
+  "ADD_TO_LIST_SHORT": "Agregar",
   "REMOVE_FROM_LIST": "Quitar seleccionado",
   "PROFILE_X_OF_Y": "Perfil {current} de {total}",
   "SESSION_PROFILE_LOG": "Perfil {current} de {total}: {url}",

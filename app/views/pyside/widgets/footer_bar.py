@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QToolButton,
     QStyle,
     QProgressBar,
@@ -36,6 +37,18 @@ class FooterBar(QWidget):
                 border-radius: 8px;
             }
         """)
+
+        # "Profile x of y" lives inside the bar as an overlay: showing or
+        # hiding it never reflows the footer around it.
+        bar_overlay = QHBoxLayout(self.progress_bar)
+        bar_overlay.setContentsMargins(0, 0, 0, 0)
+
+        self.session_profile_label = QLabel("")
+        self.session_profile_label.setAlignment(Qt.AlignCenter)
+        self.session_profile_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.session_profile_label.setStyleSheet("background: transparent;")
+        self.session_profile_label.setVisible(False)
+        bar_overlay.addWidget(self.session_profile_label)
 
         self.total_size_label = QLabel("Total: 0 B")
         self.total_size_label.setMinimumWidth(130)

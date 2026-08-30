@@ -8,12 +8,13 @@ import threading
 
 import time
 from typing import Optional
-from PySide6.QtCore import QObject, Signal, QTimer, Qt
+from PySide6.QtCore import QObject, Signal, QTimer, Qt, QSize
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
+    QListWidgetItem,
     QMessageBox,
     QHBoxLayout,
     QFileDialog,
@@ -33,7 +34,7 @@ from app.services.log_service import LogService
 from app.services.url_service import UrlService
 from app.adapters.downloader_factory import DownloaderFactory
 
-from app.views.pyside.widgets.download_panel import DownloadPanel
+from app.views.pyside.widgets.download_panel import DownloadPanel, QueueItemRow
 from app.views.pyside.widgets.log_panel import LogPanel
 from app.views.pyside.widgets.footer_bar import FooterBar
 from app.views.pyside.dialogs.settings_dialog import SettingsDialog
@@ -290,11 +291,15 @@ class PySideMainWindow(QMainWindow):
         if hasattr(self, "download_panel") and self.download_panel is not None:
             self.download_panel.retranslate_ui()
 
+            queue_list = self.download_panel.queue_list
             for index, item in enumerate(self.profile_queue):
-                if index < self.download_panel.queue_list.count():
-                    self.download_panel.queue_list.item(index).setText(
-                        self._queue_row_text(item.url, item.status.value)
-                    )
+                if index < queue_list.count():
+                    row_widget = queue_list.itemWidget(queue_list.item(index))
+                    if row_widget is not None:
+                        row_widget.text_label.setText(
+                            self._queue_row_text(item.url, item.status.value)
+                        )
+                        row_widget.remove_button.setToolTip(self.tr("REMOVE_FROM_LIST"))
 
         self.setWindowTitle(f"Downloader [{self.version}]")
         self.update_folder_label()
@@ -312,7 +317,6 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.download_button.clicked.connect(self.start_download)
         self.download_panel.cancel_button.clicked.connect(self.cancel_download)
         self.download_panel.add_to_list_button.clicked.connect(self.add_urls_to_list)
-        self.download_panel.remove_from_list_button.clicked.connect(self.remove_selected_from_list)
 
         self._queue_delete_shortcut = QShortcut(
             QKeySequence(Qt.Key_Delete), self.download_panel.queue_list
@@ -590,9 +594,34 @@ class PySideMainWindow(QMainWindow):
         return f"[{status_text}] {url}"
 
     def _update_queue_visibility(self):
-        has_items = len(self.profile_queue) > 0
-        self.download_panel.queue_list.setVisible(has_items)
-        self.download_panel.remove_from_list_button.setVisible(has_items)
+        queue_list = self.download_panel.queue_list
+        count = queue_list.count()
+        queue_list.setVisible(count > 0)
+
+        if count > 0:
+            # Exact-content height: the list grows one row at a time
+            # instead of claiming space up front.
+            height = 2 * queue_list.frameWidth()
+            for index in range(count):
+                height += queue_list.sizeHintForRow(index)
+            queue_list.setFixedHeight(height)
+
+    def _append_queue_row(self, item):
+        queue_list = self.download_panel.queue_list
+
+        row_widget = QueueItemRow(self._queue_row_text(item.url, item.status.value))
+        row_widget.remove_button.setToolTip(self.tr("REMOVE_FROM_LIST"))
+
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(QSize(0, row_widget.sizeHint().height()))
+        queue_list.addItem(list_item)
+        queue_list.setItemWidget(list_item, row_widget)
+
+        row_widget.remove_button.clicked.connect(
+            lambda _=False, li=list_item: self._remove_queue_row(
+                self.download_panel.queue_list.row(li)
+            )
+        )
 
     def _clear_terminal_queue_items(self):
         # A finished session already reported its result; its rows make
@@ -640,9 +669,7 @@ class PySideMainWindow(QMainWindow):
             existing_keys.add(key)
             item = ProfileQueueItem(url=url)
             self.profile_queue.append(item)
-            self.download_panel.queue_list.addItem(
-                self._queue_row_text(item.url, item.status.value)
-            )
+            self._append_queue_row(item)
 
         self.download_panel.url_input.setText(" ".join(leftovers))
         self._update_queue_visibility()
@@ -668,10 +695,12 @@ class PySideMainWindow(QMainWindow):
         return not leftovers
 
     def remove_selected_from_list(self):
+        self._remove_queue_row(self.download_panel.queue_list.currentRow())
+
+    def _remove_queue_row(self, row: int):
         if self._session_active:
             return
 
-        row = self.download_panel.queue_list.currentRow()
         if row < 0 or row >= len(self.profile_queue):
             return
         if self.profile_queue[row].status is not ProfileStatus.PENDING:
@@ -690,17 +719,26 @@ class PySideMainWindow(QMainWindow):
         if index >= self.download_panel.queue_list.count():
             return
 
-        row_item = self.download_panel.queue_list.item(index)
-        row_item.setText(self._queue_row_text(self.profile_queue[index].url, status_value))
-        row_item.setToolTip(reason or "")
+        queue_list = self.download_panel.queue_list
+        row_widget = queue_list.itemWidget(queue_list.item(index))
+        if row_widget is None:
+            return
+
+        row_widget.text_label.setText(
+            self._queue_row_text(self.profile_queue[index].url, status_value)
+        )
+        row_widget.setToolTip(reason or "")
+        row_widget.remove_button.setVisible(
+            status_value == ProfileStatus.PENDING.value
+        )
 
     def _on_session_progress(self, current: int, total: int):
-        label = self.download_panel.session_progress_label
+        label = self.footer_bar.session_profile_label
         label.setText(self.tr("PROFILE_X_OF_Y", current=current, total=total))
         label.setVisible(total > 1)
 
     def _on_session_finished(self, summary):
-        self.download_panel.session_progress_label.setVisible(False)
+        self.footer_bar.session_profile_label.setVisible(False)
 
         if not isinstance(summary, dict) or summary.get("total", 0) <= 1:
             return
@@ -813,7 +851,12 @@ class PySideMainWindow(QMainWindow):
     def _set_download_enabled(self, enabled: bool):
         self.download_panel.download_button.setEnabled(enabled)
         self.download_panel.add_to_list_button.setEnabled(enabled)
-        self.download_panel.remove_from_list_button.setEnabled(enabled)
+
+        queue_list = self.download_panel.queue_list
+        for index in range(queue_list.count()):
+            row_widget = queue_list.itemWidget(queue_list.item(index))
+            if row_widget is not None:
+                row_widget.remove_button.setEnabled(enabled)
 
     def _set_cancel_enabled(self, enabled: bool):
         self.download_panel.cancel_button.setEnabled(enabled)
