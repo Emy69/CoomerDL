@@ -1,4 +1,6 @@
 import threading
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from app.models.download_request import DownloadRequest
 
@@ -8,6 +10,22 @@ DEAD_SITES = {
     "kemono.cr": "pawchive.pw",
     "jpg5.su": None,
 }
+
+
+@dataclass
+class DownloadJob:
+    downloader: object
+    method: Callable
+    args: tuple = ()
+
+
+@dataclass
+class JobResolutionError:
+    # Translated message, usable as a per-profile failure reason.
+    message: str
+    # Whether the single-URL flow shows an error dialog for this failure
+    # (the unknown-site case historically only logs).
+    show_popup: bool = True
 
 
 class MainController:
@@ -48,8 +66,32 @@ class MainController:
 
         self.app.prepare_download_ui()
 
+        job, error = self._resolve_download_job(request)
+
+        if error is not None:
+            if error.show_popup:
+                self.app.show_error(self.app.tr("ERROR"), error.message)
+            self.app.enable_widgets()
+            return
+
+        download_thread = threading.Thread(
+            target=self.wrapped_download,
+            args=(job.downloader, job.method, *job.args),
+            daemon=True
+        )
+        download_thread.start()
+        self.app.download_thread = download_thread
+
+    def _resolve_download_job(
+        self, request: DownloadRequest
+    ) -> tuple[Optional[DownloadJob], Optional[JobResolutionError]]:
+        """Resolve a request into the downloader call that serves it.
+
+        Returns (job, error); exactly one is not None. Logs here, but
+        error dialogs are the caller's call: a session runner records
+        failures instead of popping one dialog per profile.
+        """
         parsed = self.app.url_service.parse_download_url(request.url)
-        download_thread = None
 
         host = parsed.host
         dead_site = next(
@@ -69,9 +111,7 @@ class MainController:
                 message = self.app.tr("SITE_NO_LONGER_SUPPORTED", site=host)
 
             self.app.add_log_message_safe(message)
-            self.app.show_error(self.app.tr("ERROR"), message)
-            self.app.enable_widgets()
-            return
+            return None, JobResolutionError(message)
 
         if parsed.site_type == "erome":
             self.app.add_log_message_safe(self.app.tr("DOWNLOADING_EROME"))
@@ -80,54 +120,41 @@ class MainController:
 
             if parsed.is_album:
                 self.app.add_log_message_safe(self.app.tr("ALBUM_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.app.active_downloader,
-                        self.app.active_downloader.process_album_page,
-                        request.url,
-                        request.download_folder,
-                        request.download_images,
-                        request.download_videos,
-                    ),
-                    daemon=True
-                )
+                method = self.app.active_downloader.process_album_page
             else:
                 self.app.add_log_message_safe("erome", self.app.tr("PROFILE_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.app.active_downloader,
-                        self.app.active_downloader.process_profile_page,
-                        request.url,
-                        request.download_folder,
-                        request.download_images,
-                        request.download_videos,
-                    ),
-                    daemon=True
-                )
+                method = self.app.active_downloader.process_profile_page
 
-        elif parsed.site_type == "bunkr":
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=method,
+                args=(
+                    request.url,
+                    request.download_folder,
+                    request.download_images,
+                    request.download_videos,
+                ),
+            ), None
+
+        if parsed.site_type == "bunkr":
             self.app.add_log_message_safe("bunkr", self.app.tr("DOWNLOADING_BUNKR"))
             self.app.setup_bunkr_downloader()
             self.app.active_downloader = self.app.bunkr_downloader
 
             if parsed.is_post:
                 self.app.add_log_message_safe(self.app.tr("POST_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader, self.app.bunkr_downloader.descargar_post_bunkr, request.url),
-                    daemon=True
-                )
+                method = self.app.bunkr_downloader.descargar_post_bunkr
             else:
                 self.app.add_log_message_safe("bunkr", self.app.tr("PROFILE_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(self.app.bunkr_downloader, self.app.bunkr_downloader.descargar_perfil_bunkr, request.url),
-                    daemon=True
-                )
+                method = self.app.bunkr_downloader.descargar_perfil_bunkr
 
-        elif parsed.site_type == "coomer_kemono":
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=method,
+                args=(request.url,),
+            ), None
+
+        if parsed.site_type == "coomer_kemono":
             self.app.add_log_message_safe(self.app.tr("STARTING_DOWNLOAD"))
             self.app.setup_general_downloader()
             self.app.active_downloader = self.app.general_downloader
@@ -139,21 +166,13 @@ class MainController:
 
             if service is None or user is None:
                 if service is None:
-                    self.app.add_log_message_safe(self.app.tr("FAILED_TO_EXTRACT_SERVICE"))
-                    self.app.show_error(
-                        self.app.tr("ERROR"),
-                        self.app.tr("FAILED_TO_EXTRACT_SERVICE")
-                    )
+                    message = self.app.tr("FAILED_TO_EXTRACT_SERVICE")
                 else:
-                    self.app.add_log_message_safe(self.app.tr("FAILED_TO_EXTRACT_USER_ID"))
-                    self.app.show_error(
-                        self.app.tr("ERROR"),
-                        self.app.tr("FAILED_TO_EXTRACT_USER_ID")
-                    )
+                    message = self.app.tr("FAILED_TO_EXTRACT_USER_ID")
 
+                self.app.add_log_message_safe(message)
                 self.app.add_log_message_safe("SYSTEM", self.app.tr("INVALID_URL"))
-                self.app.enable_widgets()
-                return
+                return None, JobResolutionError(message)
 
             self.app.add_log_message_safe(
                 self.app.tr(
@@ -165,104 +184,79 @@ class MainController:
 
             if parsed.is_post:
                 self.app.add_log_message_safe(self.app.tr("DOWNLOADING_SINGLE_POST"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
+                return DownloadJob(
+                    downloader=self.app.active_downloader,
+                    method=self.start_ck_post_download,
                     args=(
-                        self.app.active_downloader,
-                        self.start_ck_post_download,
                         self.app.active_downloader,
                         site,
                         service,
                         user,
                         post,
                     ),
-                    daemon=True
-                )
-            else:
-                self.app.add_log_message_safe(self.app.tr("DOWNLOADING_ALL_USER_CONTENT"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.app.active_downloader,
-                        self.start_ck_profile_download,
-                        self.app.active_downloader,
-                        site,
-                        service,
-                        user,
-                        parsed.query,
-                        True,
-                        parsed.offset,
-                        request.only_this_url,
-                    ),
-                    daemon=True
-                )
+                ), None
 
-        elif parsed.site_type == "simpcity":
+            self.app.add_log_message_safe(self.app.tr("DOWNLOADING_ALL_USER_CONTENT"))
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=self.start_ck_profile_download,
+                args=(
+                    self.app.active_downloader,
+                    site,
+                    service,
+                    user,
+                    parsed.query,
+                    True,
+                    parsed.offset,
+                    request.only_this_url,
+                ),
+            ), None
+
+        if parsed.site_type == "simpcity":
             self.app.add_log_message_safe(self.app.tr("DOWNLOADING_SIMPCITY"))
             self.app.setup_simpcity_downloader()
             self.app.active_downloader = self.app.simpcity_downloader
-            download_thread = threading.Thread(
-                target=self.wrapped_download,
-                args=(
-                    self.app.active_downloader,
-                    self.app.active_downloader.download_images_from_simpcity,
-                    request.url,
-                    not request.only_this_url,
-                ),
-                daemon=True
-            )
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=self.app.active_downloader.download_images_from_simpcity,
+                args=(request.url, not request.only_this_url),
+            ), None
 
-        elif parsed.site_type == "jpg5":
+        if parsed.site_type == "jpg5":
             self.app.add_log_message_safe(self.app.tr("DOWNLOADING_FROM_JPG5"))
             self.app.setup_jpg5_downloader()
-            download_thread = threading.Thread(
-                target=self.wrapped_download,
-                args=(self.app.active_downloader, self.app.active_downloader.descargar_imagenes),
-                daemon=True
-            )
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=self.app.active_downloader.descargar_imagenes,
+                args=(),
+            ), None
 
-        elif parsed.site_type == "coomerfans":
+        if parsed.site_type == "coomerfans":
             self.app.add_log_message_safe(self.app.tr("DOWNLOADING_COOMERFANS"))
             self.app.setup_coomerfans_downloader(is_profile_download=parsed.is_profile)
             self.app.active_downloader = self.app.coomerfans_downloader
 
             if parsed.is_post:
                 self.app.add_log_message_safe(self.app.tr("POST_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.app.active_downloader,
-                        self.app.active_downloader.process_post_page,
-                        request.url,
-                        request.download_folder,
-                        request.download_images,
-                        request.download_videos,
-                    ),
-                    daemon=True
-                )
+                method = self.app.active_downloader.process_post_page
             else:
                 self.app.add_log_message_safe(self.app.tr("PROFILE_URL"))
-                download_thread = threading.Thread(
-                    target=self.wrapped_download,
-                    args=(
-                        self.app.active_downloader,
-                        self.app.active_downloader.process_profile_page,
-                        request.url,
-                        request.download_folder,
-                        request.download_images,
-                        request.download_videos,
-                    ),
-                    daemon=True
-                )
+                method = self.app.active_downloader.process_profile_page
 
-        else:
-            self.app.add_log_message_safe(self.app.tr("INVALID_URL"))
-            self.app.enable_widgets()
-            return
+            return DownloadJob(
+                downloader=self.app.active_downloader,
+                method=method,
+                args=(
+                    request.url,
+                    request.download_folder,
+                    request.download_images,
+                    request.download_videos,
+                ),
+            ), None
 
-        if download_thread:
-            download_thread.start()
-            self.app.download_thread = download_thread
+        message = self.app.tr("INVALID_URL")
+        self.app.add_log_message_safe(message)
+        return None, JobResolutionError(message, show_popup=False)
 
     def wrapped_download(self, downloader, download_method, *args):
         try:
