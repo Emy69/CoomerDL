@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from app.controllers.main_controller import MainController
 from app.models.app_state import AppState
 from app.models.profile_session import (
-    MAX_PROFILES_PER_SESSION,
+    DEFAULT_MAX_PROFILES_PER_SESSION,
     ProfileQueueItem,
     ProfileStatus,
     TERMINAL_STATUSES,
@@ -589,6 +589,17 @@ class PySideMainWindow(QMainWindow):
     def _queue_key(self, url: str) -> str:
         return url.rstrip("/")
 
+    def _max_profiles_per_session(self) -> int:
+        try:
+            value = int(
+                self.settings.get(
+                    "max_profiles_per_session", DEFAULT_MAX_PROFILES_PER_SESSION
+                )
+            )
+        except Exception:
+            value = DEFAULT_MAX_PROFILES_PER_SESSION
+        return max(1, value)
+
     def _queue_row_text(self, url: str, status_value: str) -> str:
         status_text = self.tr("PROFILE_STATUS_" + status_value.upper())
         return f"[{status_text}] {url}"
@@ -642,6 +653,7 @@ class PySideMainWindow(QMainWindow):
 
         self._clear_terminal_queue_items()
 
+        max_profiles = self._max_profiles_per_session()
         existing_keys = {self._queue_key(item.url) for item in self.profile_queue}
         leftovers = []
         rejected_lines = []
@@ -661,7 +673,7 @@ class PySideMainWindow(QMainWindow):
                 rejected_lines.append(f"{token}: {self.tr('URL_ALREADY_IN_LIST')}")
                 continue
 
-            if len(self.profile_queue) >= MAX_PROFILES_PER_SESSION:
+            if len(self.profile_queue) >= max_profiles:
                 hit_limit = True
                 leftovers.append(token)
                 continue
@@ -674,22 +686,22 @@ class PySideMainWindow(QMainWindow):
         self.download_panel.url_input.setText(" ".join(leftovers))
         self._update_queue_visibility()
 
-        if leftovers:
-            message_parts = []
-            if hit_limit:
-                message_parts.append(
-                    self.tr("FREE_PROFILE_LIMIT_INFO", max=MAX_PROFILES_PER_SESSION)
-                )
-            if rejected_lines:
-                message_parts.append(
-                    self.tr("URLS_NOT_ADDED") + "\n" + "\n".join(rejected_lines)
-                )
-            message_parts.append(self.tr("URLS_LEFT_IN_INPUT"))
+        if hit_limit:
+            # No dialog: the URLs stay in the input and the log says why
+            # and where the limit can be changed.
+            self.add_log_message_safe(
+                self.tr("PROFILE_LIMIT_REACHED_LOG", max=max_profiles)
+            )
 
+        if rejected_lines:
             QMessageBox.information(
                 self,
-                self.tr("PROFILE_LIMIT_TITLE") if hit_limit else self.tr("WARNING"),
-                "\n\n".join(message_parts),
+                self.tr("WARNING"),
+                self.tr("URLS_NOT_ADDED")
+                + "\n"
+                + "\n".join(rejected_lines)
+                + "\n\n"
+                + self.tr("URLS_LEFT_IN_INPUT"),
             )
 
         return not leftovers

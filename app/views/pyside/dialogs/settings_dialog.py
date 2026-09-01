@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontDatabase
 
+from app.models.profile_session import DEFAULT_MAX_PROFILES_PER_SESSION
 from app.services.settings_window_service import SettingsWindowService
 from app.services.download_settings_service import DownloadSettingsService
 from app.services.cookies_settings_service import CookiesSettingsService
@@ -155,6 +156,14 @@ class SettingsDialog(QDialog):
         self.max_downloads_combo.setCurrentText(str(self.settings.get("max_downloads", 3)))
         self.max_downloads_label = QLabel(self.translate("SETTINGS_MAX_DOWNLOADS"))
         layout.addRow(self.max_downloads_label, self.max_downloads_combo)
+
+        self.max_profiles_combo = QComboBox()
+        self.max_profiles_combo.addItems([str(i) for i in range(1, 11)])
+        self.max_profiles_combo.setCurrentText(
+            str(self.settings.get("max_profiles_per_session", DEFAULT_MAX_PROFILES_PER_SESSION))
+        )
+        self.max_profiles_label = QLabel(self.translate("SETTINGS_MAX_PROFILES_PER_SESSION"))
+        layout.addRow(self.max_profiles_label, self.max_profiles_combo)
 
         self.folder_structure_combo = QComboBox()
         self.folder_structure_combo.addItems(["default", "post_number"])
@@ -703,6 +712,7 @@ class SettingsDialog(QDialog):
                 max_retries_value=self.max_retries_combo.currentText(),
                 retry_interval_value=self.retry_interval_edit.text(),
                 file_naming_mode_label=self.file_naming_combo.currentText(),
+                max_profiles_value=self.max_profiles_combo.currentText(),
             )
 
             self.settings = self.download_settings_service.apply_to_settings(
@@ -811,6 +821,7 @@ class SettingsDialog(QDialog):
 
         self.language_label.setText(self.translate("SETTINGS_LANGUAGE"))
         self.max_downloads_label.setText(self.translate("SETTINGS_MAX_DOWNLOADS"))
+        self.max_profiles_label.setText(self.translate("SETTINGS_MAX_PROFILES_PER_SESSION"))
         self.folder_structure_label.setText(self.translate("SETTINGS_FOLDER_STRUCTURE"))
         self.max_retries_label.setText(self.translate("SETTINGS_MAX_RETRIES"))
         self.retry_interval_label.setText(self.translate("SETTINGS_RETRY_INTERVAL_SECONDS"))

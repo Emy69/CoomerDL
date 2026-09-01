@@ -5,8 +5,9 @@ from typing import List, Optional
 
 from app.models.download_request import DownloadRequest
 
-# Single source of truth for the free-version session limit.
-MAX_PROFILES_PER_SESSION = 3
+# Default for the "max_profiles_per_session" setting; the effective
+# limit is user-configurable in Settings.
+DEFAULT_MAX_PROFILES_PER_SESSION = 3
 
 
 class ProfileStatus(Enum):
@@ -33,7 +34,7 @@ class ProfileQueueItem:
 
 
 class ProfileSession:
-    """One download session over up to MAX_PROFILES_PER_SESSION profiles.
+    """One download session over a limited list of profiles.
 
     Lives in memory only: it is never persisted to disk or settings and
     is not restored when the app restarts.

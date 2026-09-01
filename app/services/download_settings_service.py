@@ -39,11 +39,13 @@ class DownloadSettingsService:
         max_retries_value,
         retry_interval_value,
         file_naming_mode_label,
+        max_profiles_value,
     ):
         max_downloads = int(max_downloads_value)
         max_retries = int(max_retries_value)
         retry_interval = float(retry_interval_value)
         numeric_mode = self.NAMING_MODE_LABEL_TO_VALUE.get(file_naming_mode_label, 0)
+        max_profiles = max(1, int(max_profiles_value))
 
         return {
             "max_downloads": max_downloads,
@@ -51,6 +53,7 @@ class DownloadSettingsService:
             "max_retries": max_retries,
             "retry_interval": retry_interval,
             "file_naming_mode": numeric_mode,
+            "max_profiles_per_session": max_profiles,
         }
 
     def apply_to_settings(self, settings: dict, parsed_values: dict):
@@ -59,6 +62,7 @@ class DownloadSettingsService:
         settings["max_retries"] = parsed_values["max_retries"]
         settings["retry_interval"] = parsed_values["retry_interval"]
         settings["file_naming_mode"] = parsed_values["file_naming_mode"]
+        settings["max_profiles_per_session"] = parsed_values["max_profiles_per_session"]
         return settings
 
     def apply_to_downloader(self, downloader, parsed_values: dict):
