@@ -67,6 +67,19 @@ python main.py
 4. Choose the content types you want (images, videos, compressed files)
 5. Click **Download**
 
+### Downloading several profiles in one session
+
+You can queue more than one profile and let them download one after another:
+
+1. Paste one or more URLs (separated by spaces or new lines) and click **Add** next to the URL field
+2. Each queued profile appears in a list with its status (pending, downloading, completed, error)
+3. Click **Download** — profiles download **one at a time**, and the progress bar shows *Profile 2 of 3*
+4. When the session ends, a summary lists what completed and what failed (and why)
+
+A profile that fails doesn't stop the session; the next one starts anyway. **Cancel** stops the current profile and skips the pending ones. Pending profiles can be removed from the list with the ✕ button or the Delete key. The queue only lives in memory — it is not restored when you reopen the app.
+
+By default a session allows **3 profiles**; you can change the limit in **Settings > Downloads > Max Profiles per Session**.
+
 https://github.com/user-attachments/assets/f11a4681-4c6f-4797-a8a5-8eabe5e2cdfa
 
 Downloaded files are organized into subfolders by type (`images`, `videos`, `documents`, `compressed`).
@@ -76,6 +89,7 @@ Downloaded files are organized into subfolders by type (`images`, `videos`, `doc
 ## Features
 
 - Modern **PySide6** desktop interface
+- Profile queue: several profiles per session, downloaded sequentially, with per-profile status and an end-of-session summary
 - Multithreaded downloads with configurable limits
 - Per-file and global progress tracking (speed, ETA)
 - Automatic retries with configurable interval
@@ -101,7 +115,7 @@ Downloaded files are organized into subfolders by type (`images`, `videos`, `doc
 Open **Settings** from the main window:
 
 - **General** — language selection
-- **Downloads** — max simultaneous downloads, retries, retry interval, file naming mode, folder structure (these apply to every supported site)
+- **Downloads** — max simultaneous downloads, max profiles per session, retries, retry interval, file naming mode, folder structure (these apply to every supported site)
 - **Cookies** — SimpCity cookies (import, save, clear), with a status line showing how many cookies are stored and a built-in tutorial for extracting them from your browser
 - **Database** — browse download records grouped by user and post, search by user or file name, see totals (users, files, size), export the database, or delete records
 
