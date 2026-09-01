@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
+from app.version import APP_VERSION
 from app.controllers.main_controller import MainController
 from app.models.app_state import AppState
 from app.models.profile_session import (
@@ -44,7 +45,7 @@ from app.about_window import AboutWindow
 from app.donors import DonorsModal
 from app.views.pyside.dialogs.startup_community_dialog import StartupCommunityDialog
 
-VERSION = "V1.2.5"
+VERSION = f"V{APP_VERSION}"
 MAX_LOG_LINES = 500
 LOG_FLUSH_INTERVAL_MS = 150
 

@@ -1,3 +1,4 @@
+from app.version import USER_AGENT
 from downloader.bunkr import BunkrDownloader
 from downloader.coomerfans import CoomerfansDownloader
 from downloader.downloader import Downloader
@@ -84,7 +85,7 @@ class DownloaderFactory:
             headers={
                 # ddos-guard on file.pawchive.pw rejects Googlebot and
                 # full browser user agents; a plain app UA passes.
-                "User-Agent": "CoomerDL/1.2.5",
+                "User-Agent": USER_AGENT,
                 "Referer": "https://pawchive.pw/",
             },
             download_images=self.frontend.get_download_images(),

@@ -37,9 +37,11 @@ class Downloader:
         self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()
         self.headers = headers or {
-            # ddos-guard on file.pawchive.pw rejects Googlebot and full
-            # browser user agents; a plain app UA passes.
-            "User-Agent": "CoomerDL/1.2.5",
+            # Fallback only (the app always passes headers). Version-less
+            # so this layer stays independent from app.version; ddos-guard
+            # on file.pawchive.pw rejects Googlebot and full browser user
+            # agents, while a plain app UA passes.
+            "User-Agent": "CoomerDL",
             "Referer": "https://pawchive.pw/",
         }
 
