@@ -770,6 +770,13 @@ class PySideMainWindow(QMainWindow):
             for url, reason in failed:
                 lines.append(f"- {url}: {reason}" if reason else f"- {url}")
 
+        partial = summary.get("partial") or []
+        if partial:
+            lines.append("")
+            lines.append(self.tr("SESSION_SUMMARY_PARTIAL_HEADER"))
+            for url, reason in partial:
+                lines.append(f"- {url}: {reason}" if reason else f"- {url}")
+
         cancelled = summary.get("cancelled") or []
         if cancelled:
             lines.append("")

@@ -213,7 +213,32 @@ class MainController:
                     if session.cancel_requested.is_set():
                         self._mark_item(session, index, ProfileStatus.CANCELLED)
                     else:
-                        self._mark_item(session, index, ProfileStatus.COMPLETED)
+                        # Downloaders swallow per-file failures; their
+                        # counters are the only record of what happened.
+                        failed_count, completed_count = self._collect_file_stats(
+                            job.downloader
+                        )
+
+                        if failed_count and not completed_count:
+                            self._mark_item(
+                                session,
+                                index,
+                                ProfileStatus.ERROR,
+                                self.app.tr(
+                                    "PROFILE_ALL_FILES_FAILED", failed=failed_count
+                                ),
+                            )
+                        elif failed_count:
+                            self._mark_item(
+                                session,
+                                index,
+                                ProfileStatus.COMPLETED,
+                                self.app.tr(
+                                    "PROFILE_SOME_FILES_FAILED", failed=failed_count
+                                ),
+                            )
+                        else:
+                            self._mark_item(session, index, ProfileStatus.COMPLETED)
                 finally:
                     # Only clear if a newer download has not replaced it already
                     if self.app.active_downloader is job.downloader:
@@ -244,6 +269,17 @@ class MainController:
         item.error_reason = reason or ""
         self.app.notify_session_item_changed(index, status.value, item.error_reason)
 
+    def _collect_file_stats(self, downloader) -> tuple[int, int]:
+        failed = getattr(downloader, "failed_files", None)
+        failed_count = len(failed) if hasattr(failed, "__len__") else 0
+
+        try:
+            completed_count = int(getattr(downloader, "completed_files", 0))
+        except (TypeError, ValueError):
+            completed_count = 0
+
+        return failed_count, completed_count
+
     def _build_summary(self, session: ProfileSession) -> dict:
         return {
             "total": len(session.items),
@@ -255,6 +291,11 @@ class MainController:
                 (item.url, item.error_reason)
                 for item in session.items
                 if item.status is ProfileStatus.ERROR
+            ],
+            "partial": [
+                (item.url, item.error_reason)
+                for item in session.items
+                if item.status is ProfileStatus.COMPLETED and item.error_reason
             ],
             "cancelled": [
                 item.url

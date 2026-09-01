@@ -254,6 +254,9 @@
   "SESSION_SUMMARY_TITLE": "Resumen de la sesión",
   "SESSION_SUMMARY_COMPLETED": "Perfiles completados: {completed} de {total}",
   "SESSION_SUMMARY_FAILED_HEADER": "Perfiles con error:",
+  "SESSION_SUMMARY_PARTIAL_HEADER": "Completados con archivos fallidos:",
+  "PROFILE_ALL_FILES_FAILED": "No se pudo descargar ningún archivo ({failed} fallidos).",
+  "PROFILE_SOME_FILES_FAILED": "{failed} archivo(s) no se pudieron descargar.",
   "SESSION_SUMMARY_CANCELLED_HEADER": "Perfiles cancelados:",
   "SESSION_CANCEL_REQUESTED": "Cancelación solicitada; los perfiles pendientes no se iniciarán."
 }
