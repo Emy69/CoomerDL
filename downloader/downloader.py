@@ -37,9 +37,10 @@ class Downloader:
         self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()
         self.headers = headers or {
-            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-            "Referer": "https://coomer.st/",
-            "Accept": "text/css",
+            # ddos-guard on file.pawchive.pw rejects Googlebot and full
+            # browser user agents; a plain app UA passes.
+            "User-Agent": "CoomerDL/1.2.5",
+            "Referer": "https://pawchive.pw/",
         }
 
         self.session = requests.Session()
@@ -418,7 +419,9 @@ class Downloader:
                         if attempt < max_retries:
                             time.sleep(self._compute_retry_delay(attempt))
 
-                    if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
+                    # 403/404 outside coomer/kemono used to exhaust every
+                    # retry in silence; always report the final failure.
+                    if status_code in (403, 404) and attempt == max_retries:
                         self.log(
                             "FINAL_FAILURE_ACCESSING_URL",
                             url=url,

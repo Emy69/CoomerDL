@@ -82,9 +82,10 @@ class DownloaderFactory:
             update_progress_callback=self.frontend.update_progress,
             update_global_progress_callback=self.frontend.update_global_progress,
             headers={
-                "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-                "Referer": "https://coomer.st/",
-                "Accept": "text/css"
+                # ddos-guard on file.pawchive.pw rejects Googlebot and
+                # full browser user agents; a plain app UA passes.
+                "User-Agent": "CoomerDL/1.2.5",
+                "Referer": "https://pawchive.pw/",
             },
             download_images=self.frontend.get_download_images(),
             download_videos=self.frontend.get_download_videos(),
