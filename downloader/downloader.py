@@ -543,31 +543,48 @@ class Downloader:
         return all_posts
 
     def process_post(self, post, site):
-        base = f"https://{site}/"
-        if "pawchive" in site:
-            base = "https://file.pawchive.pw/"
+        is_pawchive = "pawchive" in site
+        base = "https://file.pawchive.pw/" if is_pawchive else f"https://{site}/"
 
-        def _full(path):
+        def _full(entry):
+            path = entry.get("path") or entry.get("url") or entry.get("name")
             if not path:
                 return None
             p = path if str(path).startswith("/") else f"/{path}"
-            if "pawchive" in site and not p.startswith("/data/"):
+            if is_pawchive and not p.startswith("/data/"):
                 p = f"/data{p}"
+
+            if is_pawchive and entry.get("preview_only"):
+                # preview_only means the original was never archived; the
+                # only copy is the preview on the thumbnail host (the
+                # embeds the post page displays).
+                self.log(
+                    "PAWCHIVE_PREVIEW_ONLY",
+                    name=entry.get("name") or os.path.basename(p),
+                )
+                return urljoin("https://img.pawchive.pw/", f"/thumbnail{p}")
+
             return urljoin(base, p)
 
         media_urls = []
 
         main_file = post.get("file") or {}
-        u = _full(main_file.get("path") or main_file.get("url") or main_file.get("name"))
+        u = _full(main_file)
         if u:
             media_urls.append(u)
 
         for att in (post.get("attachments") or []):
-            u = _full(att.get("path") or att.get("url") or att.get("name"))
+            u = _full(att)
             if u:
                 media_urls.append(u)
 
         return media_urls
+
+    def _pawchive_preview_fallback(self, media_url):
+        prefix = "https://file.pawchive.pw/data/"
+        if media_url.startswith(prefix):
+            return "https://img.pawchive.pw/thumbnail/data/" + media_url[len(prefix):]
+        return None
 
     def _collect_filtered_media(self, posts, site):
         collected = []
@@ -672,7 +689,18 @@ class Downloader:
         try:
             self.log("STARTING_DOWNLOAD_FROM", media_url=media_url)
 
-            response = self.safe_request(media_url, max_retries=self.max_retries)
+            request_url = media_url
+            response = self.safe_request(request_url, max_retries=self.max_retries)
+
+            if response is None:
+                # Posts archived in preview mode 404 on the file host but
+                # keep their preview on the thumbnail host. media_url stays
+                # the bookkeeping key (dedupe, DB, logs).
+                fallback_url = self._pawchive_preview_fallback(media_url)
+                if fallback_url:
+                    self.log("PAWCHIVE_PREVIEW_FALLBACK", media_url=media_url)
+                    request_url = fallback_url
+                    response = self.safe_request(request_url, max_retries=self.max_retries)
 
             if response is None:
                 self.log(
@@ -725,7 +753,7 @@ class Downloader:
                     )
 
                     part_response = self.safe_request(
-                        media_url,
+                        request_url,
                         max_retries=self.max_retries,
                         headers=resume_headers,
                     )

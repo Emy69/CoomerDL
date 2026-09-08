@@ -234,6 +234,8 @@
   "Compressed": "Compressed",
   "Other": "Other",
   "EXIT_DOWNLOAD_IN_PROGRESS": "A download is still in progress or still being cancelled. If you close now it will be interrupted. Close anyway?",
+  "PAWCHIVE_PREVIEW_ONLY": "Original file not archived; downloading the preview: {name}",
+  "PAWCHIVE_PREVIEW_FALLBACK": "Original file unavailable; trying the preview: {media_url}",
   "COOMERFANS_CACHE_SUMMARY": "Profile processed: {cached} posts reused from cache, {scraped} newly scraped",
   "EROME_CACHE_SUMMARY": "Profile processed: {cached} albums reused from cache, {scraped} newly scraped",
   "ADD_TO_LIST": "Add to list",
