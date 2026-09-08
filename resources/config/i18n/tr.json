@@ -234,6 +234,8 @@
   "Compressed": "Sıkıştırılmış",
   "Other": "Diğer",
   "EXIT_DOWNLOAD_IN_PROGRESS": "Bir indirme işlemi hâlâ devam ediyor veya iptal ediliyor. Şimdi kapatırsanız işlem yarıda kalacaktır. Yine de kapatmak istiyor musunuz?",
+  "PAWCHIVE_PREVIEW_ONLY": "Orijinal dosya arşivlenmemiş; önizleme indiriliyor: {name}",
+  "PAWCHIVE_PREVIEW_FALLBACK": "Orijinal dosya kullanılamıyor; önizleme deneniyor: {media_url}",
   "COOMERFANS_CACHE_SUMMARY": "Profil işlendi: {cached} gönderi önbellekten kullanıldı, {scraped} gönderi yeni tarandı",
   "EROME_CACHE_SUMMARY": "Profil işlendi: {cached} albüm önbellekten kullanıldı, {scraped} albüm yeni tarandı"
 }
