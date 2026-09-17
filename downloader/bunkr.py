@@ -3,6 +3,7 @@ from concurrent.futures import as_completed
 
 from downloader.core.base_api_downloader import BaseApiDownloader
 from downloader.adapters.bunkr_adapter import BunkrAdapter
+from downloader.adapters.http_retry import ScrapeCancelled
 
 
 class BunkrDownloader(BaseApiDownloader):
@@ -13,6 +14,10 @@ class BunkrDownloader(BaseApiDownloader):
             headers=self.headers,
             log_callback=self.log_callback,
             tr=self._translate_text,
+            should_cancel=self.cancel_requested.is_set,
+            max_retries=self.max_retries,
+            retry_interval=self.retry_interval,
+            request_interval=self.rate_limit_interval,
         )
         self.domain_name = "bunkr"
 
@@ -52,6 +57,8 @@ class BunkrDownloader(BaseApiDownloader):
                     break
                 future.result()
 
+        except ScrapeCancelled:
+            self.log("DOWNLOAD_CANCELLATION_REQUESTED")
         except Exception as e:
             self.log("BUNKR_ERROR_PROCESSING_POST", url=url_post, error=e)
         finally:
@@ -93,6 +100,8 @@ class BunkrDownloader(BaseApiDownloader):
                     break
                 future.result()
 
+        except ScrapeCancelled:
+            self.log("DOWNLOAD_CANCELLATION_REQUESTED")
         except Exception as e:
             self.log("BUNKR_ERROR_PROCESSING_PROFILE", url=url_perfil, error=e)
         finally:
