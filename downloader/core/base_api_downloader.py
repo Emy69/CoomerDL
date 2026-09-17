@@ -1,7 +1,7 @@
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 import os
 import random
 import re
@@ -75,6 +75,8 @@ class BaseApiDownloader:
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
         self.request_timeout = (10, 120)
+        # Query parameters that carry the original filename (bunkr uses n).
+        self.filename_query_keys = ("n",)
 
         self.domain_error_state = defaultdict(
             lambda: {
@@ -171,8 +173,32 @@ class BaseApiDownloader:
                 except Exception:
                     pass
 
+    def _filename_from_url(self, media_url):
+        """
+        Some hosts serve the file under a hash or a UUID and send the real
+        name in the query string, so the path alone gives useless names.
+        """
+        parsed = urlparse(media_url)
+        path_name = os.path.basename(parsed.path)
+
+        query = dict(parse_qsl(parsed.query))
+        for key in self.filename_query_keys:
+            # parse_qsl already decodes the value.
+            candidate = query.get(key) or ""
+            candidate = os.path.basename(candidate.replace("\\", "/")).strip()
+
+            if not candidate or candidate in (".", ".."):
+                continue
+
+            if not os.path.splitext(candidate)[1]:
+                candidate += os.path.splitext(path_name)[1]
+
+            return candidate
+
+        return path_name
+
     def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1, post_time=None):
-        base_name = os.path.basename(media_url).split("?")[0]
+        base_name = self._filename_from_url(media_url)
         name_no_ext, extension = os.path.splitext(base_name)
 
         if not hasattr(self, "file_naming_mode"):
@@ -439,7 +465,7 @@ class BaseApiDownloader:
         if self.cancel_requested.is_set():
             return
 
-        extension = os.path.splitext(media_url.split("?")[0])[1].lower()
+        extension = os.path.splitext(self._filename_from_url(media_url))[1].lower()
 
         if (extension in self.image_extensions and not self.download_images) or \
         (extension in self.video_extensions and not self.download_videos) or \
