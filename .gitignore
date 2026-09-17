@@ -45,3 +45,6 @@ CLI/
 resources/config/downloads.db
 resources/config/cookies/*
 resources/config/settings.json
+
+# Default download folder; never commit downloaded media
+downloads/
