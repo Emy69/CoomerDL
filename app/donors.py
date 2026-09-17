@@ -2,6 +2,7 @@ import os
 import json
 import requests
 
+from app.version import USER_AGENT
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -16,6 +17,11 @@ from PySide6.QtWidgets import (
 )
 
 
+# The donor list is maintained in https://github.com/Emy69/Proyect-C and
+# published as JSON, so the app reads it straight from the raw file.
+DONORS_URL = "https://raw.githubusercontent.com/Emy69/Proyect-C/main/donadores.json"
+
+
 class DonorsWorker(QObject):
     finished = Signal(list)
     error = Signal(str)
@@ -23,20 +29,15 @@ class DonorsWorker(QObject):
     def run(self):
         try:
             response = requests.get(
-                "https://emydevs.com/coomer/donadores.php",
+                DONORS_URL,
                 headers={
                     "Accept": "application/json",
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/100.0.4896.127 Safari/537.36"
-                    ),
+                    "User-Agent": USER_AGENT,
                 },
                 timeout=10,
             )
             response.raise_for_status()
-            donors = response.json()
-            self.finished.emit(donors if isinstance(donors, list) else [])
+            self.finished.emit(self._parse_donors(response.json()))
         except json.JSONDecodeError as exc:
             # Must come first: requests' JSONDecodeError subclasses both
             # json.JSONDecodeError and RequestException
@@ -45,6 +46,31 @@ class DonorsWorker(QObject):
             self.error.emit(f"request:{exc}")
         except Exception as exc:
             self.error.emit(f"unknown:{exc}")
+
+    @staticmethod
+    def _parse_donors(payload):
+        """
+        The published file is {"actualizado", "total", "donantes": [name, ...]}.
+        The previous source returned a plain list of objects, so both shapes
+        are accepted and normalised to the dicts the grid expects.
+        """
+        if isinstance(payload, dict):
+            entries = payload.get("donantes") or payload.get("donors") or []
+        elif isinstance(payload, list):
+            entries = payload
+        else:
+            entries = []
+
+        donors = []
+        for entry in entries:
+            if isinstance(entry, str):
+                name = entry.strip()
+                if name:
+                    donors.append({"name": name})
+            elif isinstance(entry, dict):
+                donors.append(entry)
+
+        return donors
 
 
 class DonorsModal(QDialog):
