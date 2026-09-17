@@ -2,6 +2,7 @@ import os
 from concurrent.futures import as_completed
 
 from downloader.core.base_api_downloader import BaseApiDownloader
+from downloader.adapters.http_retry import ScrapeCancelled
 from downloader.adapters.jpg5_adapter import Jpg5Adapter
 
 
@@ -37,6 +38,9 @@ class Jpg5Downloader(BaseApiDownloader):
             headers=self.headers,
             log_callback=self.log_callback,
             tr=self.tr,
+            should_cancel=self.cancel_requested.is_set,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
         self.domain_name = "jpg5"
 
@@ -79,6 +83,8 @@ class Jpg5Downloader(BaseApiDownloader):
                     break
                 future.result()
 
+        except ScrapeCancelled:
+            self.log("JPG5_DOWNLOAD_CANCELLED_BY_USER")
         except Exception as e:
             self.log("JPG5_ERROR_PROCESSING_GALLERY", url=self.url, error=e)
         finally:

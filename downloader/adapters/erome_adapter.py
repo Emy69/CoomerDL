@@ -5,14 +5,16 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from downloader.adapters.http_retry import RetryingScraper, ScrapeCancelled
 from downloader.adapters.resolution_cache import ResolutionCache
 
 
-class EromeAdapter:
+class EromeAdapter(RetryingScraper):
     site_name = "erome"
 
     def __init__(self, session, headers=None, log_callback=None, tr=None,
-                 should_cancel=None, cache_db_path="resources/config/downloads.db"):
+                 should_cancel=None, cache_db_path="resources/config/downloads.db",
+                 max_retries=3, retry_interval=2.0, request_interval=0.0):
         self.session = session
         self.headers = {
             k: str(v).encode("ascii", "ignore").decode("ascii")
@@ -23,10 +25,15 @@ class EromeAdapter:
         }
         self.log_callback = log_callback
         self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
-        self.should_cancel = should_cancel
         self._album_cache = ResolutionCache("erome_album_cache", db_path=cache_db_path)
         self._cache_hits = 0
         self._cache_misses = 0
+        self._init_retry(
+            max_retries=max_retries,
+            retry_interval=retry_interval,
+            request_interval=request_interval,
+            should_cancel=should_cancel,
+        )
 
     def log(self, message, **kwargs):
         if kwargs:
@@ -39,14 +46,6 @@ class EromeAdapter:
     @staticmethod
     def clean_filename(filename):
         return re.sub(r'[<>:"/\\|?*]', "_", str(filename).split("?")[0])
-
-    def _cancelled(self):
-        return callable(self.should_cancel) and self.should_cancel()
-
-    def _request_soup(self, url):
-        response = self.session.get(url, headers=self.headers, timeout=20)
-        response.raise_for_status()
-        return BeautifulSoup(response.text, "html.parser")
 
     def _resolve_profile(self, profile_url, soup=None, download_images=True, download_videos=True, direct_download=False):
         soup = soup or self._request_soup(profile_url)
@@ -79,6 +78,8 @@ class EromeAdapter:
                     inherited_base_folder=base_folder_name,
                 )
                 media.extend(album_data["media"])
+            except ScrapeCancelled:
+                break
             except Exception as e:
                 self.log("EROME_ERROR_RESOLVING_ALBUM", url=album_url, error=e)
 
