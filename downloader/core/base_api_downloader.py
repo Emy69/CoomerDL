@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
 from urllib.parse import urlparse
 import os
+import random
 import re
 import requests
 import threading
@@ -74,6 +75,18 @@ class BaseApiDownloader:
         self.subdomain_cache = {}
         self.subdomain_locks = defaultdict(threading.Lock)
         self.request_timeout = (10, 120)
+
+        self.domain_error_state = defaultdict(
+            lambda: {
+                "burst_count": 0,
+                "last_error_ts": 0.0,
+                "cooldown_until": 0.0,
+            }
+        )
+        self.domain_error_lock = threading.Lock()
+        self.domain_error_window = 10.0
+        self.domain_error_threshold = 4
+        self.domain_cooldown_seconds = 8.0
 
         db_folder = os.path.join("resources", "config")
         os.makedirs(db_folder, exist_ok=True)
@@ -150,6 +163,8 @@ class BaseApiDownloader:
             if self.enable_widgets_callback:
                 self.enable_widgets_callback()
             self.log("ALL_DOWNLOADS_COMPLETED_OR_CANCELLED")
+            if self.failed_files:
+                self.log("DOWNLOAD_SUMMARY_FAILED", failed=len(self.failed_files))
             with self.db_lock:
                 try:
                     self.db_connection.close()
@@ -203,6 +218,62 @@ class BaseApiDownloader:
 
         return os.path.join(self.download_folder, user_id, folder_name)
 
+    def _compute_retry_delay(self, attempt_index, response=None):
+        if response is not None:
+            raw = response.headers.get("Retry-After")
+            if raw:
+                try:
+                    retry_after = float(raw)
+                except (TypeError, ValueError):
+                    pass
+                else:
+                    if 0 <= retry_after <= 60:
+                        return retry_after
+
+        base = max(float(self.retry_interval or 0), 0.1)
+        return (base * (attempt_index + 1)) + random.uniform(0.35, 1.15)
+
+    def _wait_for_domain_cooldown(self, domain):
+        while True:
+            if self.cancel_requested.is_set():
+                return False
+
+            with self.domain_error_lock:
+                cooldown_until = self.domain_error_state[domain]["cooldown_until"]
+
+            remaining = cooldown_until - time.time()
+            if remaining <= 0:
+                return True
+
+            time.sleep(min(remaining, 0.5))
+
+    def _mark_domain_success(self, domain):
+        with self.domain_error_lock:
+            state = self.domain_error_state[domain]
+            state["burst_count"] = 0
+            state["last_error_ts"] = 0.0
+            state["cooldown_until"] = 0.0
+
+    def _mark_domain_error(self, domain, status_code):
+        if status_code not in (429, 500, 502, 503, 504):
+            return
+
+        now = time.time()
+        with self.domain_error_lock:
+            state = self.domain_error_state[domain]
+
+            if now - state["last_error_ts"] > self.domain_error_window:
+                state["burst_count"] = 0
+
+            state["burst_count"] += 1
+            state["last_error_ts"] = now
+
+            if state["burst_count"] >= self.domain_error_threshold:
+                state["cooldown_until"] = max(
+                    state["cooldown_until"],
+                    now + self.domain_cooldown_seconds,
+                )
+
     def safe_request(self, url, max_retries=None, headers=None):
         if max_retries is None:
             max_retries = self.max_retries
@@ -215,6 +286,9 @@ class BaseApiDownloader:
 
         for attempt in range(max_retries + 1):
             if self.cancel_requested.is_set():
+                return None
+
+            if not self._wait_for_domain_cooldown(domain):
                 return None
 
             with self.domain_locks[domain]:
@@ -243,8 +317,13 @@ class BaseApiDownloader:
                             if self.update_progress_callback:
                                 self.update_progress_callback(0, 0, status=f"Subdomain found: {found}")
 
+                            alt_domain = urlparse(alt_url).netloc
+                            if not self._wait_for_domain_cooldown(alt_domain):
+                                return None
+
                             response = self.session.get(alt_url, stream=True, headers=headers, timeout=self.request_timeout)
                             response.raise_for_status()
+                            self._mark_domain_success(alt_domain)
                             return response
 
                         if self.update_progress_callback:
@@ -252,10 +331,33 @@ class BaseApiDownloader:
                         return None
 
                     response.raise_for_status()
+                    self._mark_domain_success(domain)
                     return response
 
                 except requests.exceptions.RequestException as e:
-                    status_code = getattr(e.response, "status_code", None)
+                    error_response = getattr(e, "response", None)
+                    status_code = getattr(error_response, "status_code", None)
+                    is_last_attempt = attempt == max_retries
+
+                    if status_code in (429, 500, 502, 503, 504):
+                        self._mark_domain_error(domain, status_code)
+
+                    # A 403/404 means the URL itself is wrong or expired, so
+                    # repeating the same request cannot help. Coomer/kemono
+                    # are handled by the subdomain probe above.
+                    give_up = is_last_attempt or status_code in (403, 404)
+
+                    if give_up:
+                        # These used to exhaust every retry in silence, which
+                        # left failures with no explanation in the log.
+                        self.log(
+                            "FINAL_FAILURE_ACCESSING_URL",
+                            url=url,
+                            status_code=status_code if status_code is not None else e,
+                        )
+                        return None
+
+                    retry_delay = self._compute_retry_delay(attempt, error_response)
 
                     if status_code in (429, 500, 502, 503, 504):
                         self.log(
@@ -264,9 +366,8 @@ class BaseApiDownloader:
                             total=max_retries + 1,
                             status_code=status_code,
                             url=url,
+                            delay=round(retry_delay, 1),
                         )
-                        time.sleep(self.retry_interval)
-
                     elif isinstance(e, requests.exceptions.ReadTimeout):
                         self.log(
                             "READ_TIMEOUT_RETRY",
@@ -274,9 +375,7 @@ class BaseApiDownloader:
                             total=max_retries + 1,
                             timeout=self.request_timeout[1],
                         )
-                        time.sleep(self.retry_interval)
-
-                    elif status_code not in (403, 404):
+                    else:
                         url_display = getattr(e.request, "url", url)
                         if len(url_display) > 60:
                             url_display = url_display[:60] + "..."
@@ -287,15 +386,8 @@ class BaseApiDownloader:
                             url=url_display,
                             error=e,
                         )
-                        if attempt < max_retries:
-                            time.sleep(self.retry_interval)
 
-                    if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
-                        self.log(
-                            "FINAL_FAILURE_ACCESSING_URL",
-                            url=url,
-                            status_code=status_code,
-                        )
+                    time.sleep(retry_delay)
 
         return None
 
