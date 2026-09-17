@@ -50,6 +50,8 @@ class EromeDownloader(BaseApiDownloader):
             log_callback=self._capture_log,
             tr=self.tr,
             should_cancel=self.cancel_requested.is_set,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
         self.domain_name = "erome"
 

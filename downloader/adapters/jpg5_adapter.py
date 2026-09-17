@@ -1,19 +1,27 @@
 import os
 from urllib.parse import urljoin, urlparse
 
-from bs4 import BeautifulSoup
+from downloader.adapters.http_retry import RetryingScraper, ScrapeCancelled
 
 
-class Jpg5Adapter:
+class Jpg5Adapter(RetryingScraper):
     site_name = "jpg5"
 
-    def __init__(self, session, headers=None, log_callback=None, tr=None):
+    def __init__(self, session, headers=None, log_callback=None, tr=None,
+                 should_cancel=None, max_retries=3, retry_interval=2.0,
+                 request_interval=0.0):
         self.session = session
         self.headers = headers or {
             "User-Agent": "Mozilla/5.0",
         }
         self.log_callback = log_callback
         self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
+        self._init_retry(
+            max_retries=max_retries,
+            retry_interval=retry_interval,
+            request_interval=request_interval,
+            should_cancel=should_cancel,
+        )
 
     def log(self, message, **kwargs):
         if kwargs:
@@ -24,14 +32,9 @@ class Jpg5Adapter:
         if self.log_callback:
             self.log_callback(self.site_name, message)
 
-    def _request_soup(self, url):
-        response = self.session.get(url, headers=self.headers, timeout=20)
-        response.raise_for_status()
-        return BeautifulSoup(response.content, "html.parser")
-
     def resolve_gallery(self, url):
         self.log("JPG5_PROCESSING_GALLERY", url=url)
-        soup = self._request_soup(url)
+        soup = self._request_soup(url, raw=True)
 
         divs = soup.find_all("div", class_="list-item c8 gutter-margin-right-bottom")
         media = []
@@ -49,6 +52,8 @@ class Jpg5Adapter:
                     file_entry = self._resolve_media_page(media_page_url)
                     if file_entry:
                         media.append(file_entry)
+                except ScrapeCancelled:
+                    raise
                 except Exception as e:
                     self.log("JPG5_ERROR_PROCESSING_MEDIA_PAGE", url=media_page_url, error=e)
 
@@ -60,7 +65,7 @@ class Jpg5Adapter:
 
     def _resolve_media_page(self, media_page_url):
         self.log("JPG5_RESOLVING_MEDIA_PAGE", url=media_page_url)
-        media_soup = self._request_soup(media_page_url)
+        media_soup = self._request_soup(media_page_url, raw=True)
 
         header_content = media_soup.find("div", class_="header-content-right")
         if not header_content:

@@ -3,14 +3,16 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
+from downloader.adapters.http_retry import MAX_RETRY_DELAY, RetryingScraper, ScrapeCancelled
 from downloader.adapters.resolution_cache import ResolutionCache
 
 
-class CoomerfansAdapter:
+class CoomerfansAdapter(RetryingScraper):
     site_name = "coomerfans"
 
     def __init__(self, session, headers=None, log_callback=None, tr=None,
-                 should_cancel=None, cache_db_path="resources/config/downloads.db"):
+                 should_cancel=None, cache_db_path="resources/config/downloads.db",
+                 max_retries=3, retry_interval=2.0, request_interval=0.0):
         self.session = session
         self.headers = headers or {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
@@ -19,10 +21,16 @@ class CoomerfansAdapter:
         }
         self.log_callback = log_callback
         self.tr = tr if tr else (lambda x, **kwargs: x.format(**kwargs) if kwargs else x)
-        self.should_cancel = should_cancel
         self._post_cache = ResolutionCache("coomerfans_post_cache", db_path=cache_db_path)
         self._cache_hits = 0
         self._cache_misses = 0
+        self._failed_posts = []
+        self._init_retry(
+            max_retries=max_retries,
+            retry_interval=retry_interval,
+            request_interval=request_interval,
+            should_cancel=should_cancel,
+        )
 
     def log(self, message, **kwargs):
         if kwargs:
@@ -35,14 +43,6 @@ class CoomerfansAdapter:
     @staticmethod
     def clean_filename(filename):
         return re.sub(r'[<>:"/\\|?*]', "_", str(filename).split("?")[0])
-
-    def _cancelled(self):
-        return callable(self.should_cancel) and self.should_cancel()
-
-    def _request_soup(self, url):
-        response = self.session.get(url, headers=self.headers, timeout=20)
-        response.raise_for_status()
-        return BeautifulSoup(response.text, "html.parser")
 
     def _resolve_profile(self, profile_url, download_images=True, download_videos=True):
         """
@@ -70,6 +70,8 @@ class CoomerfansAdapter:
             seen_post_links = set()
             self._cache_hits = 0
             self._cache_misses = 0
+            self._failed_posts = []
+            scrape_incomplete = False
 
             while page <= max_pages:
                 if self._cancelled():
@@ -101,9 +103,20 @@ class CoomerfansAdapter:
                     media.extend(page_media)
                     page += 1
 
+                except ScrapeCancelled:
+                    break
                 except Exception as e:
                     self.log("COOMERFANS_ERROR_PROCESSING_PAGE", page=page, error=e)
+                    scrape_incomplete = True
                     break
+
+            if scrape_incomplete:
+                self.log("COOMERFANS_PROFILE_SCRAPE_INCOMPLETE", page=page)
+
+            media.extend(
+                self._retry_failed_posts(download_images=download_images,
+                                         download_videos=download_videos)
+            )
 
             if self._cache_hits or self._cache_misses:
                 self.log(
@@ -118,12 +131,57 @@ class CoomerfansAdapter:
                 "media": media,
             }
 
+        except ScrapeCancelled:
+            return {
+                "mode": "profile",
+                "folder_name": base_folder_name,
+                "media": media,
+            }
         except Exception as e:
             self.log("COOMERFANS_ERROR_RESOLVING_PROFILE", url=profile_url, error=e)
             return {
                 "folder_name": "coomerfans_profile",
                 "media": [],
             }
+
+    def _retry_failed_posts(self, download_images=True, download_videos=True):
+        """
+        Retry the posts that used up their attempts once the whole profile
+        has been walked, when the server has had time to recover.
+        """
+        pending = self._failed_posts
+        self._failed_posts = []
+
+        if not pending or self._cancelled():
+            self._failed_posts = pending
+            return []
+
+        recovered = []
+        self.log("COOMERFANS_RETRYING_FAILED_POSTS", count=len(pending))
+
+        try:
+            self._sleep(min(MAX_RETRY_DELAY, max(self.retry_interval * 2, 5.0)))
+
+            for post_url, profile_folder, want_images, want_videos in pending:
+                if self._cancelled():
+                    break
+                try:
+                    retried = self._resolve_post(
+                        post_url,
+                        download_images=want_images,
+                        download_videos=want_videos,
+                        profile_user_id=profile_folder,
+                    )
+                except ScrapeCancelled:
+                    break
+                recovered.extend(retried.get("media", []))
+        except ScrapeCancelled:
+            pass
+
+        if self._failed_posts:
+            self.log("COOMERFANS_FAILED_POSTS_SUMMARY", count=len(self._failed_posts))
+
+        return recovered
 
     def _extract_profile_posts(self, soup, service, user_id, username, download_images=True, download_videos=True, seen_links=None):
         """
@@ -153,6 +211,8 @@ class CoomerfansAdapter:
                     profile_user_id=profile_folder,
                 )
                 media.extend(post_media.get("media", []))
+            except ScrapeCancelled:
+                raise
             except Exception as e:
                 self.log("COOMERFANS_ERROR_EXTRACTING_POST", error=e)
                 continue
@@ -252,8 +312,13 @@ class CoomerfansAdapter:
                 "media": media,
             }
 
+        except ScrapeCancelled:
+            raise
         except Exception as e:
             self.log("COOMERFANS_ERROR_RESOLVING_POST", url=post_url, error=e)
+            self._failed_posts.append(
+                (post_url, profile_user_id, download_images, download_videos)
+            )
             return {
                 "folder_name": "coomerfans_post",
                 "media": [],

@@ -2,6 +2,7 @@ from concurrent.futures import as_completed
 
 from downloader.core.base_api_downloader import BaseApiDownloader
 from downloader.adapters.coomerfans_adapter import CoomerfansAdapter
+from downloader.adapters.http_retry import ScrapeCancelled
 
 
 class CoomerfansDownloader(BaseApiDownloader):
@@ -51,6 +52,9 @@ class CoomerfansDownloader(BaseApiDownloader):
             log_callback=self._capture_log,
             tr=self.tr,
             should_cancel=self.cancel_requested.is_set,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
+            request_interval=rate_limit_interval,
         )
         self.domain_name = "coomerfans"
 
@@ -112,6 +116,8 @@ class CoomerfansDownloader(BaseApiDownloader):
             self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
             self.log("COOMERFANS_POST_DOWNLOAD_COMPLETE", folder_name=resolved["folder_name"])
 
+        except ScrapeCancelled:
+            self.log("COOMERFANS_DOWNLOAD_CANCELLED")
         except Exception as e:
             self.log("COOMERFANS_ERROR_ACCESSING_PAGE", page_url=page_url, status_code=str(e))
         finally:
@@ -132,6 +138,8 @@ class CoomerfansDownloader(BaseApiDownloader):
             self._download_entries(resolved["media"], default_user_id=resolved.get("folder_name"))
             self.log("COOMERFANS_PROFILE_DOWNLOAD_COMPLETE", username=resolved["folder_name"])
 
+        except ScrapeCancelled:
+            self.log("COOMERFANS_DOWNLOAD_CANCELLED")
         except Exception as e:
             self.log("COOMERFANS_ERROR_ACCESSING_PAGE", page_url=url, status_code=str(e))
         finally:
