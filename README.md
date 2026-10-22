@@ -257,10 +257,6 @@ If this project helps you, you can support it here:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00.svg?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/emy_69)
 
-## Community
-
-[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
-
 ## Downloads
 
 Latest public builds are on the [Releases page](https://github.com/Emy69/CoomerDL/releases).
