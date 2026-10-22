@@ -461,9 +461,22 @@ class BaseApiDownloader:
         download_id=None,
         target_folder=None,
         forced_filename=None,
+        headers=None,
+        record_url=None,
     ):
+        """
+        `headers` are merged over the downloader's own for this one file, for
+        hosts that only serve it with a particular Referer.
+
+        `record_url` is what the database remembers the file by. Signed links
+        change on every visit, so for those the caller passes the stable page
+        the link came from; otherwise the same file is fetched again each run.
+        """
         if self.cancel_requested.is_set():
             return
+
+        request_headers = {**self.headers, **headers} if headers else self.headers
+        record_url = record_url or media_url
 
         extension = os.path.splitext(self._filename_from_url(media_url))[1].lower()
 
@@ -499,15 +512,15 @@ class BaseApiDownloader:
         final_path = os.path.normpath(os.path.join(media_folder, filename))
         tmp_path = final_path + ".tmp"
 
-        if media_url in self.download_cache:
-            self.log("FILE_ALREADY_IN_DB_SKIPPING", media_url=media_url)
+        if record_url in self.download_cache:
+            self.log("FILE_ALREADY_IN_DB_SKIPPING", media_url=record_url)
             with self.file_lock:
                 self.skipped_files.append(final_path)
             return
 
         self.log("STARTING_DOWNLOAD_FROM", media_url=media_url)
 
-        response = self.safe_request(media_url, max_retries=self.max_retries)
+        response = self.safe_request(media_url, max_retries=self.max_retries, headers=request_headers)
 
         if response is None:
             self.log(
@@ -546,7 +559,7 @@ class BaseApiDownloader:
 
             zero_progress_rounds = 0
             while total_size and downloaded_size < total_size:
-                resume_headers = self.headers.copy()
+                resume_headers = dict(request_headers)
                 resume_headers["Range"] = f"bytes={downloaded_size}-"
                 self.log(
                     "RESUMING_DOWNLOAD_AT_BYTE",
@@ -620,11 +633,11 @@ class BaseApiDownloader:
                     INSERT OR REPLACE INTO downloads (media_url, file_path, file_size, user_id, post_id)
                     VALUES (?, ?, ?, ?, ?)
                     """,
-                    (media_url, final_path, total_size, user_id, post_id),
+                    (record_url, final_path, total_size, user_id, post_id),
                 )
                 self.db_connection.commit()
 
-            self.download_cache[media_url] = (final_path, total_size)
+            self.download_cache[record_url] = (final_path, total_size)
 
         except Exception as e:
             if os.path.exists(tmp_path):

@@ -19,7 +19,7 @@ Built with Python and a modern **PySide6 (Qt)** interface.
 | [pawchive.pw](https://pawchive.pw/) | ✅ Working | Alternative to Kemono |
 | [erome.com](https://www.erome.com/) | ✅ Working | Albums and profiles |
 | [bunkr](https://bunkr-albums.io/) | ✅ Working | Any bunkr domain (bunkr.si, bunkr.site, etc.) |
-| [simpcity.cr](https://simpcity.cr/) | ✅ Working | May require cookies (see [Cookies](#simpcity-cookies)) |
+| [simpcity.cr](https://simpcity.cr/) | ✅ Working | Includes GoonBox images and turbo.cr videos posted in threads. May require cookies (see [Cookies](#simpcity-cookies)) |
 | ~~coomer.st~~ | ❌ Not working | The site blocks the app — use **coomerfans.com** instead |
 | ~~kemono.cr~~ | ❌ Not working | The site blocks the app — use **pawchive.pw** instead |
 | ~~jpg5.su~~ | ❌ Not working | Downloads from this site currently fail |

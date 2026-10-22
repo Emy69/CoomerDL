@@ -36,8 +36,51 @@ class SimpCity(BaseApiDownloader):
         self.adapter = SimpCityAdapter(
             log_callback=self.log_callback,
             tr=self.tr,
+            should_cancel=self.cancel_requested.is_set,
+            max_retries=max_retries,
+            retry_interval=retry_interval,
         )
         self.domain_name = "simpcity"
+
+    def _download_entry(self, entry, target_folder):
+        if self.cancel_requested.is_set():
+            return
+
+        # GoonBox and turbo.cr are resolved here, in the worker, rather than
+        # while the thread is read: one API call per embed adds up fast on a
+        # long thread.
+        try:
+            files = self.adapter.resolve_embed(entry)
+        except Exception as e:
+            if self.cancel_requested.is_set():
+                return
+            self.log("SIMPCITY_EMBED_FAILED", url=entry["media_url"], error=e)
+            with self.file_lock:
+                self.failed_files.append(entry["media_url"])
+            return
+
+        if not files:
+            self.log("SIMPCITY_EMBED_EMPTY", url=entry["media_url"])
+            return
+
+        if len(files) > 1:
+            # An album stands for several files, not the one counted up front.
+            with self.counter_lock:
+                self.total_files += len(files) - 1
+
+        for item in files:
+            self.process_media_element(
+                item["media_url"],
+                user_id=None,
+                post_id=item.get("post_id"),
+                post_name=item.get("title"),
+                post_time=item.get("published"),
+                download_id=item["media_url"],
+                target_folder=target_folder,
+                forced_filename=item.get("filename"),
+                headers=item.get("headers"),
+                record_url=item.get("record_url"),
+            )
 
     def download_images_from_simpcity(self, url, paginate=True):
         try:
@@ -55,20 +98,7 @@ class SimpCity(BaseApiDownloader):
             futures = []
 
             for entry in media_entries:
-                media_url = entry["media_url"]
-
-                future = self.executor.submit(
-                    self.process_media_element,
-                    media_url,
-                    user_id=None,
-                    post_id=entry.get("post_id"),
-                    post_name=entry.get("title"),
-                    post_time=entry.get("published"),
-                    download_id=media_url,
-                    target_folder=target_folder,
-                    forced_filename=entry.get("filename"),
-                )
-                futures.append(future)
+                futures.append(self.executor.submit(self._download_entry, entry, target_folder))
 
             self.futures = futures
 
