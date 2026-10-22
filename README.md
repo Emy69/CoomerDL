@@ -1,5 +1,7 @@
 ![Windows Compatibility](https://img.shields.io/badge/Windows-10%2C%2011-blue)
 ![Downloads](https://img.shields.io/github/downloads/emy69/CoomerDL/total)
+[![Support on Patreon](https://img.shields.io/badge/Full%20version%20on%20Patreon-FF424D.svg?style=flat&logo=patreon&logoColor=white)](https://www.patreon.com/emy69)
+[![Join Discord](https://img.shields.io/badge/Join-Discord-7289DA.svg?style=flat&logo=discord&logoColor=white)](https://discord.gg/ku8gSPsesh)
 
 # CoomerDL
 
@@ -22,7 +24,27 @@ Built with Python and a modern **PySide6 (Qt)** interface.
 | ~~kemono.cr~~ | ❌ Not working | The site blocks the app — use **pawchive.pw** instead |
 | ~~jpg5.su~~ | ❌ Not working | Downloads from this site currently fail |
 
-> **Note:** Sites marked ❌ no longer work with the app. If you paste one of their URLs, the app shows a message pointing you to the working alternative instead of attempting the download.
+> **Note:** Sites marked ❌ no longer work with the app. If you paste one of their URLs, the app shows a message pointing you to the working alternative instead of attempting the download. The full version supports 31 sites, including alternatives that still work when these go down.
+
+---
+
+## Full version
+
+The version on this page is the free one. A full version with **31 supported sites** is available to Patreon members, including sites that still serve video now that Coomer and Kemono block downloaders.
+
+| | Free | Full |
+|---|---|---|
+| Supported sites | 5 | 31 |
+| Library window with search and sort | — | ✅ |
+| Resume videos where you left off | — | ✅ |
+| Reorderable download queue | ✅ | ✅ |
+| Favorites and history | — | ✅ |
+| Recam (multi-stream recorder) | — | ✅ |
+| Weekly updates and fixes | — | ✅ |
+| Windows | ✅ | ✅ |
+| Linux | — | ✅ |
+
+**[Get the full version →](https://www.patreon.com/emy69)**
 
 ---
 
@@ -234,7 +256,6 @@ Prefer the command line? Check out:
 If this project helps you, you can support it here:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00.svg?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/emy_69)
-[![Support on Patreon](https://img.shields.io/badge/Support%20on%20Patreon-FF424D.svg?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/emy69)
 
 ## Community
 
