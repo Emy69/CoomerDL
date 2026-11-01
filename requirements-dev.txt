@@ -1,0 +1,10 @@
+-r requirements.txt
+
+# Test suite
+pytest>=8,<10
+
+# Building the Windows executable (python setup.py build)
+cx_Freeze>=8,<9
+
+# Regenerating resources/img/icono.ico from the 256x256 master
+Pillow>=10,<12
