@@ -3,7 +3,6 @@ import re
 import uuid
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
 
 from downloader.adapters.http_retry import RetryingScraper, ScrapeCancelled
 from downloader.adapters.resolution_cache import ResolutionCache

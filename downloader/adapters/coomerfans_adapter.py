@@ -1,7 +1,6 @@
 import re
 from urllib.parse import urljoin, urlparse
 
-from bs4 import BeautifulSoup
 
 from downloader.adapters.http_retry import MAX_RETRY_DELAY, RetryingScraper, ScrapeCancelled
 from downloader.adapters.resolution_cache import ResolutionCache
