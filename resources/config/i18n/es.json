@@ -99,6 +99,7 @@
   "CK_NO_POSTS_FOUND_FOR_USER": "No se encontraron posts para este usuario.",
   "CK_ERROR_DURING_DOWNLOAD": "Error durante la descarga: {error}",
   "CK_NO_POST_FOUND_FOR_ID": "No se encontró ningún post para este ID.",
+  "CK_SITE_BLOCKED": "{site} está rechazando las conexiones ahora mismo (su protección anti-DDoS bloquea el acceso automático). Es un problema del sitio; inténtalo más tarde.",
   "EROME_DOWNLOAD_CANCELLED": "Descarga cancelada",
   "EROME_CANCELLING_REMAINING_DOWNLOADS": "Cancelando descargas restantes.",
   "EROME_PROCESSING_ALBUM_URL": "Procesando URL del álbum: {page_url}",
