@@ -1,5 +1,4 @@
 import base64
-import json
 import os
 import re
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -7,6 +6,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 
 from downloader.adapters.http_retry import RetryingScraper
+from downloader.core import protected_json
 
 # The TLD is left open: these hosts move (jpg5.su became goonbox.cr).
 GOONBOX_IMAGE_RE = re.compile(r"^https?://(?:www\.)?goonbox\.[a-z]{2,}/img/([A-Za-z0-9_-]+)", re.I)
@@ -81,11 +81,9 @@ class SimpCityAdapter(RetryingScraper):
         return re.sub(r'[<>:"/\\|?*]', "_", name)
 
     def set_cookies(self):
-        if not os.path.exists(self.cookies_path):
+        cookies = protected_json.load(self.cookies_path)
+        if not cookies:
             return
-
-        with open(self.cookies_path, "r", encoding="utf-8") as f:
-            cookies = json.load(f)
 
         if isinstance(cookies, dict):
             if "name" in cookies and "value" in cookies:
