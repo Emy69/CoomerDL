@@ -36,6 +36,7 @@ class Downloader:
         self.update_progress_callback = update_progress_callback
         self.update_global_progress_callback = update_global_progress_callback
         self.cancel_requested = threading.Event()
+        self.fetch_blocked = False
         self.headers = headers or {
             # Fallback only (the app always passes headers). Version-less
             # so this layer stays independent from app.version; ddos-guard
@@ -489,6 +490,7 @@ class Downloader:
     ):
         all_posts = []
         offset = initial_offset
+        self.fetch_blocked = False
         user_id_encoded = quote_plus(user_id)
         self.domain_name = self.get_domain_name(site)
 
@@ -507,6 +509,13 @@ class Downloader:
 
             try:
                 response = self.session.get(api_url, headers=self.headers, timeout=self.request_timeout)
+                if response.status_code == 403:
+                    # The site's DDoS protection refuses the API outright; the
+                    # profile itself may well have posts, so say that instead
+                    # of reporting an empty profile.
+                    self.fetch_blocked = True
+                    self.log("CK_SITE_BLOCKED", site=site)
+                    break
                 if response.status_code == 400:
                     self.log("CK_END_OF_POSTS_AT_OFFSET", offset=offset)
                     break
@@ -877,7 +886,8 @@ class Downloader:
             )
 
             if not posts:
-                self.log("CK_NO_POSTS_FOUND_FOR_USER")
+                if not self.fetch_blocked:
+                    self.log("CK_NO_POSTS_FOUND_FOR_USER")
                 return
 
             if not download_all:
@@ -917,7 +927,8 @@ class Downloader:
             self.domain_name = self.get_domain_name(site)
             posts = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
             if not posts:
-                self.log("CK_NO_POST_FOUND_FOR_ID")
+                if not self.fetch_blocked:
+                    self.log("CK_NO_POST_FOUND_FOR_ID")
                 return
 
             current_post = posts[0]

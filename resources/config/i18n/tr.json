@@ -99,6 +99,7 @@
   "CK_NO_POSTS_FOUND_FOR_USER": "Bu kullanıcı için gönderi bulunamadı.",
   "CK_ERROR_DURING_DOWNLOAD": "İndirme sırasında hata oluştu: {error}",
   "CK_NO_POST_FOUND_FOR_ID": "Bu kimlik için gönderi bulunamadı.",
+  "CK_SITE_BLOCKED": "{site} şu anda bağlantıları reddediyor (DDoS koruması otomatik erişimi engelliyor). Sorun sitenin tarafında; daha sonra tekrar deneyin.",
   "EROME_DOWNLOAD_CANCELLED": "İndirme iptal edildi",
   "EROME_CANCELLING_REMAINING_DOWNLOADS": "Kalan indirmeler iptal ediliyor.",
   "EROME_PROCESSING_ALBUM_URL": "Albüm URL'si işleniyor: {page_url}",
